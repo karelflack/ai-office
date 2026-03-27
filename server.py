@@ -158,7 +158,9 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
     def do_POST(self):
         path = self.path.split("?", 1)[0]
 
-        if path == "/api/tasks":
+        if path == "/api/login":
+            self._handle_post_login()
+        elif path == "/api/tasks":
             self._handle_post_task()
         elif path == "/api/tasks/assign":
             self._handle_post_assign()
@@ -172,6 +174,23 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
     # ------------------------------------------------------------------
     # API handlers
     # ------------------------------------------------------------------
+
+    def _handle_post_login(self):
+        """Simple credential check against OFFICE_USER / OFFICE_PASS env vars.
+        Defaults to admin / admin if not set."""
+        try:
+            body = json.loads(self._read_body())
+        except (json.JSONDecodeError, ValueError):
+            self._error(400, "Invalid JSON")
+            return
+
+        expected_user = os.environ.get("OFFICE_USER", "admin")
+        expected_pass = os.environ.get("OFFICE_PASS", "admin")
+
+        if body.get("username") == expected_user and body.get("password") == expected_pass:
+            self._json_response({"ok": True})
+        else:
+            self._json_response({"ok": False, "error": "Invalid credentials."}, status=401)
 
     def _handle_get_tasks(self):
         result = {}
@@ -347,6 +366,7 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
             ["claude", "--print", "--dangerously-skip-permissions", prompt],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
+            stdin=subprocess.DEVNULL,
             text=True,
             cwd=str(BASE_DIR),
         )
