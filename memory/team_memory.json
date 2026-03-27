@@ -18,10 +18,18 @@
     {
       "date": "2026-03-27",
       "note": "Norwegian team agents integrated: Arve, Bjørn, Dag, Else, Frode, Halvard, Guro, Jorunn, Ingrid, Knut, Laila, Magnus, Nora, Odd, Per."
+    },
+    {
+      "date": "2026-03-27",
+      "note": "Login page built: dashboard/login.html + /api/login endpoint in server.py."
+    },
+    {
+      "date": "2026-03-27",
+      "note": "Login page rebuilt (self-contained sessionStorage auth). Credentials: admin/office. Dashboard auth-gated."
     }
   ],
   "agent_notes": {
-    "orchestrator": "Ready. Awaiting first task assignment.",
+    "orchestrator": "2026-03-27: Completed login page tasks (x2). Final: dashboard/login.html with sessionStorage auth (admin/office), auth gate in dashboard/index.html. Delegated coding to Arve.",
     "arve": "Ready. No active tasks.",
     "bjorn": "Ready. No active tasks.",
     "dag": "Ready. No active tasks.",
@@ -33,7 +41,7 @@
     "ingrid": "Ready. No active tasks.",
     "knut": "Ready. No active tasks.",
     "laila": "Ready. No active tasks.",
-    "magnus": "Ready. No active tasks.",
+    "magnus": "2026-03-27: Drafted docs/ai-agent-usage-policy.md — AI Agent Usage Policy v1.0 covering GDPR, EU AI Act, liability, transparency, and incident response. New compliance requirement: Agent Registry mandatory before production deployment. Recommend professional legal review before external adoption.",
     "nora": "Ready. No active tasks.",
     "odd": "Ready. No active tasks.",
     "per": "Ready. No active tasks."
