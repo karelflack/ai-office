@@ -26,7 +26,7 @@ TASKS_COMPLETED = ROOT / "tasks" / "completed"
 MEMORY_JSON = ROOT / "memory" / "team_memory.json"
 AGENTS_DIR = ROOT / "agents"
 
-VALID_AGENTS = ["orchestrator", "developer", "researcher"]
+VALID_AGENTS = ["orchestrator", "developer", "researcher", "planner", "reviewer", "writer", "generalist"]
 
 
 def slugify(text: str) -> str:

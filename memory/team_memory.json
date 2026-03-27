@@ -13,11 +13,19 @@
     {
       "date": "2026-03-27",
       "note": "Framework initialized. Repo structure created."
+    },
+    {
+      "date": "2026-03-27",
+      "note": "Added agents: planner, reviewer, writer, generalist."
     }
   ],
   "agent_notes": {
     "orchestrator": "Ready. Awaiting first task assignment.",
     "developer": "Ready. No active tasks.",
-    "researcher": "Ready. No active tasks."
+    "researcher": "Ready. No active tasks.",
+    "planner": "Ready. No active tasks.",
+    "reviewer": "Ready. No active tasks.",
+    "writer": "Ready. No active tasks.",
+    "generalist": "Ready. No active tasks."
   }
 }

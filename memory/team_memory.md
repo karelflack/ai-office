@@ -24,6 +24,7 @@ The ai-office framework has been initialized. No tasks are active yet.
 ## Recent Updates
 
 - 2026-03-27: Framework initialized. Repo structure created.
+- 2026-03-27: Added agents: planner, reviewer, writer, generalist.
 
 ---
 
@@ -32,3 +33,7 @@ The ai-office framework has been initialized. No tasks are active yet.
 - **Orchestrator**: Ready. Awaiting first task assignment.
 - **Developer**: Ready. No active tasks.
 - **Researcher**: Ready. No active tasks.
+- **Planner**: Ready. No active tasks.
+- **Reviewer**: Ready. No active tasks.
+- **Writer**: Ready. No active tasks.
+- **Generalist**: Ready. No active tasks.
