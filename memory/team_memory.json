@@ -26,6 +26,10 @@
     {
       "date": "2026-03-27",
       "note": "Login page rebuilt (self-contained sessionStorage auth). Credentials: admin/office. Dashboard auth-gated."
+    },
+    {
+      "date": "2026-03-27",
+      "note": "Competitor research completed. Top 5 AI agent platforms documented: LangGraph, Microsoft Agent Framework, CrewAI, OpenAI Agents SDK, Salesforce Agentforce. Report at output/2026-03-27-ai-agent-platform-competitor-research.md."
     }
   ],
   "agent_notes": {
