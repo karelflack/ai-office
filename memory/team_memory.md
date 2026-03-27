@@ -47,6 +47,7 @@ The ai-office framework has been initialized with the Norwegian team agents.
 - **Knut** (project tracking): Ready. No active tasks.
 - **Laila** (support): Ready. No active tasks.
 - **Magnus** (legal) (2026-03-27): Completed task `2026-03-27-draft-legal-document-on-ai-agent-usage-in-business.md`. Drafted `docs/ai-agent-usage-policy.md` — a comprehensive AI Agent Usage Policy covering GDPR compliance (lawful basis, data minimization, DPA requirements, erasure obligations), EU AI Act high-risk classification, liability limitations, human-in-the-loop requirements, transparency/disclosure obligations, incident response, and a pre-deployment risk checklist. Added compliance requirement: all AI agent deployments must be registered in an Agent Registry before go-live. Recommend professional legal review before external adoption.
+- **Orchestrator** (2026-03-27): Completed task `2026-03-27-research-the-top-5-competitors-building-ai-agent-platforms-and-summarize-their-strengths.md`. Researched and documented the top 5 AI agent platform competitors as of early 2026: LangGraph (LangChain), Microsoft Agent Framework (AutoGen + Semantic Kernel), CrewAI, OpenAI Agents SDK + Responses API, and Salesforce Agentforce. Full report saved to `output/2026-03-27-ai-agent-platform-competitor-research.md`.
 - **Nora** (finance): Ready. No active tasks.
 - **Odd** (API testing): Ready. No active tasks.
 - **Per** (benchmarking): Ready. No active tasks.

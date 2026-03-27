@@ -9,3 +9,4 @@ Each file is the direct result of an agent session — documents, plans, researc
 | File | Agent | Date |
 |---|---|---|
 | [ai-agent-usage-policy.md](ai-agent-usage-policy.md) | Magnus (legal) | 2026-03-27 |
+| [2026-03-27-ai-agent-platform-competitor-research.md](2026-03-27-ai-agent-platform-competitor-research.md) | Orchestrator | 2026-03-27 |
