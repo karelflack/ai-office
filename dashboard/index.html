@@ -569,7 +569,7 @@ function makeAgents() {
     const startY = Math.min(rawY, tileY(8) + TILE - 6);
     return {
       id, x: startX, y: startY, targetX: startX, targetY: startY,
-      state: 'idle', stateTimer: randi(30, 90),
+      state: 'idle', stateTimer: randi(180, 360),
       bubble: null, walkFrame: 0, walkTick: 0, facing: 'down',
       cursorTick: 0, cursorVisible: false,
       pendingState: null, pendingMsg: null, pendingTarget: null,
@@ -657,8 +657,13 @@ function tickAgents() {
       } else {
         agent.stateTimer--;
         if (agent.stateTimer <= 0) {
-          if (agent.state === 'working' || agent.state === 'talking') {
-            agent.state = 'idle'; agent.bubble = null; agent.stateTimer = randi(20, 60);
+          if (agent.state === 'talking') {
+            // Return to own desk after conversation
+            agent.bubble = null;
+            const pos = deskStandPos(agent.id);
+            startWalking(agent, pos.x, pos.y, 'idle');
+          } else if (agent.state === 'working') {
+            agent.state = 'idle'; agent.bubble = null; agent.stateTimer = randi(120, 240);
           } else if (agent.state === 'idle') { decideNextAction(agent); }
         }
         if (agent.state === 'working') {
@@ -676,25 +681,22 @@ function tickAgents() {
 
 function decideNextAction(agent) {
   const roll = Math.random();
-  if (roll < 0.40) {
+  if (roll < 0.85) {
+    // Stay at / return to own desk
     const pos = deskStandPos(agent.id);
-    startWalking(agent, pos.x, pos.y, 'working');
-  } else if (roll < 0.75) {
-    const otherIds = Object.keys(DESKS).filter(id => id !== agent.id);
-    const targetId = pickRandom(otherIds);
-    const pos = deskStandPos(targetId);
-    const offsetX = randi(-6, 6);
-    const msgs = MESSAGES.filter(m => m.from === agent.id && m.to !== agent.id);
-    if (msgs.length === 0) { startWalking(agent, pos.x + offsetX, pos.y, 'idle'); return; }
-    const msg = pickRandom(msgs);
-    agent.pendingTarget = targetId; agent.pendingMsg = msg;
-    startWalking(agent, pos.x + offsetX, pos.y - 4, 'talking');
-  } else if (roll < 0.90) {
-    const mtg = meetingTableCenter();
-    startWalking(agent, mtg.x + randi(-TILE, TILE), mtg.y + randi(-4, 4), 'meeting');
+    agent.x = pos.x; agent.y = pos.y;
+    agent.state = 'idle';
+    agent.stateTimer = randi(120, 300);
   } else {
-    const pos = randomFloorPos();
-    startWalking(agent, pos.x, pos.y, 'idle');
+    // Walk to another agent's desk to deliver a message, then return
+    const msgs = MESSAGES.filter(m => m.from === agent.id && m.to !== agent.id);
+    if (msgs.length === 0) {
+      agent.state = 'idle'; agent.stateTimer = randi(120, 300); return;
+    }
+    const msg = pickRandom(msgs);
+    const pos = deskStandPos(msg.to);
+    agent.pendingTarget = msg.to; agent.pendingMsg = msg;
+    startWalking(agent, pos.x + randi(-5, 5), pos.y - 4, 'talking');
   }
 }
 
