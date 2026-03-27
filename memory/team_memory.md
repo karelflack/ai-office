@@ -38,7 +38,7 @@ The ai-office framework has been initialized with the Norwegian team agents.
 - **Arve** (coding): Ready. No active tasks.
 - **Bjørn** (architecture): Ready. No active tasks.
 - **Dag** (devops): Ready. No active tasks.
-- **Else** (research): Ready. No active tasks.
+- **Else** (research) (2026-03-27): Completed task `2026-03-27-research-the-top-5-open-source-frameworks-for-building-multi-agent-ai-systems.md`. Researched and documented the top 5 open source frameworks for building multi-agent AI systems: LangGraph, AutoGen/Microsoft Agent Framework, CrewAI, OpenAI Agents SDK, and OpenHands. Key findings: no single framework wins across all dimensions; AutoGen maintenance mode is a real risk for new projects; LangGraph is production standard but carries steep learning curve; OpenHands is a distinct category (software engineering automation, not general orchestration). Full report at `output/2026-03-27-top-5-open-source-multi-agent-frameworks.md`.
 - **Frode** (sprint planning): Ready. No active tasks.
 - **Halvard** (growth): Ready. No active tasks.
 - **Guro** (social media): Ready. No active tasks.

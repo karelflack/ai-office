@@ -37,7 +37,7 @@
     "arve": "Ready. No active tasks.",
     "bjorn": "Ready. No active tasks.",
     "dag": "Ready. No active tasks.",
-    "else": "Ready. No active tasks.",
+    "else": "2026-03-27: Completed task — top 5 open source multi-agent frameworks. Covered LangGraph, AutoGen/Microsoft Agent Framework, CrewAI, OpenAI Agents SDK, OpenHands. Key flags: AutoGen is in maintenance mode (risk for new projects); no single framework dominates across all dimensions; OpenHands is a specialized category (software engineering), not a general orchestration alternative. Report at output/2026-03-27-top-5-open-source-multi-agent-frameworks.md.",
     "frode": "Ready. No active tasks.",
     "halvard": "Ready. No active tasks.",
     "guro": "Ready. No active tasks.",

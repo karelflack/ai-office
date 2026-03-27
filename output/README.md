@@ -10,3 +10,4 @@ Each file is the direct result of an agent session — documents, plans, researc
 |---|---|---|
 | [ai-agent-usage-policy.md](ai-agent-usage-policy.md) | Magnus (legal) | 2026-03-27 |
 | [2026-03-27-ai-agent-platform-competitor-research.md](2026-03-27-ai-agent-platform-competitor-research.md) | Orchestrator | 2026-03-27 |
+| [2026-03-27-top-5-open-source-multi-agent-frameworks.md](2026-03-27-top-5-open-source-multi-agent-frameworks.md) | Else (research) | 2026-03-27 |
