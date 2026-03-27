@@ -398,36 +398,10 @@
 <div id="task-panel">
   <h2>Task Manager</h2>
   <div id="task-form">
-    <div id="task-form-title">New Task</div>
+    <div id="task-form-title">New Task — delivered to Orchestrator</div>
     <div class="task-form-row">
-      <span class="task-form-label">Title</span>
-      <input id="tf-title" class="task-input" type="text" placeholder="Task title..." />
-    </div>
-    <div class="task-form-row">
-      <span class="task-form-label">Agent</span>
-      <select id="tf-agent" class="task-select">
-        <option value="orchestrator">Orchestrator</option>
-        <option value="arve">Arve — Coding</option>
-        <option value="bjorn">Bjørn — Architecture</option>
-        <option value="dag">Dag — DevOps</option>
-        <option value="else">Else — Research</option>
-        <option value="frode">Frode — Sprint planning</option>
-        <option value="halvard">Halvard — Growth</option>
-        <option value="guro">Guro — Social media</option>
-        <option value="jorunn">Jorunn — Branding</option>
-        <option value="ingrid">Ingrid — UI/UX</option>
-        <option value="knut">Knut — Project tracking</option>
-        <option value="laila">Laila — Support</option>
-        <option value="magnus">Magnus — Legal</option>
-        <option value="nora">Nora — Finance</option>
-        <option value="odd">Odd — API testing</option>
-        <option value="per">Per — Benchmarking</option>
-      </select>
-      <button class="task-btn" onclick="handleCreateTask()">+ Create</button>
-    </div>
-    <div class="task-form-row">
-      <span class="task-form-label">Desc</span>
-      <input id="tf-desc" class="task-input" type="text" placeholder="Description (optional)" />
+      <input id="tf-title" class="task-input" type="text" placeholder="Describe the task..." />
+      <button class="task-btn" onclick="handleCreateTask()">+ Add</button>
     </div>
     <div id="task-form-error"></div>
   </div>
@@ -1246,13 +1220,10 @@ async function handleCreateTask() {
   const errEl = document.getElementById('task-form-error');
   errEl.textContent = '';
   const title = document.getElementById('tf-title').value.trim();
-  const agent = document.getElementById('tf-agent').value;
-  const desc  = document.getElementById('tf-desc').value.trim();
   if (!title) { errEl.textContent = 'Title is required.'; return; }
   try {
-    await createTask(title, agent, desc);
+    await createTask(title, 'orchestrator', '');
     document.getElementById('tf-title').value = '';
-    document.getElementById('tf-desc').value  = '';
     await loadTasks();
   } catch (e) { errEl.textContent = `Error: ${e.message}`; }
 }
@@ -1280,14 +1251,12 @@ async function renderTaskManager() {
   function renderCard(filename, bucket) {
     const label = taskLabel(filename);
     const content = taskContentCache[filename];
-    const agent = parseAgentFromContent(content) || 'unassigned';
+    const agent = parseAgentFromContent(content) || 'orchestrator';
     const agentInfo = AGENT_COLORS[agent];
     const agentLabel = agentInfo ? agentInfo.name : agent;
     const agentColor = agentInfo ? agentInfo.primary : '#888';
     let actionsHtml = '';
-    if (bucket === 'backlog') {
-      actionsHtml = `<div class="task-card-actions">${agentSelectHtml(true, filename)}</div>`;
-    } else if (bucket === 'active') {
+    if (bucket === 'active') {
       actionsHtml = `<div class="task-card-actions">
         <button class="task-btn-done" onclick="handleDone('${escHtml(filename)}')">&#10003; Done</button>
         <button class="run-btn" onclick="runTask('${escHtml(filename)}', '${escHtml(agent)}')">&#9654; Run</button>
