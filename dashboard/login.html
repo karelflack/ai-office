@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Office — Login</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0d0d0d;
+      color: #f0e0c0;
+      font-family: 'Courier New', monospace;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ---- HEADER ---- */
+    #header {
+      background: #1a0a00;
+      border-bottom: 2px solid #3d2b1a;
+      padding: 0 1rem;
+      height: 48px;
+      display: flex;
+      align-items: center;
+    }
+    #header h1 {
+      font-family: 'Courier New', monospace;
+      font-size: 20px;
+      font-weight: bold;
+      color: #f0e0c0;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+    }
+
+    /* ---- MAIN: vertically and horizontally centred ---- */
+    #main {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* ---- LOGIN CARD ---- */
+    #login-card {
+      background: #1a0a00;
+      border: 1px solid #3d2b1a;
+      padding: 2rem;
+      min-width: 320px;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .card-head .tagline {
+      font-size: 11px;
+      letter-spacing: 2px;
+      color: #8a6a40;
+      margin-bottom: 0.5rem;
+    }
+
+    .card-head h2 {
+      font-size: 14px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #f0e0c0;
+      border-bottom: 1px solid #3d2b1a;
+      padding-bottom: 0.75rem;
+    }
+
+    .fields {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .field label {
+      font-size: 11px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: #8a6a40;
+    }
+
+    .field input {
+      background: #111;
+      border: 1px solid #3d2b1a;
+      color: #f0e0c0;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      padding: 8px 12px;
+      width: 100%;
+      transition: border-color 0.15s;
+    }
+
+    .field input:focus {
+      border-color: #6b4520;
+      outline: none;
+    }
+
+    .field input::placeholder {
+      color: #4a3420;
+    }
+
+    /* Error shown in terminal style; hidden by default */
+    #error-msg {
+      display: none;
+      font-size: 12px;
+      letter-spacing: 1px;
+      color: #e74c3c;
+    }
+
+    #error-msg.visible {
+      display: block;
+    }
+
+    #login-btn {
+      background: #3d2b1a;
+      border: 1px solid #6b4520;
+      color: #f0e0c0;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      padding: 10px 14px;
+      cursor: pointer;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      width: 100%;
+      transition: background 0.15s;
+    }
+
+    #login-btn:hover { background: #6b4520; }
+  </style>
+</head>
+<body>
+
+  <div id="header">
+    <h1>AI OFFICE</h1>
+  </div>
+
+  <div id="main">
+    <div id="login-card">
+      <div class="card-head">
+        <p class="tagline">// secure access terminal</p>
+        <h2>Authentication Required</h2>
+      </div>
+
+      <form id="login-form" novalidate>
+        <div class="fields">
+          <div class="field">
+            <label for="username">Username</label>
+            <input
+              id="username"
+              type="text"
+              autocomplete="username"
+              placeholder="enter username"
+              spellcheck="false"
+              autofocus
+            />
+          </div>
+          <div class="field">
+            <label for="password">Password</label>
+            <input
+              id="password"
+              type="password"
+              autocomplete="current-password"
+              placeholder="enter password"
+            />
+          </div>
+          <p id="error-msg">// AUTH FAILED — invalid credentials</p>
+          <button id="login-btn" type="submit">LOGIN</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    var form     = document.getElementById('login-form');
+    var errorMsg = document.getElementById('error-msg');
+    var card     = document.getElementById('login-card');
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+
+      var username = document.getElementById('username').value.trim();
+      var password = document.getElementById('password').value;
+
+      fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: username, password: password })
+      }).then(function (r) { return r.json(); }).then(function (data) {
+        if (data.ok) {
+          sessionStorage.setItem('authenticated', 'true');
+          window.location.replace('/dashboard/');
+        } else {
+          errorMsg.classList.add('visible');
+          card.style.transition = 'transform 0.08s ease';
+          card.style.transform  = 'translateX(8px)';
+          setTimeout(function () { card.style.transform = 'translateX(-8px)'; }, 80);
+          setTimeout(function () { card.style.transform = 'translateX(0)';    }, 160);
+          document.getElementById('password').value = '';
+          document.getElementById('password').focus();
+        }
+      }).catch(function () {
+        errorMsg.classList.add('visible');
+      });
+    });
+
+    // Hide the error as soon as the user starts editing any field
+    ['username', 'password'].forEach(function (id) {
+      document.getElementById(id).addEventListener('input', function () {
+        errorMsg.classList.remove('visible');
+      });
+    });
+  </script>
+
+</body>
+</html>
