@@ -581,12 +581,21 @@
       <span class="task-form-label">Agent:</span>
       <select id="tf-agent" class="task-select">
         <option value="orchestrator">Orchestrator</option>
-        <option value="developer">Developer</option>
-        <option value="researcher">Researcher</option>
-        <option value="planner">Planner</option>
-        <option value="reviewer">Reviewer</option>
-        <option value="writer">Writer</option>
-        <option value="generalist">Generalist</option>
+        <option value="arve">Arve (coding)</option>
+        <option value="bjorn">Bjørn (architecture)</option>
+        <option value="dag">Dag (devops)</option>
+        <option value="else">Else (research)</option>
+        <option value="frode">Frode (sprint planning)</option>
+        <option value="halvard">Halvard (growth)</option>
+        <option value="guro">Guro (social media)</option>
+        <option value="jorunn">Jorunn (branding)</option>
+        <option value="ingrid">Ingrid (UI/UX)</option>
+        <option value="knut">Knut (project tracking)</option>
+        <option value="laila">Laila (support)</option>
+        <option value="magnus">Magnus (legal)</option>
+        <option value="nora">Nora (finance)</option>
+        <option value="odd">Odd (API testing)</option>
+        <option value="per">Per (benchmarking)</option>
       </select>
       <button class="task-btn" onclick="handleCreateTask()">+ Create Task</button>
     </div>
@@ -672,43 +681,34 @@ const FRAME_MS = 1000 / FPS;
 
 const AGENT_COLORS = {
   orchestrator: { primary: '#9b59b6', name: 'Orchestrator' },
-  developer:    { primary: '#3498db', name: 'Developer' },
-  researcher:   { primary: '#2ecc71', name: 'Researcher' },
-  planner:      { primary: '#e67e22', name: 'Planner' },
-  reviewer:     { primary: '#e74c3c', name: 'Reviewer' },
-  writer:       { primary: '#1abc9c', name: 'Writer' },
-  generalist:   { primary: '#f1c40f', name: 'Generalist' },
+  arve:         { primary: '#3498db', name: 'Arve' },
+  else:         { primary: '#2ecc71', name: 'Else' },
+  frode:        { primary: '#e67e22', name: 'Frode' },
+  odd:          { primary: '#e74c3c', name: 'Odd' },
+  guro:         { primary: '#1abc9c', name: 'Guro' },
+  knut:         { primary: '#f1c40f', name: 'Knut' },
 };
 
 const DESKS = {
   orchestrator: { tx: 2,  ty: 1 },
-  developer:    { tx: 12, ty: 1 },
-  generalist:   { tx: 7,  ty: 1 },
-  reviewer:     { tx: 2,  ty: 5 },
-  writer:       { tx: 12, ty: 5 },
-  researcher:   { tx: 2,  ty: 8 },
-  planner:      { tx: 12, ty: 8 },
+  arve:         { tx: 12, ty: 1 },
+  knut:         { tx: 7,  ty: 1 },
+  odd:          { tx: 2,  ty: 5 },
+  guro:         { tx: 12, ty: 5 },
+  else:         { tx: 2,  ty: 8 },
+  frode:        { tx: 12, ty: 8 },
 };
 
 const MESSAGES = [
-  { from: 'orchestrator', to: 'developer',    text: 'New task in active queue.' },
-  { from: 'orchestrator', to: 'researcher',   text: 'Need research on this topic.' },
-  { from: 'orchestrator', to: 'planner',      text: 'Break down the next milestone.' },
-  { from: 'developer',    to: 'reviewer',     text: 'PR ready for review.' },
-  { from: 'reviewer',     to: 'developer',    text: 'LGTM. Merging.' },
-  { from: 'reviewer',     to: 'developer',    text: 'Needs revision on auth logic.' },
-  { from: 'researcher',   to: 'writer',       text: 'Findings ready. Check notes.' },
-  { from: 'writer',       to: 'orchestrator', text: 'README updated.' },
-  { from: 'planner',      to: 'orchestrator', text: 'Roadmap updated. 3 tasks queued.' },
-  { from: 'generalist',   to: 'orchestrator', text: 'On it. Adapting to task.' },
-  { from: 'developer',    to: 'generalist',   text: 'Can you handle the config?' },
-  { from: 'researcher',   to: 'planner',      text: 'Found a dependency we missed.' },
-  { from: 'planner',      to: 'developer',    text: 'Task spec is in active/.' },
-  { from: 'writer',       to: 'reviewer',     text: 'Docs draft ready for review.' },
-  { from: 'orchestrator', to: 'generalist',   text: 'No owner for this task — take it.' },
-  { from: 'developer',    to: 'developer',    text: 'Running tests...' },
-  { from: 'researcher',   to: 'researcher',   text: 'Searching docs...' },
-  { from: 'writer',       to: 'writer',       text: 'Drafting...' },
+  { from: 'orchestrator', to: 'arve',         text: 'New task in active queue.' },
+  { from: 'orchestrator', to: 'else',         text: 'Need research on this topic.' },
+  { from: 'orchestrator', to: 'frode',        text: 'Break down the next milestone.' },
+  { from: 'arve',         to: 'odd',          text: 'PR ready for review.' },
+  { from: 'odd',          to: 'arve',         text: 'LGTM. Merging.' },
+  { from: 'else',         to: 'guro',         text: 'Findings ready. Check notes.' },
+  { from: 'guro',         to: 'orchestrator', text: 'Content draft done.' },
+  { from: 'frode',        to: 'orchestrator', text: 'Sprint planned. 3 tasks queued.' },
+  { from: 'knut',         to: 'orchestrator', text: 'Milestone on track.' },
 ];
 
 // ============================================================

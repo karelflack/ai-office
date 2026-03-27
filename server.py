@@ -21,8 +21,9 @@ TASKS_DIR = BASE_DIR / "tasks"
 MEMORY_FILE = BASE_DIR / "memory" / "team_memory.json"
 
 VALID_AGENTS = {
-    "orchestrator", "developer", "researcher",
-    "planner", "reviewer", "writer", "generalist",
+    "orchestrator", "arve", "bjorn", "dag", "else", "frode",
+    "halvard", "guro", "jorunn", "ingrid", "knut", "laila",
+    "magnus", "nora", "odd", "per",
 }
 
 TASK_DIRS = {
