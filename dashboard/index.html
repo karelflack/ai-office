@@ -528,6 +528,20 @@
     #tech-error { color: #e74c3c; font-size: 11px; margin-top: 6px; }
     #tech-dashboard { display: none; }
     #tech-dashboard.visible { display: block; }
+    #agent-tooltip {
+  position: fixed;
+  background: #1a0a00;
+  border: 1px solid #6b4520;
+  color: #f0e0c0;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  padding: 5px 10px;
+  pointer-events: none;
+  display: none;
+  z-index: 999;
+  letter-spacing: 1px;
+  white-space: nowrap;
+}
   </style>
 </head>
 <body>
@@ -547,7 +561,7 @@
 <!-- MAIN: canvas + sidebar -->
 <div id="main">
   <div id="canvas-wrap">
-    <canvas id="game-canvas" width="768" height="480"></canvas>
+    <canvas id="game-canvas" width="1056" height="672"></canvas>
     <div id="scanlines"></div>
   </div>
   <div id="sidebar">
@@ -670,45 +684,72 @@
 // ============================================================
 // CONSTANTS
 // ============================================================
-const CANVAS_W = 768;
-const CANVAS_H = 480;
+const CANVAS_W = 1056;
+const CANVAS_H = 672;
 const PIXEL = 3;       // canvas px per game px
 const TILE = 16;       // game px per tile
-const GRID_W = 16;     // tiles wide
-const GRID_H = 10;     // tiles tall
+const GRID_W = 22;     // tiles wide
+const GRID_H = 14;     // tiles tall
 const FPS = 30;
 const FRAME_MS = 1000 / FPS;
 
 const AGENT_COLORS = {
-  orchestrator: { primary: '#9b59b6', name: 'Orchestrator' },
-  arve:         { primary: '#3498db', name: 'Arve' },
-  else:         { primary: '#2ecc71', name: 'Else' },
-  frode:        { primary: '#e67e22', name: 'Frode' },
-  odd:          { primary: '#e74c3c', name: 'Odd' },
-  guro:         { primary: '#1abc9c', name: 'Guro' },
-  knut:         { primary: '#f1c40f', name: 'Knut' },
+  orchestrator: { primary: '#9b59b6', name: 'Orchestrator', role: 'Routing & coordination' },
+  arve:         { primary: '#3498db', name: 'Arve',         role: 'Coding' },
+  bjorn:        { primary: '#5dade2', name: 'Bjørn',        role: 'Architecture' },
+  dag:          { primary: '#1a5276', name: 'Dag',          role: 'DevOps' },
+  else:         { primary: '#2ecc71', name: 'Else',         role: 'Research' },
+  frode:        { primary: '#e67e22', name: 'Frode',        role: 'Sprint planning' },
+  halvard:      { primary: '#e59866', name: 'Halvard',      role: 'Growth' },
+  guro:         { primary: '#1abc9c', name: 'Guro',         role: 'Social media' },
+  jorunn:       { primary: '#76d7c4', name: 'Jorunn',       role: 'Branding' },
+  ingrid:       { primary: '#f8c471', name: 'Ingrid',       role: 'UI/UX' },
+  knut:         { primary: '#f1c40f', name: 'Knut',         role: 'Project tracking' },
+  laila:        { primary: '#e74c3c', name: 'Laila',        role: 'Support' },
+  magnus:       { primary: '#922b21', name: 'Magnus',       role: 'Legal' },
+  nora:         { primary: '#a569bd', name: 'Nora',         role: 'Finance' },
+  odd:          { primary: '#85929e', name: 'Odd',          role: 'API testing' },
+  per:          { primary: '#566573', name: 'Per',          role: 'Benchmarking' },
 };
 
 const DESKS = {
-  orchestrator: { tx: 2,  ty: 1 },
-  arve:         { tx: 12, ty: 1 },
-  knut:         { tx: 7,  ty: 1 },
-  odd:          { tx: 2,  ty: 5 },
-  guro:         { tx: 12, ty: 5 },
-  else:         { tx: 2,  ty: 8 },
-  frode:        { tx: 12, ty: 8 },
+  orchestrator: { tx: 2,  ty: 1  },
+  arve:         { tx: 7,  ty: 1  },
+  bjorn:        { tx: 13, ty: 1  },
+  dag:          { tx: 18, ty: 1  },
+  else:         { tx: 2,  ty: 4  },
+  frode:        { tx: 7,  ty: 4  },
+  halvard:      { tx: 13, ty: 4  },
+  guro:         { tx: 18, ty: 4  },
+  jorunn:       { tx: 2,  ty: 8  },
+  ingrid:       { tx: 7,  ty: 8  },
+  knut:         { tx: 13, ty: 8  },
+  laila:        { tx: 18, ty: 8  },
+  magnus:       { tx: 2,  ty: 11 },
+  nora:         { tx: 7,  ty: 11 },
+  odd:          { tx: 13, ty: 11 },
+  per:          { tx: 18, ty: 11 },
 };
 
 const MESSAGES = [
-  { from: 'orchestrator', to: 'arve',         text: 'New task in active queue.' },
-  { from: 'orchestrator', to: 'else',         text: 'Need research on this topic.' },
-  { from: 'orchestrator', to: 'frode',        text: 'Break down the next milestone.' },
-  { from: 'arve',         to: 'odd',          text: 'PR ready for review.' },
-  { from: 'odd',          to: 'arve',         text: 'LGTM. Merging.' },
-  { from: 'else',         to: 'guro',         text: 'Findings ready. Check notes.' },
+  { from: 'orchestrator', to: 'arve',    text: 'New task in queue.' },
+  { from: 'orchestrator', to: 'else',    text: 'Research needed.' },
+  { from: 'orchestrator', to: 'frode',   text: 'Break down milestone.' },
+  { from: 'arve',         to: 'odd',     text: 'PR ready for review.' },
+  { from: 'odd',          to: 'arve',    text: 'LGTM. Merging.' },
+  { from: 'bjorn',        to: 'arve',    text: 'Architecture ready.' },
+  { from: 'dag',          to: 'bjorn',   text: 'Deploy pipeline set.' },
+  { from: 'else',         to: 'guro',    text: 'Findings ready.' },
   { from: 'guro',         to: 'orchestrator', text: 'Content draft done.' },
-  { from: 'frode',        to: 'orchestrator', text: 'Sprint planned. 3 tasks queued.' },
+  { from: 'halvard',      to: 'orchestrator', text: 'Growth plan ready.' },
+  { from: 'jorunn',       to: 'ingrid',  text: 'Brand guidelines done.' },
+  { from: 'ingrid',       to: 'arve',    text: 'Designs ready to build.' },
   { from: 'knut',         to: 'orchestrator', text: 'Milestone on track.' },
+  { from: 'laila',        to: 'arve',    text: 'Bug reported by user.' },
+  { from: 'magnus',       to: 'orchestrator', text: 'GDPR check complete.' },
+  { from: 'nora',         to: 'orchestrator', text: 'Pricing model ready.' },
+  { from: 'frode',        to: 'orchestrator', text: 'Sprint planned.' },
+  { from: 'per',          to: 'dag',     text: 'Benchmark results in.' },
 ];
 
 // ============================================================
@@ -791,26 +832,26 @@ function deskStandPos(agentId) {
   const rawY = tileY(desk.ty) + TILE + TILE / 2;
   return {
     x: tileX(desk.tx) + TILE / 2,
-    y: Math.min(rawY, tileY(8) + TILE - 6),
+    y: Math.min(rawY, tileY(12) + TILE - 6),
   };
 }
 
 function meetingTableCenter() {
-  // Table occupies tiles (6,3)-(9,5)
-  // Center is around (7.5, 4) in tile coords
-  return { x: tileX(7) + TILE, y: tileY(4) };
+  // Table occupies tiles (9,6)-(12,8)
+  // Center is around (10.5, 7) in tile coords
+  return { x: tileX(10) + TILE / 2, y: tileY(7) };
 }
 
 // Safe random floor tile position (logical px)
 function randomFloorPos() {
-  // Floor: rows 1-8, cols 1-14, avoiding the meeting table block
+  // Floor: rows 1-12, cols 1-20, avoiding the meeting table block
   let tx, ty;
   do {
-    tx = randi(1, 14);
-    ty = randi(1, 8);
+    tx = randi(1, 20);
+    ty = randi(1, 12);
   } while (
-    // avoid meeting table tiles 6-9, rows 3-5
-    (tx >= 6 && tx <= 9 && ty >= 3 && ty <= 5) ||
+    // avoid meeting table tiles 9-12, rows 6-8
+    (tx >= 9 && tx <= 12 && ty >= 6 && ty <= 8) ||
     // avoid desk tiles
     Object.values(DESKS).some(d => d.tx === tx && d.ty === ty)
   );
@@ -981,9 +1022,9 @@ function decideNextAction(agent) {
 function startWalking(agent, tx, ty, nextState) {
   // Clamp to floor bounds (game pixels)
   const minX = tileX(1) + 4;
-  const maxX = tileX(14) + TILE - 4;
+  const maxX = tileX(20) + TILE - 4;
   const minY = tileY(1) + 4;
-  const maxY = tileY(8) + TILE - 4;
+  const maxY = tileY(12) + TILE - 4;
   agent.targetX = Math.max(minX, Math.min(maxX, tx));
   agent.targetY = Math.max(minY, Math.min(maxY, ty));
   agent.state = 'walking';
@@ -1020,8 +1061,8 @@ function drawRect(gxPos, gyPos, gw, gh, color) {
 }
 
 function drawFloor() {
-  for (let ty = 1; ty <= 8; ty++) {
-    for (let tx = 1; tx <= 14; tx++) {
+  for (let ty = 1; ty <= 12; ty++) {
+    for (let tx = 1; tx <= 20; tx++) {
       const color = (tx + ty) % 2 === 0 ? FLOOR_A : FLOOR_B;
       drawRect(tileX(tx), tileY(ty), TILE, TILE, color);
     }
@@ -1038,7 +1079,7 @@ function drawWalls() {
   }
   // Bottom wall
   for (let tx = 0; tx < GRID_W; tx++) {
-    drawRect(tileX(tx), tileY(9), TILE, TILE, WALL_COLOR);
+    drawRect(tileX(tx), tileY(13), TILE, TILE, WALL_COLOR);
   }
   // Left wall
   for (let ty = 0; ty < GRID_H; ty++) {
@@ -1046,14 +1087,14 @@ function drawWalls() {
   }
   // Right wall
   for (let ty = 0; ty < GRID_H; ty++) {
-    drawRect(tileX(15), tileY(ty), TILE, TILE, WALL_COLOR);
+    drawRect(tileX(21), tileY(ty), TILE, TILE, WALL_COLOR);
   }
 }
 
 // Draw a small window on top wall
 function drawWallDetails() {
   // Windows on top wall
-  const windowPositions = [4, 8, 12];
+  const windowPositions = [3, 7, 11, 15, 19];
   for (const wx of windowPositions) {
     // Window frame
     ctx.fillStyle = '#5a3a1a';
@@ -1095,27 +1136,27 @@ function drawDesk(tx, ty, agentId) {
 }
 
 function drawMeetingTable() {
-  // Meeting table: tiles (6,3) to (9,5) — 4×3 block
+  // Meeting table: tiles (9,6) to (12,8) — 4×3 block in new center
   // Table surface
-  drawRect(tileX(6) + 2, tileY(3) + 2, TILE * 4 - 4, TILE * 3 - 4, TABLE_COLOR);
+  drawRect(tileX(9) + 2, tileY(6) + 2, TILE * 4 - 4, TILE * 3 - 4, TABLE_COLOR);
   // Table edge highlight
   ctx.strokeStyle = TABLE_HIGHLIGHT;
   ctx.lineWidth = PIXEL;
   ctx.strokeRect(
-    gx(tileX(6) + 2) + PIXEL * 0.5,
-    gy(tileY(3) + 2) + PIXEL * 0.5,
+    gx(tileX(9) + 2) + PIXEL * 0.5,
+    gy(tileY(6) + 2) + PIXEL * 0.5,
     (TILE * 4 - 4) * PIXEL - PIXEL,
     (TILE * 3 - 4) * PIXEL - PIXEL
   );
-  // Chair positions around the table (simple squares)
+  // Chair positions around the table
   const chairColor = '#4a2a10';
   const chairPositions = [
     // Top row chairs
-    { x: tileX(6) + 4,  y: tileY(3) - 3 }, { x: tileX(7) + 4,  y: tileY(3) - 3 },
-    { x: tileX(8) + 4,  y: tileY(3) - 3 }, { x: tileX(9) + 4,  y: tileY(3) - 3 },
+    { x: tileX(9) + 4,  y: tileY(6) - 3 }, { x: tileX(10) + 4, y: tileY(6) - 3 },
+    { x: tileX(11) + 4, y: tileY(6) - 3 }, { x: tileX(12) + 4, y: tileY(6) - 3 },
     // Bottom row chairs
-    { x: tileX(6) + 4,  y: tileY(5) + TILE }, { x: tileX(7) + 4,  y: tileY(5) + TILE },
-    { x: tileX(8) + 4,  y: tileY(5) + TILE }, { x: tileX(9) + 4,  y: tileY(5) + TILE },
+    { x: tileX(9) + 4,  y: tileY(8) + TILE }, { x: tileX(10) + 4, y: tileY(8) + TILE },
+    { x: tileX(11) + 4, y: tileY(8) + TILE }, { x: tileX(12) + 4, y: tileY(8) + TILE },
   ];
   for (const c of chairPositions) {
     drawRect(c.x, c.y, 8, 4, chairColor);
@@ -1145,9 +1186,9 @@ function drawFurniture() {
   drawMeetingTable();
   // Plants in corners
   drawPlant(1, 1);
-  drawPlant(14, 1);
-  drawPlant(1, 8);
-  drawPlant(14, 8);
+  drawPlant(20, 1);
+  drawPlant(1, 12);
+  drawPlant(20, 12);
 }
 
 // Draw a single agent sprite centered at (cx, cy) in game pixels
@@ -1404,6 +1445,50 @@ function renderStatusPanel() {
   }).join('');
   statusRows.innerHTML = html;
 }
+
+// ============================================================
+// HOVER TOOLTIP
+// ============================================================
+
+const agentTooltip = document.getElementById('agent-tooltip');
+
+canvas.addEventListener('mousemove', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  // Scale mouse coords to canvas pixel space
+  const scaleX = CANVAS_W / rect.width;
+  const scaleY = CANVAS_H / rect.height;
+  const mx = (e.clientX - rect.left) * scaleX;
+  const my = (e.clientY - rect.top) * scaleY;
+
+  let hit = null;
+  for (const agent of agents) {
+    const cx = gx(Math.round(agent.x));
+    const cy = gy(Math.round(agent.y));
+    const headY = cy - 12 * PIXEL;
+    // Hit box: 24px wide, 36px tall centered on agent
+    if (mx >= cx - 12 && mx <= cx + 12 && my >= headY && my <= cy + 4 * PIXEL) {
+      hit = agent;
+      break;
+    }
+  }
+
+  if (hit) {
+    const col = AGENT_COLORS[hit.id];
+    agentTooltip.textContent = col ? `${col.name} — ${col.role}` : hit.id;
+    agentTooltip.style.display = 'block';
+    agentTooltip.style.left = (e.clientX + 14) + 'px';
+    agentTooltip.style.top  = (e.clientY - 10) + 'px';
+    canvas.style.cursor = 'pointer';
+  } else {
+    agentTooltip.style.display = 'none';
+    canvas.style.cursor = 'default';
+  }
+});
+
+canvas.addEventListener('mouseleave', () => {
+  agentTooltip.style.display = 'none';
+  canvas.style.cursor = 'default';
+});
 
 // ============================================================
 // GAME LOOP
@@ -1824,5 +1909,6 @@ autoLoadMemory();
 pollRunStatus();
 requestAnimationFrame(gameLoop);
 </script>
+<div id="agent-tooltip"></div>
 </body>
 </html>
