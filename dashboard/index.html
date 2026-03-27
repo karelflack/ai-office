@@ -173,6 +173,47 @@
       cursor: pointer;
     }
     .task-btn-assign:hover { background: #2a3a2a; }
+    .run-btn {
+      background: #1a3a1a;
+      border: 1px solid #2ecc71;
+      color: #2ecc71;
+      font-family: 'Courier New', monospace;
+      font-size: 10px;
+      padding: 3px 8px;
+      cursor: pointer;
+    }
+    .run-btn:hover { background: #2a4a2a; }
+
+    /* Terminal panel */
+    #terminal-panel {
+      margin-top: 1rem;
+      background: #000;
+      border: 1px solid #2ecc71;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.8rem;
+    }
+    #terminal-header {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.4rem 0.75rem;
+      border-bottom: 1px solid #1a3a1a;
+      color: #2ecc71;
+    }
+    #terminal-output {
+      height: 220px;
+      overflow-y: auto;
+      padding: 0.75rem;
+      color: #a0a0a0;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    #terminal-status {
+      padding: 0.4rem 0.75rem;
+      border-top: 1px solid #1a3a1a;
+      color: #555;
+      font-size: 0.75rem;
+    }
 
     /* Task columns */
     #task-columns {
@@ -571,6 +612,16 @@
       <div class="task-col-header">Completed</div>
       <div id="task-col-completed"></div>
     </div>
+  </div>
+
+  <!-- Live agent output terminal -->
+  <div id="terminal-panel" style="display:none;">
+    <div id="terminal-header">
+      <span id="terminal-title">&#9679; AGENT OUTPUT</span>
+      <button onclick="closeTerminal()" style="background:none;border:none;color:#2ecc71;cursor:pointer;font-size:1rem;">&#10005;</button>
+    </div>
+    <div id="terminal-output"></div>
+    <div id="terminal-status"></div>
   </div>
 </div>
 
@@ -1106,6 +1157,17 @@ function drawAgentSprite(cx, cy, agentId, walkFrame) {
   const primary = col.primary;
   const bodyColor = darken(primary, 0.2);
 
+  // Pulsing green glow when this agent has an active claude run
+  if (runningAgents.has(agentId)) {
+    ctx.save();
+    ctx.globalAlpha = 0.3 + 0.2 * Math.sin(Date.now() / 300);
+    ctx.fillStyle = '#2ecc71';
+    ctx.beginPath();
+    ctx.arc(gx(cx), gy(cy), 20, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
   // Shadow beneath agent
   const shadowAlpha = 0.35;
   ctx.fillStyle = `rgba(0,0,0,${shadowAlpha})`;
@@ -1610,6 +1672,7 @@ async function renderTaskManager() {
     } else if (bucket === 'active') {
       actionsHtml = `<div class="task-card-actions">
         <button class="task-btn-done" onclick="handleDone('${escHtml(filename)}')">&#10003; Done</button>
+        <button class="run-btn" onclick="runTask('${escHtml(filename)}', '${escHtml(agent)}')">&#9654; Run</button>
       </div>`;
     }
 
@@ -1638,6 +1701,106 @@ async function renderTaskManager() {
 }
 
 // ============================================================
+// RUNNING AGENTS — track which agent ids have active claude runs
+// ============================================================
+
+let runningAgents = new Set();
+let terminalPollInterval = null;
+
+// Poll /api/run/status every 3 s and keep runningAgents in sync
+function pollRunStatus() {
+  setInterval(async () => {
+    try {
+      const r = await fetch('/api/run/status');
+      if (!r.ok) return;
+      const d = await r.json();
+      runningAgents = new Set(
+        // Map filenames to agent ids via running_tasks agent field — we can't
+        // know the agent id directly from the filename, so we resolve it from
+        // the task content cache as a best-effort lookup.
+        (d.running || []).map(fname => {
+          const content = taskContentCache[fname];
+          return parseAgentFromContent(content) || null;
+        }).filter(Boolean)
+      );
+    } catch (e) {
+      // Server may not be running — ignore silently
+    }
+  }, 3000);
+}
+
+async function runTask(filename, agent) {
+  // Show terminal panel
+  document.getElementById('terminal-panel').style.display = 'block';
+  document.getElementById('terminal-output').innerHTML = '';
+  document.getElementById('terminal-title').textContent = `\u25CF ${agent.toUpperCase()} \u2014 ${taskLabel(filename)}`;
+  document.getElementById('terminal-status').textContent = 'Starting...';
+
+  // Scroll terminal into view
+  document.getElementById('terminal-panel').scrollIntoView({ behavior: 'smooth' });
+
+  try {
+    const res = await fetch('/api/run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filename, agent }),
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'Failed to start');
+
+    // Mark this agent as running in the canvas overlay
+    runningAgents.add(agent);
+
+    // Start polling for output
+    let linesShown = 0;
+    clearInterval(terminalPollInterval);
+    terminalPollInterval = setInterval(async () => {
+      const r = await fetch(`/api/run/output?task_id=${encodeURIComponent(filename)}`);
+      const d = await r.json();
+
+      const output = document.getElementById('terminal-output');
+      const newLines = d.lines.slice(linesShown);
+      newLines.forEach(line => {
+        const div = document.createElement('div');
+        div.textContent = line;
+        // Color-code certain lines
+        if (line.startsWith('\u2713') || line.includes('completed') || line.includes('Done')) {
+          div.style.color = '#2ecc71';
+        } else if (line.startsWith('Error') || line.startsWith('\u2717')) {
+          div.style.color = '#e74c3c';
+        } else if (line.startsWith('>') || line.startsWith('$')) {
+          div.style.color = '#3498db';
+        }
+        output.appendChild(div);
+      });
+      linesShown = d.lines.length;
+      output.scrollTop = output.scrollHeight;
+
+      if (d.done) {
+        clearInterval(terminalPollInterval);
+        document.getElementById('terminal-status').textContent = '\u2713 Done';
+        document.getElementById('terminal-status').style.color = '#2ecc71';
+        // Remove from canvas glow
+        runningAgents.delete(agent);
+        // Reload tasks after a short delay
+        setTimeout(() => loadTasks().then(renderTaskManager), 1500);
+      } else {
+        document.getElementById('terminal-status').textContent = `Running... (${linesShown} lines)`;
+      }
+    }, 800);
+
+  } catch (e) {
+    document.getElementById('terminal-output').textContent = `Error: ${e.message}\n\nMake sure server.py is running.`;
+    document.getElementById('terminal-status').textContent = 'Failed';
+  }
+}
+
+function closeTerminal() {
+  clearInterval(terminalPollInterval);
+  document.getElementById('terminal-panel').style.display = 'none';
+}
+
+// ============================================================
 // AUTO-LOAD MEMORY ON STARTUP (silent fail)
 // ============================================================
 
@@ -1658,6 +1821,7 @@ async function autoLoadMemory() {
 // ============================================================
 
 autoLoadMemory();
+pollRunStatus();
 requestAnimationFrame(gameLoop);
 </script>
 </body>

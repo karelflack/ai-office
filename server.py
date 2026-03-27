@@ -10,6 +10,8 @@ import json
 import os
 import re
 import shutil
+import subprocess
+import threading
 from datetime import date
 from pathlib import Path
 
@@ -28,6 +30,10 @@ TASK_DIRS = {
     "active":    TASKS_DIR / "active",
     "completed": TASKS_DIR / "completed",
 }
+
+# Tracks in-flight claude subprocess runs keyed by filename.
+# Each value: { "process": Popen, "output": [str], "done": bool, "agent": str }
+running_tasks: dict = {}
 
 
 def slugify(text: str) -> str:
@@ -140,6 +146,10 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
             self._handle_get_task_file(filename)
         elif path == "/api/memory":
             self._handle_get_memory()
+        elif path == "/api/run/output":
+            self._handle_get_run_output()
+        elif path == "/api/run/status":
+            self._handle_get_run_status()
         else:
             # Fall through to static file serving
             super().do_GET()
@@ -153,6 +163,8 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
             self._handle_post_assign()
         elif path == "/api/tasks/done":
             self._handle_post_done()
+        elif path == "/api/run":
+            self._handle_post_run()
         else:
             self.send_error(404, "Not found")
 
@@ -292,6 +304,101 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
             src_path.unlink()
 
         self._json_response({"ok": True})
+
+    def _handle_post_run(self):
+        try:
+            body = json.loads(self._read_body())
+        except (json.JSONDecodeError, ValueError):
+            self._error(400, "Invalid JSON")
+            return
+
+        filename = (body.get("filename") or "").strip()
+        agent = (body.get("agent") or "").strip()
+
+        if not filename or not agent:
+            self._error(400, "filename and agent are required")
+            return
+
+        # Task must be in active/
+        active_path = TASK_DIRS["active"] / filename
+        if not active_path.exists():
+            self._error(400, f"Task not found in active/: {filename}")
+            return
+
+        # Build the prompt that claude will receive
+        prompt = (
+            f"You are the {agent} agent in the ai-office multi-agent framework.\n\n"
+            "Your job: complete the task assigned to you.\n\n"
+            "Steps to follow:\n"
+            "1. Read the file CLAUDE.md for your session protocol\n"
+            f"2. Read agents/{agent}.md for your full role definition and behavior rules\n"
+            f"3. Read the task file at tasks/active/{filename} carefully\n"
+            "4. Complete the task as described — write code, research, plan, or write as your role requires\n"
+            "5. After completing the work, update memory/team_memory.md and memory/team_memory.json "
+            "with a note under Agent Notes\n"
+            f"6. Move the task file to tasks/completed/ by updating its Status field and saving it "
+            "there, then deleting it from tasks/active/\n\n"
+            "Work autonomously. Use your tools. Complete the task fully."
+        )
+
+        # Spawn claude subprocess, capturing stdout+stderr together
+        proc = subprocess.Popen(
+            ["claude", "--print", prompt],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            cwd=str(BASE_DIR),
+        )
+
+        running_tasks[filename] = {
+            "process": proc,
+            "output": [],
+            "done": False,
+            "agent": agent,
+        }
+
+        # Background thread reads output line-by-line until the process exits
+        def _reader(fname, p):
+            try:
+                for line in p.stdout:
+                    try:
+                        running_tasks[fname]["output"].append(line.rstrip("\n"))
+                    except UnicodeDecodeError:
+                        # Skip lines that can't be decoded
+                        pass
+            finally:
+                p.wait()
+                running_tasks[fname]["done"] = True
+
+        t = threading.Thread(target=_reader, args=(filename, proc), daemon=True)
+        t.start()
+
+        self._json_response({"ok": True, "task_id": filename})
+
+    def _handle_get_run_output(self):
+        import urllib.parse
+        qs = urllib.parse.parse_qs(self.path.split("?", 1)[1] if "?" in self.path else "")
+        task_id = (qs.get("task_id") or [""])[0]
+
+        if task_id not in running_tasks:
+            self._json_response({"lines": [], "done": False})
+            return
+
+        entry = running_tasks[task_id]
+        self._json_response({
+            "lines": list(entry["output"]),
+            "done": entry["done"],
+        })
+
+    def _handle_get_run_status(self):
+        running = []
+        done = []
+        for fname, entry in running_tasks.items():
+            if entry["done"]:
+                done.append(fname)
+            else:
+                running.append(fname)
+        self._json_response({"running": running, "done": done})
 
     def _handle_get_memory(self):
         if not MEMORY_FILE.exists():
