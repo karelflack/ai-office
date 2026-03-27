@@ -36,8 +36,21 @@ ai-office/
 | Agent | Role |
 |---|---|
 | **orchestrator** | Routes tasks, maintains memory, reviews completed work |
-| **developer** | Writes code, runs tests, commits to git |
-| **researcher** | Gathers information, writes research notes |
+| **arve** | Writes, reviews, and debugs code |
+| **bjorn** | Designs system architecture and infrastructure |
+| **dag** | Deployments, CI/CD, Docker, environment, monitoring |
+| **else** | User research, feedback synthesis, product insights |
+| **frode** | Sprint planning, backlog prioritization |
+| **halvard** | Growth strategy, acquisition, onboarding |
+| **guro** | Social media content (X/Twitter, LinkedIn) |
+| **jorunn** | Brand identity, naming, tone of voice |
+| **ingrid** | UI/UX design, user flows, dashboard layout |
+| **knut** | Project tracking, milestones, blockers |
+| **laila** | Customer support, help documentation |
+| **magnus** | Legal, compliance, GDPR |
+| **nora** | Pricing, revenue modeling, unit economics |
+| **odd** | API testing, endpoint validation |
+| **per** | Performance benchmarking, load testing |
 
 ### Adding a New Agent
 

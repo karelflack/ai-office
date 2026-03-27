@@ -2,12 +2,13 @@
   "project_status": {
     "phase": "Initialization",
     "last_updated": "2026-03-27",
-    "summary": "The ai-office framework has been initialized. No tasks are active yet."
+    "summary": "The ai-office framework has been initialized with the Norwegian team agents."
   },
   "active_decisions": [
     "Agents should always read team_memory.json before starting work",
     "Task files use the naming convention YYYY-MM-DD-<slug>.md",
-    "One agent per task — no concurrent ownership"
+    "One agent per task — no concurrent ownership",
+    "Shared memory lives at memory/team_memory.json and memory/team_memory.md"
   ],
   "recent_updates": [
     {
@@ -16,16 +17,25 @@
     },
     {
       "date": "2026-03-27",
-      "note": "Added agents: planner, reviewer, writer, generalist."
+      "note": "Norwegian team agents integrated: Arve, Bjørn, Dag, Else, Frode, Halvard, Guro, Jorunn, Ingrid, Knut, Laila, Magnus, Nora, Odd, Per."
     }
   ],
   "agent_notes": {
     "orchestrator": "Ready. Awaiting first task assignment.",
-    "developer": "Ready. No active tasks.",
-    "researcher": "Ready. No active tasks.",
-    "planner": "Ready. No active tasks.",
-    "reviewer": "Ready. No active tasks.",
-    "writer": "Ready. No active tasks.",
-    "generalist": "Ready. No active tasks."
+    "arve": "Ready. No active tasks.",
+    "bjorn": "Ready. No active tasks.",
+    "dag": "Ready. No active tasks.",
+    "else": "Ready. No active tasks.",
+    "frode": "Ready. No active tasks.",
+    "halvard": "Ready. No active tasks.",
+    "guro": "Ready. No active tasks.",
+    "jorunn": "Ready. No active tasks.",
+    "ingrid": "Ready. No active tasks.",
+    "knut": "Ready. No active tasks.",
+    "laila": "Ready. No active tasks.",
+    "magnus": "Ready. No active tasks.",
+    "nora": "Ready. No active tasks.",
+    "odd": "Ready. No active tasks.",
+    "per": "Ready. No active tasks."
   }
 }
