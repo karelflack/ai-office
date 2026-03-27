@@ -1,0 +1,23 @@
+{
+  "project_status": {
+    "phase": "Initialization",
+    "last_updated": "2026-03-27",
+    "summary": "The ai-office framework has been initialized. No tasks are active yet."
+  },
+  "active_decisions": [
+    "Agents should always read team_memory.json before starting work",
+    "Task files use the naming convention YYYY-MM-DD-<slug>.md",
+    "One agent per task — no concurrent ownership"
+  ],
+  "recent_updates": [
+    {
+      "date": "2026-03-27",
+      "note": "Framework initialized. Repo structure created."
+    }
+  ],
+  "agent_notes": {
+    "orchestrator": "Ready. Awaiting first task assignment.",
+    "developer": "Ready. No active tasks.",
+    "researcher": "Ready. No active tasks."
+  }
+}
