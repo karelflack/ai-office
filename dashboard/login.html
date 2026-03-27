@@ -3,180 +3,142 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AI Office — Login</title>
+  <title>AI Office — Sign In</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      background: #0d0d0d;
-      color: #f0e0c0;
-      font-family: 'Courier New', monospace;
+      background-color: #f2f0ec;
+      background-image: radial-gradient(circle, rgba(0,0,0,0.05) 1px, transparent 1px);
+      background-size: 24px 24px;
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
-    }
-
-    /* ---- HEADER ---- */
-    #header {
-      background: #1a0a00;
-      border-bottom: 2px solid #3d2b1a;
-      padding: 0 1rem;
-      height: 48px;
-      display: flex;
-      align-items: center;
-    }
-    #header h1 {
-      font-family: 'Courier New', monospace;
-      font-size: 20px;
-      font-weight: bold;
-      color: #f0e0c0;
-      letter-spacing: 3px;
-      text-transform: uppercase;
-    }
-
-    /* ---- MAIN: vertically and horizontally centred ---- */
-    #main {
-      flex: 1;
-      display: flex;
       align-items: center;
       justify-content: center;
     }
 
-    /* ---- LOGIN CARD ---- */
     #login-card {
-      background: #1a0a00;
-      border: 1px solid #3d2b1a;
-      padding: 2rem;
-      min-width: 320px;
+      background: rgba(255,255,255,0.78);
+      backdrop-filter: blur(28px) saturate(180%);
+      -webkit-backdrop-filter: blur(28px) saturate(180%);
+      border: 1px solid rgba(0,0,0,0.08);
+      border-radius: 20px;
+      padding: 2.5rem 2.25rem 2rem;
+      width: 340px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.1), 0 2px 6px rgba(0,0,0,0.06);
+    }
+
+    .card-logo {
       display: flex;
-      flex-direction: column;
-      gap: 1.25rem;
+      align-items: center;
+      gap: 9px;
+      margin-bottom: 1.75rem;
+    }
+    .logo-dot {
+      width: 9px; height: 9px;
+      border-radius: 50%;
+      background: #30d158;
+      box-shadow: 0 0 0 3px rgba(48,209,88,0.18);
+    }
+    .logo-text {
+      font-size: 17px;
+      font-weight: 600;
+      color: #1d1d1f;
+      letter-spacing: -0.3px;
     }
 
-    .card-head .tagline {
-      font-size: 11px;
-      letter-spacing: 2px;
-      color: #8a6a40;
-      margin-bottom: 0.5rem;
-    }
-
-    .card-head h2 {
-      font-size: 14px;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      color: #f0e0c0;
-      border-bottom: 1px solid #3d2b1a;
-      padding-bottom: 0.75rem;
-    }
-
-    .fields {
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
+    .card-sub {
+      font-size: 13px;
+      color: #6e6e73;
+      margin-bottom: 1.75rem;
+      line-height: 1.45;
     }
 
     .field {
       display: flex;
       flex-direction: column;
       gap: 6px;
+      margin-bottom: 0.875rem;
     }
-
     .field label {
-      font-size: 11px;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      color: #8a6a40;
+      font-size: 12px;
+      font-weight: 500;
+      color: #6e6e73;
+      letter-spacing: 0.1px;
     }
-
     .field input {
-      background: #111;
-      border: 1px solid #3d2b1a;
-      color: #f0e0c0;
-      font-family: 'Courier New', monospace;
-      font-size: 14px;
-      padding: 8px 12px;
+      background: rgba(255,255,255,0.9);
+      border: 1px solid rgba(0,0,0,0.12);
+      border-radius: 10px;
+      color: #1d1d1f;
+      font-family: inherit;
+      font-size: 15px;
+      padding: 10px 14px;
       width: 100%;
-      transition: border-color 0.15s;
+      transition: border-color 0.15s, box-shadow 0.15s;
     }
-
     .field input:focus {
-      border-color: #6b4520;
       outline: none;
+      border-color: #0071e3;
+      box-shadow: 0 0 0 3px rgba(0,113,227,0.18);
     }
+    .field input::placeholder { color: #aeaeb2; }
 
-    .field input::placeholder {
-      color: #4a3420;
-    }
-
-    /* Error shown in terminal style; hidden by default */
     #error-msg {
       display: none;
       font-size: 12px;
-      letter-spacing: 1px;
-      color: #e74c3c;
+      color: #ff453a;
+      margin-bottom: 0.75rem;
+      padding: 8px 12px;
+      background: rgba(255,69,58,0.08);
+      border: 1px solid rgba(255,69,58,0.18);
+      border-radius: 8px;
     }
-
-    #error-msg.visible {
-      display: block;
-    }
+    #error-msg.visible { display: block; }
 
     #login-btn {
-      background: #3d2b1a;
-      border: 1px solid #6b4520;
-      color: #f0e0c0;
-      font-family: 'Courier New', monospace;
-      font-size: 13px;
-      padding: 10px 14px;
+      background: #0071e3;
+      border: none;
+      border-radius: 10px;
+      color: #fff;
+      font-family: inherit;
+      font-size: 15px;
+      font-weight: 500;
+      padding: 11px 14px;
       cursor: pointer;
-      letter-spacing: 2px;
-      text-transform: uppercase;
       width: 100%;
-      transition: background 0.15s;
+      margin-top: 0.25rem;
+      transition: opacity 0.15s, transform 0.1s;
     }
-
-    #login-btn:hover { background: #6b4520; }
+    #login-btn:hover { opacity: 0.88; }
+    #login-btn:active { transform: scale(0.98); }
   </style>
 </head>
 <body>
 
-  <div id="header">
-    <h1>AI OFFICE</h1>
-  </div>
-
-  <div id="main">
-    <div id="login-card">
-      <div class="card-head">
-        <p class="tagline">// secure access terminal</p>
-        <h2>Authentication Required</h2>
-      </div>
-
-      <form id="login-form" novalidate>
-        <div class="fields">
-          <div class="field">
-            <label for="username">Username</label>
-            <input
-              id="username"
-              type="text"
-              autocomplete="username"
-              placeholder="enter username"
-              spellcheck="false"
-              autofocus
-            />
-          </div>
-          <div class="field">
-            <label for="password">Password</label>
-            <input
-              id="password"
-              type="password"
-              autocomplete="current-password"
-              placeholder="enter password"
-            />
-          </div>
-          <p id="error-msg">// AUTH FAILED — invalid credentials</p>
-          <button id="login-btn" type="submit">LOGIN</button>
-        </div>
-      </form>
+  <div id="login-card">
+    <div class="card-logo">
+      <div class="logo-dot"></div>
+      <span class="logo-text">AI Office</span>
     </div>
+    <p class="card-sub">Sign in to access the agent dashboard.</p>
+
+    <form id="login-form" novalidate>
+      <div class="field">
+        <label for="username">Username</label>
+        <input id="username" type="text" autocomplete="username"
+               placeholder="Username" spellcheck="false" autofocus />
+      </div>
+      <div class="field">
+        <label for="password">Password</label>
+        <input id="password" type="password" autocomplete="current-password"
+               placeholder="Password" />
+      </div>
+      <p id="error-msg">Incorrect username or password.</p>
+      <button id="login-btn" type="submit">Sign In</button>
+    </form>
   </div>
 
   <script>
@@ -186,7 +148,6 @@
 
     form.addEventListener('submit', function (e) {
       e.preventDefault();
-
       var username = document.getElementById('username').value.trim();
       var password = document.getElementById('password').value;
 
@@ -200,10 +161,11 @@
           window.location.replace('/dashboard/');
         } else {
           errorMsg.classList.add('visible');
-          card.style.transition = 'transform 0.08s ease';
-          card.style.transform  = 'translateX(8px)';
-          setTimeout(function () { card.style.transform = 'translateX(-8px)'; }, 80);
-          setTimeout(function () { card.style.transform = 'translateX(0)';    }, 160);
+          card.style.transition = 'transform 0.07s ease';
+          card.style.transform  = 'translateX(7px)';
+          setTimeout(function () { card.style.transform = 'translateX(-7px)'; }, 70);
+          setTimeout(function () { card.style.transform = 'translateX(4px)'; },  140);
+          setTimeout(function () { card.style.transform = 'translateX(0)'; },    210);
           document.getElementById('password').value = '';
           document.getElementById('password').focus();
         }
@@ -212,7 +174,6 @@
       });
     });
 
-    // Hide the error as soon as the user starts editing any field
     ['username', 'password'].forEach(function (id) {
       document.getElementById(id).addEventListener('input', function () {
         errorMsg.classList.remove('visible');
