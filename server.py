@@ -344,7 +344,7 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
 
         # Spawn claude subprocess, capturing stdout+stderr together
         proc = subprocess.Popen(
-            ["claude", "--print", prompt],
+            ["claude", "--print", "--dangerously-skip-permissions", prompt],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
