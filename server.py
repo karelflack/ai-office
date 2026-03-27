@@ -361,9 +361,10 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
             "Work autonomously. Use your tools. Complete the task fully."
         )
 
-        # Spawn claude subprocess, capturing stdout+stderr together
+        # Spawn claude subprocess with streaming JSON output
         proc = subprocess.Popen(
-            ["claude", "--print", "--dangerously-skip-permissions", prompt],
+            ["claude", "--print", "--dangerously-skip-permissions",
+             "--verbose", "--output-format", "stream-json", prompt],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             stdin=subprocess.DEVNULL,
@@ -378,14 +379,59 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
             "agent": agent,
         }
 
-        # Background thread reads output line-by-line until the process exits
+        def _parse_stream_event(line):
+            """Parse a stream-json event into a human-readable string, or None to skip."""
+            try:
+                event = json.loads(line)
+            except Exception:
+                return line if line.strip() else None
+
+            t = event.get("type")
+
+            if t == "assistant":
+                content = event.get("message", {}).get("content", [])
+                for item in content:
+                    if item.get("type") == "text" and item.get("text", "").strip():
+                        return item["text"].strip()
+                    elif item.get("type") == "tool_use":
+                        name = item.get("name", "")
+                        inp = item.get("input", {})
+                        if name == "Read":
+                            return f"> Read: {inp.get('file_path', '')}"
+                        elif name == "Write":
+                            return f"> Write: {inp.get('file_path', '')}"
+                        elif name == "Edit":
+                            return f"> Edit: {inp.get('file_path', '')}"
+                        elif name == "Bash":
+                            cmd = inp.get("command", "")[:80]
+                            return f"> $ {cmd}"
+                        elif name == "Glob":
+                            return f"> Glob: {inp.get('pattern', '')}"
+                        elif name == "Grep":
+                            return f"> Grep: {inp.get('pattern', '')}"
+                        else:
+                            return f"> {name}()"
+            elif t == "result":
+                subtype = event.get("subtype", "")
+                cost = event.get("total_cost_usd", 0)
+                if subtype == "success":
+                    return f"✓ Done  (${cost:.4f})"
+                else:
+                    return f"✗ Error: {event.get('result', '')}"
+
+            return None
+
         def _reader(fname, p):
             try:
                 for line in p.stdout:
+                    line = line.rstrip("\n")
+                    if not line:
+                        continue
                     try:
-                        running_tasks[fname]["output"].append(line.rstrip("\n"))
-                    except UnicodeDecodeError:
-                        # Skip lines that can't be decoded
+                        formatted = _parse_stream_event(line)
+                        if formatted:
+                            running_tasks[fname]["output"].append(formatted)
+                    except Exception:
                         pass
             finally:
                 p.wait()

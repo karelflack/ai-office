@@ -681,6 +681,14 @@
 </div>
 
 <script>
+// ---- AUTH GATE ----
+// Redirect to the login page if the session is not authenticated.
+// sessionStorage is cleared when the browser tab is closed, so this
+// guard re-runs on every fresh visit without disrupting normal navigation.
+if (!sessionStorage.getItem('authenticated')) {
+  window.location.replace('/dashboard/login.html');
+}
+
 // ============================================================
 // CONSTANTS
 // ============================================================
@@ -948,28 +956,34 @@ function tickAgents() {
         }
       }
     } else {
-      // Not walking — count down state timer
-      agent.stateTimer--;
-      if (agent.stateTimer <= 0) {
-        if (agent.state === 'working' || agent.state === 'talking') {
-          agent.state = 'idle';
-          agent.bubble = null;
-          agent.stateTimer = randi(20, 60);
-        } else if (agent.state === 'idle') {
-          decideNextAction(agent);
-        }
-      }
-
-      // Cursor blink for working agents
-      if (agent.state === 'working') {
-        agent.cursorTick++;
-        if (agent.cursorTick >= 18) {
-          agent.cursorTick = 0;
-          agent.cursorVisible = !agent.cursorVisible;
-        }
+      // If this agent has a real claude run active, lock state to 'working'
+      if (runningAgents.has(agent.id)) {
+        agent.state = 'working';
+        agent.stateTimer = 999;
       } else {
-        agent.cursorVisible = false;
-        agent.cursorTick = 0;
+        // Not walking — count down state timer
+        agent.stateTimer--;
+        if (agent.stateTimer <= 0) {
+          if (agent.state === 'working' || agent.state === 'talking') {
+            agent.state = 'idle';
+            agent.bubble = null;
+            agent.stateTimer = randi(20, 60);
+          } else if (agent.state === 'idle') {
+            decideNextAction(agent);
+          }
+        }
+
+        // Cursor blink for working agents
+        if (agent.state === 'working') {
+          agent.cursorTick++;
+          if (agent.cursorTick >= 18) {
+            agent.cursorTick = 0;
+            agent.cursorVisible = !agent.cursorVisible;
+          }
+        } else {
+          agent.cursorVisible = false;
+          agent.cursorTick = 0;
+        }
       }
     }
 
@@ -1833,8 +1847,14 @@ async function runTask(filename, agent) {
     const data = await res.json();
     if (!data.ok) throw new Error(data.error || 'Failed to start');
 
-    // Mark this agent as running in the canvas overlay
+    // Mark this agent as running in the canvas overlay and walk them to their desk
     runningAgents.add(agent);
+    const runningCanvasAgent = agents.find(a => a.id === agent);
+    if (runningCanvasAgent && DESKS[agent]) {
+      const pos = deskStandPos(agent);
+      startWalking(runningCanvasAgent, pos.x, pos.y, 'working');
+      runningCanvasAgent.bubble = { text: 'On it...', timer: 80 };
+    }
 
     // Start polling for output
     let linesShown = 0;
@@ -1865,14 +1885,20 @@ async function runTask(filename, agent) {
         clearInterval(terminalPollInterval);
         document.getElementById('terminal-status').textContent = '\u2713 Done';
         document.getElementById('terminal-status').style.color = '#2ecc71';
-        // Remove from canvas glow
+        // Remove from canvas glow and reset agent state
         runningAgents.delete(agent);
+        const doneCanvasAgent = agents.find(a => a.id === agent);
+        if (doneCanvasAgent) {
+          doneCanvasAgent.state = 'idle';
+          doneCanvasAgent.stateTimer = randi(20, 40);
+          doneCanvasAgent.bubble = { text: 'Done!', timer: 100 };
+        }
         // Reload tasks after a short delay
         setTimeout(() => loadTasks().then(renderTaskManager), 1500);
       } else {
         document.getElementById('terminal-status').textContent = `Running... (${linesShown} lines)`;
       }
-    }, 800);
+    }, 400);
 
   } catch (e) {
     document.getElementById('terminal-output').textContent = `Error: ${e.message}\n\nMake sure server.py is running.`;
