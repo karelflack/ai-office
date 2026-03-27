@@ -62,6 +62,184 @@
     }
     #behind-btn:hover { background: #6b4520; }
 
+    #tasks-btn {
+      background: #0a1a0a;
+      border: 1px solid #1a4520;
+      color: #a0d0a0;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      padding: 6px 14px;
+      cursor: pointer;
+      letter-spacing: 1px;
+      transition: background 0.15s;
+    }
+    #tasks-btn:hover { background: #1a3020; }
+
+    /* ---- TASK MANAGER PANEL ---- */
+    #task-panel {
+      display: none;
+      background: #0a0a0a;
+      border-top: 1px solid #333;
+      padding: 1.5rem 2rem;
+    }
+    #task-panel.visible { display: block; }
+
+    #task-panel h2 {
+      font-size: 11px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: #6a9a6a;
+      margin-bottom: 1rem;
+      border-bottom: 1px solid #1a3a1a;
+      padding-bottom: 0.5rem;
+    }
+
+    /* New task form */
+    #task-form {
+      background: #111;
+      border: 1px solid #222;
+      padding: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    #task-form-title {
+      font-size: 9px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: #6a9a6a;
+      margin-bottom: 0.75rem;
+    }
+    .task-form-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .task-form-label {
+      font-size: 10px;
+      color: #666;
+      width: 42px;
+      flex-shrink: 0;
+    }
+    .task-input {
+      background: #0a0a0a;
+      border: 1px solid #333;
+      color: #d0d0d0;
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      padding: 4px 8px;
+      flex: 1;
+      min-width: 160px;
+    }
+    .task-input:focus { outline: none; border-color: #2a5a2a; }
+    .task-select {
+      background: #0a0a0a;
+      border: 1px solid #333;
+      color: #d0d0d0;
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      padding: 4px 8px;
+    }
+    .task-select:focus { outline: none; border-color: #2a5a2a; }
+    .task-btn {
+      background: #1a2a1a;
+      border: 1px solid #2a5a2a;
+      color: #a0d0a0;
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      padding: 4px 12px;
+      cursor: pointer;
+      letter-spacing: 1px;
+      white-space: nowrap;
+    }
+    .task-btn:hover { background: #2a3a2a; }
+    .task-btn-done {
+      background: #1a1a2a;
+      border: 1px solid #2a2a5a;
+      color: #a0a0d0;
+      font-family: 'Courier New', monospace;
+      font-size: 10px;
+      padding: 3px 8px;
+      cursor: pointer;
+    }
+    .task-btn-done:hover { background: #2a2a3a; }
+    .task-btn-assign {
+      background: #1a2a1a;
+      border: 1px solid #2a5a2a;
+      color: #a0d0a0;
+      font-family: 'Courier New', monospace;
+      font-size: 10px;
+      padding: 3px 8px;
+      cursor: pointer;
+    }
+    .task-btn-assign:hover { background: #2a3a2a; }
+
+    /* Task columns */
+    #task-columns {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+    }
+    .task-col-header {
+      font-size: 9px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: #6a9a6a;
+      margin-bottom: 0.5rem;
+      padding-bottom: 4px;
+      border-bottom: 1px solid #1a3a1a;
+    }
+    .task-card {
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      padding: 0.5rem 0.75rem;
+      margin-bottom: 0.5rem;
+      font-size: 11px;
+    }
+    .task-card:hover { background: #2a2a2a; }
+    .task-card-name {
+      color: #c0c0c0;
+      margin-bottom: 4px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .task-card-agent {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 9px;
+      color: #666;
+      margin-bottom: 6px;
+    }
+    .task-agent-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .task-card-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .task-col-empty {
+      font-size: 10px;
+      color: #333;
+      font-style: italic;
+    }
+    #task-error {
+      font-size: 11px;
+      color: #e74c3c;
+      margin-top: 0.5rem;
+    }
+    #task-form-error {
+      font-size: 10px;
+      color: #e74c3c;
+      margin-top: 4px;
+    }
+
     /* ---- MAIN AREA ---- */
     #main {
       display: flex;
@@ -319,7 +497,10 @@
     <div id="live-dot"></div>
     <h1>AI Office</h1>
   </div>
-  <button id="behind-btn" onclick="toggleTech()">&#9881; Behind the Scenes</button>
+  <div style="display:flex;gap:8px;align-items:center;">
+    <button id="tasks-btn" onclick="toggleTasks()">&#9632; Task Manager</button>
+    <button id="behind-btn" onclick="toggleTech()">&#9881; Behind the Scenes</button>
+  </div>
 </div>
 
 <!-- MAIN: canvas + sidebar -->
@@ -343,6 +524,55 @@
   <span id="toggle-arrow">&#9660;</span>
   <span>BEHIND THE SCENES &mdash; TECHNICAL DASHBOARD</span>
 </button>
+
+<!-- TASK MANAGER PANEL -->
+<div id="task-panel">
+  <h2>Task Manager</h2>
+
+  <!-- New Task Form -->
+  <div id="task-form">
+    <div id="task-form-title">New Task</div>
+    <div class="task-form-row">
+      <span class="task-form-label">Title:</span>
+      <input id="tf-title" class="task-input" type="text" placeholder="Task title..." />
+    </div>
+    <div class="task-form-row">
+      <span class="task-form-label">Agent:</span>
+      <select id="tf-agent" class="task-select">
+        <option value="orchestrator">Orchestrator</option>
+        <option value="developer">Developer</option>
+        <option value="researcher">Researcher</option>
+        <option value="planner">Planner</option>
+        <option value="reviewer">Reviewer</option>
+        <option value="writer">Writer</option>
+        <option value="generalist">Generalist</option>
+      </select>
+      <button class="task-btn" onclick="handleCreateTask()">+ Create Task</button>
+    </div>
+    <div class="task-form-row">
+      <span class="task-form-label">Desc:</span>
+      <input id="tf-desc" class="task-input" type="text" placeholder="Description (optional)" />
+    </div>
+    <div id="task-form-error"></div>
+  </div>
+
+  <!-- Task Columns -->
+  <div id="task-error"></div>
+  <div id="task-columns">
+    <div>
+      <div class="task-col-header">Backlog</div>
+      <div id="task-col-backlog"></div>
+    </div>
+    <div>
+      <div class="task-col-header">Active</div>
+      <div id="task-col-active"></div>
+    </div>
+    <div>
+      <div class="task-col-header">Completed</div>
+      <div id="task-col-completed"></div>
+    </div>
+  </div>
+</div>
 
 <!-- TECHNICAL PANEL -->
 <div id="tech-panel">
@@ -1195,6 +1425,216 @@ function escHtml(str) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
+}
+
+// ============================================================
+// TASK MANAGER
+// ============================================================
+
+let taskData = { backlog: [], active: [], completed: [] };
+let tasksVisible = false;
+
+// Toggle the task panel open/closed
+function toggleTasks() {
+  tasksVisible = !tasksVisible;
+  document.getElementById('task-panel').classList.toggle('visible', tasksVisible);
+  if (tasksVisible) {
+    loadTasks();
+  }
+}
+
+// Derive a human-readable label from a task filename like "2026-03-27-my-task.md"
+function taskLabel(filename) {
+  // Strip date prefix (YYYY-MM-DD-) and .md extension
+  let name = filename.replace(/^\d{4}-\d{2}-\d{2}-/, '').replace(/\.md$/, '');
+  // Replace hyphens with spaces and capitalize first letter
+  name = name.replace(/-/g, ' ');
+  return name.charAt(0).toUpperCase() + name.slice(1);
+}
+
+// Extract the agent from task file markdown content (cached per filename)
+// We fetch content lazily and cache it to avoid hammering the server
+const taskContentCache = {};
+
+async function fetchTaskContent(filename) {
+  if (taskContentCache[filename]) return taskContentCache[filename];
+  try {
+    const resp = await fetch(`/api/tasks/${encodeURIComponent(filename)}`);
+    if (!resp.ok) return null;
+    const text = await resp.text();
+    taskContentCache[filename] = text;
+    return text;
+  } catch (e) {
+    return null;
+  }
+}
+
+function parseAgentFromContent(content) {
+  if (!content) return null;
+  const match = content.match(/^\*\*Agent:\*\*\s*(.+)$/m);
+  return match ? match[1].trim() : null;
+}
+
+async function loadTasks() {
+  const errEl = document.getElementById('task-error');
+  errEl.textContent = '';
+  try {
+    const resp = await fetch('/api/tasks');
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    taskData = await resp.json();
+    await renderTaskManager();
+  } catch (e) {
+    errEl.textContent = 'Start server.py to enable task management.';
+  }
+}
+
+async function createTask(title, agent, description) {
+  const resp = await fetch('/api/tasks', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title, agent, description }),
+  });
+  if (!resp.ok) {
+    const data = await resp.json().catch(() => ({}));
+    throw new Error(data.error || `HTTP ${resp.status}`);
+  }
+  return resp.json();
+}
+
+async function assignTask(filename, agent) {
+  const resp = await fetch('/api/tasks/assign', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ filename, agent }),
+  });
+  if (!resp.ok) {
+    const data = await resp.json().catch(() => ({}));
+    throw new Error(data.error || `HTTP ${resp.status}`);
+  }
+  // Invalidate cache since content changed
+  delete taskContentCache[filename];
+  return resp.json();
+}
+
+async function doneTask(filename) {
+  const resp = await fetch('/api/tasks/done', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ filename }),
+  });
+  if (!resp.ok) {
+    const data = await resp.json().catch(() => ({}));
+    throw new Error(data.error || `HTTP ${resp.status}`);
+  }
+  delete taskContentCache[filename];
+  return resp.json();
+}
+
+async function handleCreateTask() {
+  const errEl = document.getElementById('task-form-error');
+  errEl.textContent = '';
+  const title = document.getElementById('tf-title').value.trim();
+  const agent = document.getElementById('tf-agent').value;
+  const desc = document.getElementById('tf-desc').value.trim();
+
+  if (!title) {
+    errEl.textContent = 'Title is required.';
+    return;
+  }
+
+  try {
+    await createTask(title, agent, desc);
+    document.getElementById('tf-title').value = '';
+    document.getElementById('tf-desc').value = '';
+    await loadTasks();
+  } catch (e) {
+    errEl.textContent = `Error: ${e.message}`;
+  }
+}
+
+async function handleAssign(filename, selectEl) {
+  const agent = selectEl.value;
+  try {
+    await assignTask(filename, agent);
+    await loadTasks();
+  } catch (e) {
+    document.getElementById('task-error').textContent = `Assign failed: ${e.message}`;
+  }
+}
+
+async function handleDone(filename) {
+  try {
+    await doneTask(filename);
+    await loadTasks();
+  } catch (e) {
+    document.getElementById('task-error').textContent = `Done failed: ${e.message}`;
+  }
+}
+
+// Render a colored dot for the agent
+function agentDotHtml(agentId) {
+  const color = AGENT_COLORS[agentId]?.primary || '#666';
+  return `<span class="task-agent-dot" style="background:${color}"></span>`;
+}
+
+// Inline agent select dropdown for backlog cards
+function agentSelectHtml(forAssign, filename) {
+  const id = `assign-sel-${filename.replace(/\./g, '-')}`;
+  const options = Object.entries(AGENT_COLORS)
+    .map(([k, v]) => `<option value="${k}">${v.name}</option>`)
+    .join('');
+  return `<select class="task-select" id="${escHtml(id)}" style="font-size:10px;padding:2px 4px;">${options}</select>
+    <button class="task-btn-assign" onclick="handleAssign('${escHtml(filename)}', document.getElementById('${escHtml(id)}'))">Assign</button>`;
+}
+
+async function renderTaskManager() {
+  // Fetch agent info for all visible tasks in parallel (up to 30 per column)
+  const allFiles = [
+    ...taskData.backlog.slice(0, 30),
+    ...taskData.active.slice(0, 30),
+    ...taskData.completed.slice(0, 20),
+  ];
+  await Promise.all(allFiles.map(f => fetchTaskContent(f)));
+
+  function renderCard(filename, bucket) {
+    const label = taskLabel(filename);
+    const content = taskContentCache[filename];
+    const agent = parseAgentFromContent(content) || 'unassigned';
+    const agentInfo = AGENT_COLORS[agent];
+    const agentLabel = agentInfo ? agentInfo.name : agent;
+    const agentColor = agentInfo ? agentInfo.primary : '#666';
+
+    let actionsHtml = '';
+    if (bucket === 'backlog') {
+      actionsHtml = `<div class="task-card-actions">${agentSelectHtml(true, filename)}</div>`;
+    } else if (bucket === 'active') {
+      actionsHtml = `<div class="task-card-actions">
+        <button class="task-btn-done" onclick="handleDone('${escHtml(filename)}')">&#10003; Done</button>
+      </div>`;
+    }
+
+    return `
+      <div class="task-card" title="${escHtml(filename)}">
+        <div class="task-card-name">${escHtml(label)}</div>
+        <div class="task-card-agent">
+          ${agentDotHtml(agent)}
+          <span style="color:${agentColor}">${escHtml(agentLabel)}</span>
+        </div>
+        ${actionsHtml}
+      </div>
+    `;
+  }
+
+  for (const bucket of ['backlog', 'active', 'completed']) {
+    const el = document.getElementById(`task-col-${bucket}`);
+    const files = taskData[bucket] || [];
+    if (files.length === 0) {
+      el.innerHTML = `<div class="task-col-empty">empty</div>`;
+    } else {
+      // Show most recent first (files are YYYY-MM-DD sorted, so reverse)
+      el.innerHTML = [...files].reverse().map(f => renderCard(f, bucket)).join('');
+    }
+  }
 }
 
 // ============================================================
