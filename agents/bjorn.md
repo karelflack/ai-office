@@ -32,3 +32,10 @@ Designs system architecture, makes infrastructure decisions, and plans how compo
 - Flag anything that would be hard to reverse
 - Ask: can a 2-person team maintain this at 2am?
 - Never skip the memory read — a previous decision may already constrain the architecture
+
+## Completing a Task
+1. Save deliverables to `output/` named `YYYY-MM-DD-<description>.<ext>`
+2. Update `output/README.md` table with your new file
+3. Update `memory/team_memory.md` and `memory/team_memory.json` under Agent Notes
+4. Move task file from `tasks/active/` to `tasks/completed/`
+5. Run: `git add -A && git commit -m "agent(<role>): <description>" && git push`

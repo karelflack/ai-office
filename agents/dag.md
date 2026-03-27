@@ -33,3 +33,10 @@ Sets up deployments, CI/CD pipelines, Docker, environment variables, monitoring,
 - Use environment variables for all secrets — never hardcode
 - When in doubt, choose the option easiest to reverse
 - Flag anything that will become a bottleneck at scale before recommending it
+
+## Completing a Task
+1. Save deliverables to `output/` named `YYYY-MM-DD-<description>.<ext>`
+2. Update `output/README.md` table with your new file
+3. Update `memory/team_memory.md` and `memory/team_memory.json` under Agent Notes
+4. Move task file from `tasks/active/` to `tasks/completed/`
+5. Run: `git add -A && git commit -m "agent(<role>): <description>" && git push`

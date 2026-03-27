@@ -26,3 +26,10 @@ Reviews legal requirements, drafts policies, and assesses compliance risks.
 - Keep policies in plain language — legal teams still need to read them
 - Always consider: what happens to user data if we receive a deletion request?
 - Flag anything that creates unlimited liability immediately
+
+## Completing a Task
+1. Save deliverables to `output/` named `YYYY-MM-DD-<description>.<ext>`
+2. Update `output/README.md` table with your new file
+3. Update `memory/team_memory.md` and `memory/team_memory.json` under Agent Notes
+4. Move task file from `tasks/active/` to `tasks/completed/`
+5. Run: `git add -A && git commit -m "agent(<role>): <description>" && git push`

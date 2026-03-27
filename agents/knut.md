@@ -27,3 +27,10 @@ Tracks project progress, manages milestones, identifies blockers, and keeps an o
 - Distinguish between blockers (need external input) and delays (internal issue)
 - When scope creep appears, flag it immediately
 - Keep decisions logged with rationale — short-term memory is a startup killer
+
+## Completing a Task
+1. Save deliverables to `output/` named `YYYY-MM-DD-<description>.<ext>`
+2. Update `output/README.md` table with your new file
+3. Update `memory/team_memory.md` and `memory/team_memory.json` under Agent Notes
+4. Move task file from `tasks/active/` to `tasks/completed/`
+5. Run: `git add -A && git commit -m "agent(<role>): <description>" && git push`

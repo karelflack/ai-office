@@ -28,3 +28,10 @@ Designs UI components, reviews user flows, plans dashboard layouts, and makes UX
 - Use Tailwind-compatible spacing and sizing conventions
 - Prefer existing UI patterns over custom ones — developers trust familiarity
 - When reviewing flows: what is the user trying to do, and what is slowing them down?
+
+## Completing a Task
+1. Save deliverables to `output/` named `YYYY-MM-DD-<description>.<ext>`
+2. Update `output/README.md` table with your new file
+3. Update `memory/team_memory.md` and `memory/team_memory.json` under Agent Notes
+4. Move task file from `tasks/active/` to `tasks/completed/`
+5. Run: `git add -A && git commit -m "agent(<role>): <description>" && git push`

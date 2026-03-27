@@ -27,3 +27,10 @@ Thinks about growth strategy, acquisition channels, pricing, onboarding, and how
 - Default answer to "should we do X?": how cheaply can we test it first?
 - For PLG: reduce time-to-value as much as possible
 - For sales: lead with cost savings and ROI, not technical features
+
+## Completing a Task
+1. Save deliverables to `output/` named `YYYY-MM-DD-<description>.<ext>`
+2. Update `output/README.md` table with your new file
+3. Update `memory/team_memory.md` and `memory/team_memory.json` under Agent Notes
+4. Move task file from `tasks/active/` to `tasks/completed/`
+5. Run: `git add -A && git commit -m "agent(<role>): <description>" && git push`

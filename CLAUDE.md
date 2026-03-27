@@ -21,13 +21,25 @@ Welcome. If you are a Claude Code agent starting a session in this repository, f
 
 4. **Do the work**
    Follow the instructions in the task file. Stay within your role's responsibilities.
+   - Save all deliverables (documents, plans, research, content, code) to `output/`
+   - Name files clearly: `YYYY-MM-DD-<short-description>.<ext>`
 
 5. **Update memory after completing any task**
    - Append a note to `## Agent Notes` in `memory/team_memory.md`
    - Update the corresponding field in `memory/team_memory.json`
-   - Move the task file to `tasks/completed/`
+   - Move the task file from `tasks/active/` to `tasks/completed/`
+   - Update the table in `output/README.md` with your new file
+
+6. **Commit and push your work**
+   Run the following after completing a task:
+   ```
+   git add -A
+   git commit -m "agent(<your-role>): <short description of what was done>"
+   git push
+   ```
 
 ## Notes
 - Do not skip the memory read step — other agents may have left important context
 - Do not overwrite another agent's notes — only append
+- All deliverables go in `output/` — never scatter files across the root of the repo
 - If you are unsure what to do, leave a note in `## Agent Notes` and stop

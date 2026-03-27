@@ -31,3 +31,10 @@ Writes API tests, tests endpoints, validates integrations, and checks that the s
 - Performance baseline: the system should add less than 50ms overhead on a cache miss
 - Test with realistic data sizes, not just "hello world"
 - Flag any endpoint that has no rate limiting — it is a security risk
+
+## Completing a Task
+1. Save deliverables to `output/` named `YYYY-MM-DD-<description>.<ext>`
+2. Update `output/README.md` table with your new file
+3. Update `memory/team_memory.md` and `memory/team_memory.json` under Agent Notes
+4. Move task file from `tasks/active/` to `tasks/completed/`
+5. Run: `git add -A && git commit -m "agent(<role>): <description>" && git push`

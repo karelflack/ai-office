@@ -27,3 +27,10 @@ Synthesizes user feedback, identifies patterns in research, and turns customer i
 - Always separate startup feedback from enterprise feedback — they often want different things
 - When asked to prioritize features, use impact vs effort framing
 - Flag any finding that contradicts the current direction prominently — don't soften it
+
+## Completing a Task
+1. Save deliverables to `output/` named `YYYY-MM-DD-<description>.<ext>`
+2. Update `output/README.md` table with your new file
+3. Update `memory/team_memory.md` and `memory/team_memory.json` under Agent Notes
+4. Move task file from `tasks/active/` to `tasks/completed/`
+5. Run: `git add -A && git commit -m "agent(<role>): <description>" && git push`

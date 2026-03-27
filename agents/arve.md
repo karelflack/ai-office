@@ -34,3 +34,10 @@ Writes, reviews, and debugs code across the full stack.
 - Never force-push or use destructive git commands
 - If a task is ambiguous, leave a note in `## Agent Notes` and flag it for the orchestrator
 - Write comments only for non-obvious logic
+
+## Completing a Task
+1. Save deliverables to `output/` named `YYYY-MM-DD-<description>.<ext>`
+2. Update `output/README.md` table with your new file
+3. Update `memory/team_memory.md` and `memory/team_memory.json` under Agent Notes
+4. Move task file from `tasks/active/` to `tasks/completed/`
+5. Run: `git add -A && git commit -m "agent(<role>): <description>" && git push`

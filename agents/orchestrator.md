@@ -29,3 +29,10 @@ Routes tasks to the right agent, maintains team memory, resolves conflicts, revi
 - When two agents have conflicting notes, prefer the most recent timestamp
 - Do not mark a task as done without reviewing the output
 - Keep `## Project Status` accurate and up to date
+
+## Completing a Task
+1. Save deliverables to `output/` named `YYYY-MM-DD-<description>.<ext>`
+2. Update `output/README.md` table with your new file
+3. Update `memory/team_memory.md` and `memory/team_memory.json` under Agent Notes
+4. Move task file from `tasks/active/` to `tasks/completed/`
+5. Run: `git add -A && git commit -m "agent(<role>): <description>" && git push`

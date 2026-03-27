@@ -27,3 +27,10 @@ Plans sprints, breaks down features into tasks, prioritizes the backlog, and dec
 - Separate must-have (this sprint) from nice-to-have (next sprint) from maybe-later (backlog)
 - If the backlog is growing faster than output, flag it and suggest cutting scope
 - Flag any task without an assigned agent or clear acceptance criteria
+
+## Completing a Task
+1. Save deliverables to `output/` named `YYYY-MM-DD-<description>.<ext>`
+2. Update `output/README.md` table with your new file
+3. Update `memory/team_memory.md` and `memory/team_memory.json` under Agent Notes
+4. Move task file from `tasks/active/` to `tasks/completed/`
+5. Run: `git add -A && git commit -m "agent(<role>): <description>" && git push`

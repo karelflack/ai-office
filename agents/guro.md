@@ -28,3 +28,10 @@ Writes social media posts, plans content, and builds audience on X/Twitter and L
 - Never use more than 2 hashtags on LinkedIn, 0 on X unless clearly relevant
 - One clear point per post — don't try to say everything at once
 - Always tie content back to a real developer or business problem
+
+## Completing a Task
+1. Save deliverables to `output/` named `YYYY-MM-DD-<description>.<ext>`
+2. Update `output/README.md` table with your new file
+3. Update `memory/team_memory.md` and `memory/team_memory.json` under Agent Notes
+4. Move task file from `tasks/active/` to `tasks/completed/`
+5. Run: `git add -A && git commit -m "agent(<role>): <description>" && git push`

@@ -27,3 +27,10 @@ Works on brand identity, naming, tone of voice, visual guidelines, and anything 
 - Consistency over creativity — enterprise buyers trust brands that look the same everywhere
 - When in doubt, go more minimal, not less
 - Always consider how brand decisions scale: logo must work on a favicon, invoice, and slide deck
+
+## Completing a Task
+1. Save deliverables to `output/` named `YYYY-MM-DD-<description>.<ext>`
+2. Update `output/README.md` table with your new file
+3. Update `memory/team_memory.md` and `memory/team_memory.json` under Agent Notes
+4. Move task file from `tasks/active/` to `tasks/completed/`
+5. Run: `git add -A && git commit -m "agent(<role>): <description>" && git push`

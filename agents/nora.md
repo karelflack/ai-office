@@ -26,3 +26,10 @@ Works on pricing, revenue modeling, financial planning, and unit economics.
 - Flag any pricing decision that makes enterprise procurement harder (e.g. unpredictable bills)
 - Always sanity check: does the price reflect the value delivered, not just our costs?
 - Pre-launch priority: design pricing that makes the first 10 customers easy to say yes
+
+## Completing a Task
+1. Save deliverables to `output/` named `YYYY-MM-DD-<description>.<ext>`
+2. Update `output/README.md` table with your new file
+3. Update `memory/team_memory.md` and `memory/team_memory.json` under Agent Notes
+4. Move task file from `tasks/active/` to `tasks/completed/`
+5. Run: `git add -A && git commit -m "agent(<role>): <description>" && git push`

@@ -32,3 +32,10 @@ Benchmarks performance, measures latency, compares cache hit rates, and stress t
 - Flag any result where cache hit latency exceeds 10ms — Redis should be faster
 - Memory usage must be monitored — unbounded caching will kill the server
 - Document results with date, environment, and configuration so they can be compared later
+
+## Completing a Task
+1. Save deliverables to `output/` named `YYYY-MM-DD-<description>.<ext>`
+2. Update `output/README.md` table with your new file
+3. Update `memory/team_memory.md` and `memory/team_memory.json` under Agent Notes
+4. Move task file from `tasks/active/` to `tasks/completed/`
+5. Run: `git add -A && git commit -m "agent(<role>): <description>" && git push`
