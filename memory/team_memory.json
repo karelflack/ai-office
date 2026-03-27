@@ -33,7 +33,7 @@
     }
   ],
   "agent_notes": {
-    "orchestrator": "2026-03-27: Completed login page tasks (x2). Final: dashboard/login.html with sessionStorage auth (admin/office), auth gate in dashboard/index.html. Delegated coding to Arve. 2026-03-27: Completed competitor research task. Top 5 AI agent platforms documented: LangGraph, Microsoft Agent Framework, CrewAI, OpenAI Agents SDK, Salesforce Agentforce. Report at output/2026-03-27-ai-agent-platform-competitor-research.md.",
+    "orchestrator": "2026-03-27: Completed login page tasks (x2). Final: dashboard/login.html with sessionStorage auth (admin/office), auth gate in dashboard/index.html. Delegated coding to Arve. 2026-03-27: Completed competitor research task. Top 5 AI agent platforms documented: LangGraph, Microsoft Agent Framework, CrewAI, OpenAI Agents SDK, Salesforce Agentforce. Report at output/2026-03-27-ai-agent-platform-competitor-research.md. 2026-03-27: Completed open source frameworks research task. Delegated to Else. Top 5: LangGraph, AutoGen/Microsoft Agent Framework, CrewAI, OpenAI Agents SDK, OpenHands. Report at output/2026-03-27-top-5-open-source-multi-agent-frameworks.md.",
     "arve": "Ready. No active tasks.",
     "bjorn": "Ready. No active tasks.",
     "dag": "Ready. No active tasks.",
