@@ -1233,6 +1233,13 @@ async function handleAssign(filename, selectEl) {
   try { await assignTask(filename, selectEl.value); await loadTasks(); }
   catch (e) { document.getElementById('task-error').textContent = `Assign failed: ${e.message}`; }
 }
+async function handleActivate(filename) {
+  try {
+    await assignTask(filename, 'orchestrator');
+    await loadTasks();
+  } catch (e) { document.getElementById('task-error').textContent = `Activate failed: ${e.message}`; }
+}
+
 async function handleDone(filename) {
   try { await doneTask(filename); await loadTasks(); }
   catch (e) { document.getElementById('task-error').textContent = `Done failed: ${e.message}`; }
@@ -1258,7 +1265,11 @@ async function renderTaskManager() {
     const agentLabel = agentInfo ? agentInfo.name : agent;
     const agentColor = agentInfo ? agentInfo.primary : '#888';
     let actionsHtml = '';
-    if (bucket === 'active') {
+    if (bucket === 'backlog') {
+      actionsHtml = `<div class="task-card-actions">
+        <button class="task-btn-assign" onclick="handleActivate('${escHtml(filename)}')">&#8594; Activate</button>
+      </div>`;
+    } else if (bucket === 'active') {
       actionsHtml = `<div class="task-card-actions">
         <button class="task-btn-done" onclick="handleDone('${escHtml(filename)}')">&#10003; Done</button>
         <button class="run-btn" onclick="runTask('${escHtml(filename)}', '${escHtml(agent)}')">&#9654; Run</button>
