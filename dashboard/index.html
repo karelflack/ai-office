@@ -226,7 +226,17 @@
     }
     .task-card-agent { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-secondary); margin-bottom: 6px; }
     .task-agent-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
-    .task-card-actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .task-card-actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; flex: 1; }
+    .task-delete-btn {
+      margin-left: auto; flex-shrink: 0;
+      background: none; border: none;
+      color: var(--text-tertiary); font-size: 16px; line-height: 1;
+      cursor: pointer; padding: 2px 5px; border-radius: 4px;
+      transition: color 0.15s, background 0.15s;
+      opacity: 0;
+    }
+    .task-card:hover .task-delete-btn { opacity: 1; }
+    .task-delete-btn:hover { color: var(--accent-red); background: rgba(255,59,48,0.08); }
     .task-col-empty { font-size: 12px; color: var(--text-tertiary); font-style: italic; }
     #task-error { font-size: 12px; color: var(--accent-red); margin-top: 0.5rem; }
     #task-form-error { font-size: 11px; color: var(--accent-red); margin-top: 4px; }
@@ -1953,7 +1963,9 @@ async function handleAssign(filename, selectEl) {
 }
 async function handleActivate(filename) {
   try {
-    await assignTask(filename, 'orchestrator');
+    const content = await fetchTaskContent(filename);
+    const agent = parseAgentFromContent(content) || 'orchestrator';
+    await assignTask(filename, agent);
     await loadTasks();
   } catch (e) { document.getElementById('task-error').textContent = `Activate failed: ${e.message}`; }
 }
@@ -1987,6 +1999,18 @@ async function handleRunAll() {
   }
 }
 
+async function handleDeleteTask(filename) {
+  try {
+    const r = await fetch(`/api/projects/${currentProject}/tasks/delete`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filename }),
+    });
+    if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error(d.error || `HTTP ${r.status}`); }
+    delete taskContentCache[filename];
+    await loadTasks();
+  } catch (e) { document.getElementById('task-error').textContent = `Delete failed: ${e.message}`; }
+}
+
 async function handleDone(filename) {
   try { await doneTask(filename); await loadTasks(); }
   catch (e) { document.getElementById('task-error').textContent = `Done failed: ${e.message}`; }
@@ -2013,16 +2037,21 @@ async function renderTaskManager() {
     const agentInfo = AGENT_COLORS[agent];
     const agentLabel = agentInfo ? agentInfo.name : agent;
     const agentColor = agentInfo ? agentInfo.primary : '#888';
+    const deleteBtn = `<button class="task-delete-btn" onclick="handleDeleteTask('${escHtml(filename)}')" title="Delete task">&#215;</button>`;
     let actionsHtml = '';
     if (bucket === 'backlog') {
       actionsHtml = `<div class="task-card-actions">
         <button class="task-btn-assign" onclick="handleActivate('${escHtml(filename)}')">&#8594; Activate</button>
+        ${deleteBtn}
       </div>`;
     } else if (bucket === 'active') {
       actionsHtml = `<div class="task-card-actions">
         <button class="task-btn-done" onclick="handleDone('${escHtml(filename)}')">&#10003; Done</button>
         <button class="run-btn" onclick="runTask('${escHtml(filename)}', '${escHtml(agent)}')">&#9654; Run</button>
+        ${deleteBtn}
       </div>`;
+    } else if (bucket === 'completed') {
+      actionsHtml = `<div class="task-card-actions">${deleteBtn}</div>`;
     }
     return `<div class="task-card" title="${escHtml(filename)}">
       <div class="task-card-name">${escHtml(label)}</div>

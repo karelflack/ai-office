@@ -171,6 +171,8 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
             self._handle_post_project_done(slug)
         elif rest == "run":
             self._handle_post_project_run(slug)
+        elif rest == "tasks/delete":
+            self._handle_post_project_task_delete(slug)
         elif rest == "kickoff":
             self._handle_post_project_kickoff(slug)
         elif rest == "run/all":
@@ -281,6 +283,23 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
         except FileNotFoundError as e:
             self._error(404, str(e))
             return
+        self._json_response({"ok": True})
+
+    def _handle_post_project_task_delete(self, slug):
+        try:
+            body = json.loads(self._read_body())
+        except (json.JSONDecodeError, ValueError):
+            self._error(400, "Invalid JSON")
+            return
+        filename = (body.get("filename") or "").strip()
+        if not filename or ".." in filename or "/" in filename:
+            self._error(400, "Invalid filename")
+            return
+        bucket, path = task_mgr.find_task(filename, project_slug=slug)
+        if path is None:
+            self._error(404, "Task not found")
+            return
+        path.unlink()
         self._json_response({"ok": True})
 
     def _handle_post_project_run_all(self, slug):

@@ -8,7 +8,7 @@
   "kickoff_plan": [
     {
       "agent": "bjorn",
-      "title": "System Architecture & Data Model"
+      "title": "System Architecture & Data Models"
     },
     {
       "agent": "dag",
@@ -16,11 +16,11 @@
     },
     {
       "agent": "arve",
-      "title": "Implement FastAPI Application"
+      "title": "FastAPI Application Implementation"
     },
     {
       "agent": "magnus",
-      "title": "GDPR & Data Privacy Compliance"
+      "title": "GDPR & Privacy Compliance"
     }
   ]
 }

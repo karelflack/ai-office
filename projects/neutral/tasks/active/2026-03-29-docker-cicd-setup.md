@@ -6,4 +6,4 @@
 
 ## Description
 
-Create a docker-compose.yml with services for the FastAPI app and PostgreSQL (with a named volume for persistence). Write a Dockerfile for the FastAPI service using a multi-stage build. Set up a GitHub Actions workflow that runs on push: lint with ruff, run pytest, and build the Docker image. Include an .env.example with all required environment variables (DATABASE_URL, SECRET_KEY, etc.). Output all files to output/.
+Create a Docker Compose setup with services for the FastAPI app and PostgreSQL. Write a Dockerfile for the FastAPI app using a slim Python base image. Set up environment variable handling via .env files. Create a GitHub Actions CI pipeline that runs linting (ruff), type checking (mypy), and pytest on every push. Add a separate CD step that builds and pushes a Docker image on merge to main. Output docker-compose.yml, Dockerfile, and .github/workflows/ci.yml.
