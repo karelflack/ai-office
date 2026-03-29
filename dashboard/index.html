@@ -86,6 +86,17 @@
     }
     .glass-btn:hover { background: rgba(255,255,255,0.96); box-shadow: var(--shadow-md); }
 
+    #kickoff-header-btn {
+      background: #1a7a38;
+      border: none; border-radius: var(--radius-sm);
+      color: #fff; font-family: var(--font);
+      font-size: 13px; font-weight: 500;
+      padding: 6px 14px; cursor: pointer;
+      box-shadow: var(--shadow-sm);
+      transition: opacity 0.15s;
+    }
+    #kickoff-header-btn:hover { opacity: 0.88; }
+
     /* ---- TASK PANEL ---- */
     #task-panel {
       display: none;
@@ -400,6 +411,103 @@
     .modal-btn-create:hover { opacity: 0.85; }
     #modal-error { font-size: 12px; color: var(--accent-red); margin-top: 6px; min-height: 16px; }
 
+    /* ---- KICKOFF PANEL ---- */
+    #kickoff-panel {
+      display: none;
+      background: rgba(255,255,255,0.72);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--glass-border);
+      padding: 1.75rem 2rem;
+    }
+    #kickoff-panel.visible { display: block; }
+    #kickoff-inner { max-width: 680px; }
+    #kickoff-panel h2 { font-size: 15px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px; }
+    #kickoff-panel p { font-size: 13px; color: var(--text-secondary); margin-bottom: 1.25rem; }
+    #kickoff-input {
+      width: 100%;
+      background: rgba(255,255,255,0.92);
+      border: 1px solid rgba(0,0,0,0.1);
+      border-radius: var(--radius-md);
+      color: var(--text-primary);
+      font-family: var(--font);
+      font-size: 14px;
+      line-height: 1.6;
+      padding: 12px 14px;
+      resize: none;
+      min-height: 88px;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      display: block;
+      margin-bottom: 0.875rem;
+    }
+    #kickoff-input:focus {
+      outline: none;
+      border-color: var(--accent-green);
+      box-shadow: 0 0 0 3px rgba(48,209,88,0.15);
+    }
+    #kickoff-btn {
+      background: #1a7a38;
+      border: none; border-radius: var(--radius-sm);
+      color: #fff; font-family: var(--font);
+      font-size: 14px; font-weight: 500;
+      padding: 9px 20px; cursor: pointer;
+      display: inline-flex; align-items: center; gap: 7px;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+    #kickoff-btn:hover { opacity: 0.88; }
+    #kickoff-btn:active { transform: scale(0.98); }
+    #kickoff-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    #kickoff-status { font-size: 13px; color: var(--text-secondary); margin-top: 0.875rem; min-height: 20px; }
+    #kickoff-error { font-size: 13px; color: var(--accent-red); margin-top: 0.875rem; }
+
+    /* Plan result */
+    #kickoff-result { display: none; margin-top: 1.5rem; }
+    #kickoff-result h3 { font-size: 12px; font-weight: 600; letter-spacing: 0.4px; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 0.875rem; }
+    #kickoff-task-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 1.25rem; }
+    .kickoff-task-card {
+      background: rgba(255,255,255,0.9);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-md);
+      padding: 0.875rem 1rem;
+      display: flex; gap: 12px;
+      box-shadow: var(--shadow-sm);
+      animation: kickoffFadeIn 0.3s ease forwards;
+      opacity: 0;
+    }
+    @keyframes kickoffFadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .kickoff-task-num {
+      width: 22px; height: 22px; border-radius: 50%;
+      background: rgba(0,0,0,0.06); color: var(--text-secondary);
+      font-size: 11px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; margin-top: 1px;
+    }
+    .kickoff-task-body { flex: 1; min-width: 0; }
+    .kickoff-task-header { display: flex; align-items: center; gap: 8px; margin-bottom: 3px; }
+    .kickoff-task-title { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+    .kickoff-task-agent {
+      font-size: 11px; font-weight: 500; padding: 1px 7px;
+      border-radius: 999px; flex-shrink: 0;
+    }
+    .kickoff-task-desc { font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
+    #kickoff-actions { display: flex; gap: 8px; align-items: center; }
+    #kickoff-open-tasks {
+      background: var(--accent); border: none; border-radius: var(--radius-sm);
+      color: #fff; font-family: var(--font); font-size: 13px; font-weight: 500;
+      padding: 7px 16px; cursor: pointer; transition: opacity 0.15s;
+    }
+    #kickoff-open-tasks:hover { opacity: 0.85; }
+    #kickoff-again {
+      background: rgba(0,0,0,0.05); border: 1px solid rgba(0,0,0,0.08);
+      border-radius: var(--radius-sm); color: var(--text-secondary);
+      font-family: var(--font); font-size: 13px;
+      padding: 7px 14px; cursor: pointer; transition: background 0.15s;
+    }
+    #kickoff-again:hover { background: rgba(0,0,0,0.09); }
+
     /* ---- OUTPUT PANEL ---- */
     #output-panel {
       display: none;
@@ -622,6 +730,7 @@
     </div>
   </div>
   <div style="display:flex;gap:8px;align-items:center;">
+    <button id="kickoff-header-btn" onclick="toggleKickoff()">&#9654; Kickoff</button>
     <button class="glass-btn" onclick="toggleAgents()">Agents</button>
     <button class="glass-btn" onclick="toggleOutput()">Output</button>
     <button class="glass-btn" onclick="toggleTasks()">Task Manager</button>
@@ -699,6 +808,26 @@
     </div>
     <div id="terminal-output"></div>
     <div id="terminal-status"></div>
+  </div>
+</div>
+
+<!-- KICKOFF PANEL -->
+<div id="kickoff-panel">
+  <div id="kickoff-inner">
+    <h2>What do you want to build?</h2>
+    <p>Describe your project and the orchestrator will generate a task plan and assign the right agents.</p>
+    <textarea id="kickoff-input" placeholder="e.g. A SaaS app that lets teams track customer feedback and turn it into product decisions. Python backend, React frontend."></textarea>
+    <button id="kickoff-btn" onclick="handleKickoff()">&#9654;&nbsp; Generate Plan</button>
+    <div id="kickoff-error"></div>
+    <div id="kickoff-status"></div>
+    <div id="kickoff-result">
+      <h3>Plan created</h3>
+      <div id="kickoff-task-list"></div>
+      <div id="kickoff-actions">
+        <button id="kickoff-open-tasks" onclick="openTaskManagerFromKickoff()">Open Task Manager &#8594;</button>
+        <button id="kickoff-again" onclick="resetKickoff()">Plan another</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1331,6 +1460,102 @@ function gameLoop(timestamp) {
   }
   requestAnimationFrame(gameLoop);
 }
+
+// ============================================================
+// KICKOFF
+// ============================================================
+let kickoffVisible = false;
+
+function toggleKickoff() {
+  kickoffVisible = !kickoffVisible;
+  document.getElementById('kickoff-panel').classList.toggle('visible', kickoffVisible);
+  if (kickoffVisible) setTimeout(() => document.getElementById('kickoff-input').focus(), 50);
+}
+
+async function handleKickoff() {
+  const description = document.getElementById('kickoff-input').value.trim();
+  const errEl  = document.getElementById('kickoff-error');
+  const statEl = document.getElementById('kickoff-status');
+  errEl.textContent = '';
+
+  if (!description) { errEl.textContent = 'Describe what you want to build first.'; return; }
+
+  const btn = document.getElementById('kickoff-btn');
+  btn.disabled = true;
+  document.getElementById('kickoff-result').style.display = 'none';
+
+  // Animate status while waiting
+  const dots = ['', '.', '..', '...'];
+  let dotIdx = 0;
+  const interval = setInterval(() => {
+    statEl.textContent = `Orchestrator is planning${dots[dotIdx++ % 4]}`;
+  }, 450);
+
+  try {
+    const r = await fetch(`/api/projects/${currentProject}/kickoff`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ description }),
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
+    clearInterval(interval);
+    statEl.textContent = '';
+    showKickoffResult(data.tasks);
+  } catch (e) {
+    clearInterval(interval);
+    statEl.textContent = '';
+    errEl.textContent = `Error: ${e.message}`;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function showKickoffResult(tasks) {
+  const list = document.getElementById('kickoff-task-list');
+  list.innerHTML = tasks.map((t, i) => {
+    const col = AGENT_COLORS[t.agent];
+    const color = col ? col.primary : '#888';
+    const name  = col ? col.name   : t.agent;
+    return `<div class="kickoff-task-card" style="animation-delay:${i * 80}ms">
+      <div class="kickoff-task-num">${i + 1}</div>
+      <div class="kickoff-task-body">
+        <div class="kickoff-task-header">
+          <span class="kickoff-task-title">${escHtml(t.title)}</span>
+          <span class="kickoff-task-agent" style="background:${color}22;color:${color};border:1px solid ${color}44">${escHtml(name)}</span>
+        </div>
+        <div class="kickoff-task-desc">${escHtml(t.description)}</div>
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('kickoff-result').style.display = 'block';
+  // Log to activity
+  addLog('orchestrator', null, `Plan ready: ${tasks.length} tasks created`);
+  // Refresh task manager if open
+  if (tasksVisible) loadTasks();
+}
+
+function openTaskManagerFromKickoff() {
+  kickoffVisible = false;
+  document.getElementById('kickoff-panel').classList.remove('visible');
+  if (!tasksVisible) toggleTasks();
+  else loadTasks();
+}
+
+function resetKickoff() {
+  document.getElementById('kickoff-input').value = '';
+  document.getElementById('kickoff-result').style.display = 'none';
+  document.getElementById('kickoff-error').textContent = '';
+  document.getElementById('kickoff-status').textContent = '';
+  document.getElementById('kickoff-input').focus();
+}
+
+// Ctrl+Enter submits kickoff
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+    if (kickoffVisible) handleKickoff();
+  }
+});
 
 // ============================================================
 // OUTPUT PANEL

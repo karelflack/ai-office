@@ -8,6 +8,7 @@ Run with: python3 server.py
 import http.server
 import json
 import os
+import re
 import subprocess
 import threading
 from pathlib import Path
@@ -170,6 +171,8 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
             self._handle_post_project_done(slug)
         elif rest == "run":
             self._handle_post_project_run(slug)
+        elif rest == "kickoff":
+            self._handle_post_project_kickoff(slug)
         else:
             self._error(404, f"Not found: /api/projects/{sub}")
 
@@ -277,6 +280,102 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
             self._error(404, str(e))
             return
         self._json_response({"ok": True})
+
+    def _handle_post_project_kickoff(self, slug):
+        try:
+            body = json.loads(self._read_body())
+        except (json.JSONDecodeError, ValueError):
+            self._error(400, "Invalid JSON")
+            return
+
+        description = (body.get("description") or "").strip()
+        if not description:
+            self._error(400, "description is required")
+            return
+
+        prompt = f"""You are a project planner for an AI agent office.
+
+Project to plan: "{description}"
+
+Choose 3-6 agents and define their tasks. Available agents:
+- bjorn: system architecture, tech stack, data models, Mermaid diagrams
+- arve: writing code, scaffolding projects, implementing features
+- dag: DevOps, Docker, CI/CD pipelines, deployment
+- else: research, market analysis, competitor landscape
+- frode: sprint planning, backlog breakdown, story points
+- nora: pricing model, revenue streams, unit economics
+- magnus: legal, compliance, GDPR, privacy policy
+- ingrid: UI/UX design, wireframes, user flows
+- jorunn: brand identity, naming, tone of voice
+- halvard: growth strategy, acquisition channels, onboarding
+- knut: project milestones, progress tracking
+
+Rules:
+- For software projects: always start with bjorn (architecture), include arve (code)
+- Only include agents genuinely relevant to this project type
+- Order tasks logically: research/architecture first, implementation last
+- Each description must be specific — what exactly to produce, what format, what decisions to make
+
+Reply with ONLY a JSON array, no markdown, no explanation:
+[{{"agent":"bjorn","title":"System Architecture","description":"Design the full system..."}},...]"""
+
+        try:
+            proc = subprocess.run(
+                ["claude", "--print", "--dangerously-skip-permissions",
+                 "--output-format", "json", prompt],
+                capture_output=True, text=True,
+                cwd=str(BASE_DIR), timeout=120,
+            )
+        except subprocess.TimeoutExpired:
+            self._error(504, "Planning timed out — try a shorter description")
+            return
+        except FileNotFoundError:
+            self._error(500, "claude CLI not found")
+            return
+
+        # Parse outer JSON from --output-format json
+        try:
+            outer = json.loads(proc.stdout)
+            text = outer.get("result", "")
+        except (json.JSONDecodeError, AttributeError):
+            text = proc.stdout
+
+        # Extract JSON array from the text
+        match = re.search(r'\[[\s\S]*\]', text)
+        if not match:
+            self._error(500, "Could not parse plan from orchestrator — try again")
+            return
+
+        try:
+            plan = json.loads(match.group())
+        except json.JSONDecodeError:
+            self._error(500, "Orchestrator returned malformed plan — try again")
+            return
+
+        # Validate and create task files
+        created = []
+        valid_agents = agent_registry.VALID_AGENTS
+        for item in plan:
+            agent = str(item.get("agent", "orchestrator")).strip()
+            title = str(item.get("title", "Untitled")).strip()
+            desc  = str(item.get("description", "")).strip()
+            if agent not in valid_agents:
+                agent = "orchestrator"
+            filename = task_mgr.create_task(title, agent, desc, project_slug=slug)
+            created.append({"filename": filename, "agent": agent, "title": title, "description": desc})
+
+        # Update project memory with the kickoff description
+        mem_path = BASE_DIR / "projects" / slug / "memory" / "project_memory.json"
+        if mem_path.exists():
+            try:
+                m = json.loads(mem_path.read_text(encoding="utf-8"))
+                m["kickoff_description"] = description
+                m["kickoff_plan"] = [{"agent": t["agent"], "title": t["title"]} for t in created]
+                mem_path.write_text(json.dumps(m, indent=2), encoding="utf-8")
+            except Exception:
+                pass
+
+        self._json_response({"ok": True, "tasks": created})
 
     def _handle_get_project_output_list(self, slug):
         output_dir = BASE_DIR / "projects" / slug / "output"
