@@ -135,6 +135,10 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
         elif rest.startswith("tasks/"):
             filename = rest[len("tasks/"):]
             self._handle_get_project_task_file(slug, filename)
+        elif rest == "output":
+            self._handle_get_project_output_list(slug)
+        elif rest.startswith("output/"):
+            self._handle_get_project_output_file(slug, rest[len("output/"):])
         elif rest == "memory":
             self._handle_get_project_memory(slug)
         elif rest == "run/output":
@@ -273,6 +277,35 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
             self._error(404, str(e))
             return
         self._json_response({"ok": True})
+
+    def _handle_get_project_output_list(self, slug):
+        output_dir = BASE_DIR / "projects" / slug / "output"
+        if not output_dir.exists():
+            self._json_response([])
+            return
+        files = []
+        for f in sorted(output_dir.rglob("*")):
+            if f.is_file() and f.name != "README.md":
+                rel = str(f.relative_to(output_dir))
+                stat = f.stat()
+                files.append({"path": rel, "size": stat.st_size, "modified": stat.st_mtime})
+        self._json_response(files)
+
+    def _handle_get_project_output_file(self, slug, filepath):
+        if ".." in filepath:
+            self._error(400, "Invalid path")
+            return
+        output_dir = (BASE_DIR / "projects" / slug / "output").resolve()
+        target = (output_dir / filepath).resolve()
+        try:
+            target.relative_to(output_dir)
+        except ValueError:
+            self._error(400, "Invalid path")
+            return
+        if not target.exists() or not target.is_file():
+            self._error(404, "File not found")
+            return
+        self._text_response(target.read_text(encoding="utf-8", errors="replace"))
 
     def _handle_get_project_memory(self, slug):
         try:

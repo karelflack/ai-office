@@ -400,6 +400,104 @@
     .modal-btn-create:hover { opacity: 0.85; }
     #modal-error { font-size: 12px; color: var(--accent-red); margin-top: 6px; min-height: 16px; }
 
+    /* ---- OUTPUT PANEL ---- */
+    #output-panel {
+      display: none;
+      background: rgba(255,255,255,0.72);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--glass-border);
+      padding: 1.5rem 2rem;
+    }
+    #output-panel.visible { display: block; }
+    #output-panel h2 { font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 1.25rem; }
+    #output-layout {
+      display: grid;
+      grid-template-columns: 240px 1fr;
+      gap: 1rem;
+    }
+    #output-file-list {
+      background: rgba(255,255,255,0.88);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-md);
+      overflow-y: auto;
+      max-height: 520px;
+      box-shadow: var(--shadow-sm);
+    }
+    #output-file-list-empty {
+      padding: 14px 12px;
+      font-size: 12px;
+      color: var(--text-tertiary);
+      font-style: italic;
+    }
+    .output-file-item {
+      padding: 9px 12px;
+      cursor: pointer;
+      display: flex; align-items: center; gap: 8px;
+      border-bottom: 1px solid rgba(0,0,0,0.04);
+      transition: background 0.1s;
+    }
+    .output-file-item:last-child { border-bottom: none; }
+    .output-file-item:hover { background: rgba(0,0,0,0.03); }
+    .output-file-item.selected { background: rgba(0,113,227,0.08); }
+    .output-ext-badge {
+      font-size: 9px; font-weight: 700; text-transform: uppercase;
+      padding: 2px 5px; border-radius: 4px;
+      background: rgba(0,0,0,0.06); color: var(--text-secondary);
+      flex-shrink: 0; letter-spacing: 0.3px;
+    }
+    .output-file-name {
+      font-size: 12px; color: var(--text-primary);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;
+    }
+    .output-file-size { font-size: 10px; color: var(--text-tertiary); flex-shrink: 0; }
+    #output-viewer {
+      background: rgba(255,255,255,0.88);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-md);
+      overflow-y: auto;
+      max-height: 520px;
+      padding: 1.5rem 1.75rem;
+      box-shadow: var(--shadow-sm);
+      font-size: 13px;
+      line-height: 1.65;
+      color: var(--text-secondary);
+    }
+    #output-viewer-placeholder {
+      color: var(--text-tertiary);
+      font-size: 12px;
+      font-style: italic;
+    }
+    /* Markdown rendering */
+    #output-viewer h1 { font-size: 22px; font-weight: 700; color: var(--text-primary); margin: 0 0 14px; letter-spacing: -0.3px; }
+    #output-viewer h2 { font-size: 16px; font-weight: 600; color: var(--text-primary); margin: 20px 0 8px; border-bottom: 1px solid var(--glass-border); padding-bottom: 6px; }
+    #output-viewer h3 { font-size: 14px; font-weight: 600; color: var(--text-primary); margin: 14px 0 6px; }
+    #output-viewer p { margin: 0 0 10px; }
+    #output-viewer strong { color: var(--text-primary); font-weight: 600; }
+    #output-viewer em { font-style: italic; }
+    #output-viewer ul, #output-viewer ol { padding-left: 1.4em; margin: 0 0 10px; }
+    #output-viewer li { margin-bottom: 3px; }
+    #output-viewer code {
+      font-family: var(--font-mono); font-size: 12px;
+      background: rgba(0,0,0,0.06); border-radius: 4px;
+      padding: 1px 5px; color: var(--text-primary);
+    }
+    #output-viewer pre {
+      background: rgba(0,0,0,0.04); border: 1px solid var(--glass-border);
+      border-radius: var(--radius-sm); padding: 14px 16px;
+      overflow-x: auto; margin: 0 0 12px;
+    }
+    #output-viewer pre code { background: none; padding: 0; font-size: 12px; line-height: 1.55; }
+    #output-viewer hr { border: none; border-top: 1px solid var(--glass-border); margin: 16px 0; }
+    #output-viewer blockquote {
+      border-left: 3px solid var(--accent); margin: 0 0 10px;
+      padding: 2px 0 2px 14px; color: var(--text-secondary);
+    }
+    #output-viewer table { width: 100%; border-collapse: collapse; margin: 0 0 12px; font-size: 12px; }
+    #output-viewer th { background: rgba(0,0,0,0.04); font-weight: 600; color: var(--text-primary); padding: 7px 10px; border: 1px solid var(--glass-border); text-align: left; }
+    #output-viewer td { padding: 7px 10px; border: 1px solid var(--glass-border); }
+    .output-code-raw { font-family: var(--font-mono); font-size: 12px; line-height: 1.6; color: var(--text-primary); white-space: pre-wrap; word-break: break-all; }
+
     /* ---- AGENTS PANEL ---- */
     #agents-panel {
       display: none;
@@ -525,6 +623,7 @@
   </div>
   <div style="display:flex;gap:8px;align-items:center;">
     <button class="glass-btn" onclick="toggleAgents()">Agents</button>
+    <button class="glass-btn" onclick="toggleOutput()">Output</button>
     <button class="glass-btn" onclick="toggleTasks()">Task Manager</button>
     <button class="glass-btn" onclick="toggleTech()">Behind the Scenes</button>
   </div>
@@ -600,6 +699,19 @@
     </div>
     <div id="terminal-output"></div>
     <div id="terminal-status"></div>
+  </div>
+</div>
+
+<!-- OUTPUT PANEL -->
+<div id="output-panel">
+  <h2>Output</h2>
+  <div id="output-layout">
+    <div id="output-file-list">
+      <div id="output-file-list-empty">No output files yet.</div>
+    </div>
+    <div id="output-viewer">
+      <div id="output-viewer-placeholder">Select a file to view its contents.</div>
+    </div>
   </div>
 </div>
 
@@ -1221,6 +1333,141 @@ function gameLoop(timestamp) {
 }
 
 // ============================================================
+// OUTPUT PANEL
+// ============================================================
+let outputVisible = false;
+let outputFiles = [];
+let selectedOutputFile = null;
+
+function toggleOutput() {
+  outputVisible = !outputVisible;
+  document.getElementById('output-panel').classList.toggle('visible', outputVisible);
+  if (outputVisible) loadOutput();
+}
+
+async function loadOutput() {
+  try {
+    const r = await fetch(`/api/projects/${currentProject}/output`);
+    if (!r.ok) throw new Error();
+    outputFiles = await r.json();
+    renderOutputFileList();
+  } catch (e) {
+    document.getElementById('output-file-list').innerHTML =
+      '<div id="output-file-list-empty">Could not load output.</div>';
+  }
+}
+
+function formatBytes(n) {
+  if (n < 1024) return `${n}B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)}KB`;
+  return `${(n / 1024 / 1024).toFixed(1)}MB`;
+}
+
+function renderOutputFileList() {
+  const list = document.getElementById('output-file-list');
+  if (outputFiles.length === 0) {
+    list.innerHTML = '<div id="output-file-list-empty">No output files yet.</div>';
+    return;
+  }
+  list.innerHTML = outputFiles.map(f => {
+    const parts = f.path.split('.');
+    const ext = parts.length > 1 ? parts.pop() : '—';
+    const name = f.path.replace(/^\d{4}-\d{2}-\d{2}-/, '');
+    const selected = f.path === selectedOutputFile ? ' selected' : '';
+    return `<div class="output-file-item${selected}" onclick="viewOutputFile('${escHtml(f.path)}')">
+      <span class="output-ext-badge">${escHtml(ext)}</span>
+      <span class="output-file-name" title="${escHtml(f.path)}">${escHtml(name)}</span>
+      <span class="output-file-size">${formatBytes(f.size)}</span>
+    </div>`;
+  }).join('');
+}
+
+async function viewOutputFile(path) {
+  selectedOutputFile = path;
+  renderOutputFileList();
+  const viewer = document.getElementById('output-viewer');
+  viewer.innerHTML = '<div style="color:var(--text-tertiary);font-size:12px;">Loading...</div>';
+  try {
+    const r = await fetch(`/api/projects/${currentProject}/output/${encodeURIComponent(path)}`);
+    if (!r.ok) throw new Error();
+    const text = await r.text();
+    const ext = path.split('.').pop().toLowerCase();
+    viewer.innerHTML = ext === 'md' ? renderMarkdown(text) : `<div class="output-code-raw">${escHtml(text)}</div>`;
+  } catch (e) {
+    viewer.innerHTML = '<div style="color:var(--accent-red);font-size:12px;">Could not load file.</div>';
+  }
+}
+
+function renderMarkdown(raw) {
+  // Protect code blocks first
+  const blocks = [];
+  let s = raw.replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) => {
+    blocks.push({ lang, code: code.replace(/\n$/, '') });
+    return `\x00BLK${blocks.length - 1}\x00`;
+  });
+
+  // HTML-escape everything outside code blocks
+  s = s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+  // Headings
+  s = s.replace(/^# (.+)$/gm,   '<h1>$1</h1>');
+  s = s.replace(/^## (.+)$/gm,  '<h2>$1</h2>');
+  s = s.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+
+  // Bold / italic / inline code
+  s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  s = s.replace(/\*(.+?)\*/g,     '<em>$1</em>');
+  s = s.replace(/`([^`]+)`/g,     '<code>$1</code>');
+
+  // Blockquotes
+  s = s.replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>');
+
+  // HR
+  s = s.replace(/^---$/gm, '<hr>');
+
+  // Tables — detect rows starting with |
+  s = s.replace(/((?:^\|.+\|\n?)+)/gm, tableBlock => {
+    const rows = tableBlock.trim().split('\n');
+    let html = '<table>';
+    rows.forEach((row, i) => {
+      const cells = row.replace(/^\||\|$/g, '').split('|').map(c => c.trim());
+      if (cells.every(c => /^[-: ]+$/.test(c))) return; // separator row
+      const tag = i === 0 ? 'th' : 'td';
+      html += '<tr>' + cells.map(c => `<${tag}>${c}</${tag}>`).join('') + '</tr>';
+    });
+    return html + '</table>';
+  });
+
+  // Lists
+  s = s.replace(/^[\-\*] (.+)$/gm, '<li>$1</li>');
+  s = s.replace(/^\d+\. (.+)$/gm,  '<li>$1</li>');
+  s = s.replace(/(<li>[\s\S]*?<\/li>(?:\n|$))+/g, m => `<ul>${m}</ul>`);
+
+  // Paragraphs — wrap double-newline-separated blocks that aren't block elements
+  const blockTags = /^<(h[1-6]|ul|ol|li|table|blockquote|hr|pre)/;
+  s = s.split(/\n\n+/).map(para => {
+    para = para.trim();
+    if (!para) return '';
+    if (blockTags.test(para)) return para;
+    return `<p>${para.replace(/\n/g,'<br>')}</p>`;
+  }).join('\n');
+
+  // Restore code blocks
+  s = s.replace(/\x00BLK(\d+)\x00/g, (_, i) => {
+    const { code } = blocks[parseInt(i)];
+    const safe = code.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    return `<pre><code>${safe}</code></pre>`;
+  });
+
+  return s;
+}
+
+// Reload output list when a task completes
+function refreshOutputAfterRun() {
+  if (outputVisible) loadOutput();
+}
+
+// ============================================================
 // AGENTS PANEL
 // ============================================================
 let agentsVisible = false;
@@ -1339,9 +1586,11 @@ function switchProject(slug) {
   // Clear task cache when switching projects
   Object.keys(taskContentCache).forEach(k => delete taskContentCache[k]);
   document.getElementById('project-menu').classList.remove('open');
+  selectedOutputFile = null;
   updateProjectButton();
   renderProjectMenu();
   if (tasksVisible) loadTasks();
+  if (outputVisible) loadOutput();
 }
 
 function openNewProjectModal() {
@@ -1587,7 +1836,7 @@ async function runTask(filename, agent) {
         addLog(agent, null, `Completed: ${taskLabel(filename)}`);
         const doneCanvasAgent = agents.find(a => a.id === agent);
         if (doneCanvasAgent) { doneCanvasAgent.state = 'idle'; doneCanvasAgent.stateTimer = randi(20, 40); doneCanvasAgent.bubble = { text: 'Done!', timer: 120 }; }
-        setTimeout(() => loadTasks().then(renderTaskManager), 1500);
+        setTimeout(() => { loadTasks().then(renderTaskManager); refreshOutputAfterRun(); }, 1500);
       } else {
         document.getElementById('terminal-status').textContent = `Running... (${linesShown} lines)`;
       }
