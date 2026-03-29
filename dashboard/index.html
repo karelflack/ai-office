@@ -121,6 +121,14 @@
       font-size: 11px; font-weight: 600; letter-spacing: 0.5px;
       text-transform: uppercase; color: var(--text-secondary); margin-bottom: 0.75rem;
     }
+    #run-all-btn {
+      background: #1a7a38; border: none; border-radius: var(--radius-sm);
+      color: #fff; font-family: var(--font); font-size: 12px; font-weight: 500;
+      padding: 5px 12px; cursor: pointer; transition: opacity 0.15s;
+      display: none;
+    }
+    #run-all-btn:hover { opacity: 0.85; }
+    #run-all-btn.visible { display: inline-block; }
     .task-form-row { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem; flex-wrap: wrap; }
     .task-form-label { font-size: 12px; color: var(--text-secondary); width: 42px; flex-shrink: 0; }
     .task-input {
@@ -777,7 +785,10 @@
 
 <!-- TASK MANAGER PANEL -->
 <div id="task-panel">
-  <h2>Task Manager</h2>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
+    <h2 style="margin:0;">Task Manager</h2>
+    <button id="run-all-btn" onclick="handleRunAll()">&#9654; Run All Active</button>
+  </div>
   <div id="task-form">
     <div id="task-form-title">New Task — delivered to Orchestrator</div>
     <div class="task-form-row">
@@ -1947,6 +1958,35 @@ async function handleActivate(filename) {
   } catch (e) { document.getElementById('task-error').textContent = `Activate failed: ${e.message}`; }
 }
 
+async function handleRunAll() {
+  const btn = document.getElementById('run-all-btn');
+  btn.disabled = true;
+  btn.textContent = 'Starting...';
+  try {
+    const r = await fetch(`/api/projects/${currentProject}/run/all`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}',
+    });
+    const data = await r.json();
+    const started = data.started || [];
+    started.forEach(({ filename, agent }) => {
+      addLog(agent, null, `Started: ${taskLabel(filename)}`);
+      const canvasAgent = agents.find(a => a.id === agent);
+      if (canvasAgent) {
+        runningAgents.add(agent);
+        const pos = deskStandPos(agent);
+        startWalking(canvasAgent, pos.x, pos.y, 'working');
+        canvasAgent.bubble = { text: taskLabel(filename), timer: 300 };
+      }
+    });
+    btn.textContent = `▶ ${started.length} running`;
+    setTimeout(() => { btn.disabled = false; btn.textContent = '▶ Run All Active'; }, 3000);
+  } catch (e) {
+    btn.disabled = false;
+    btn.textContent = '▶ Run All Active';
+    document.getElementById('task-error').textContent = `Run all failed: ${e.message}`;
+  }
+}
+
 async function handleDone(filename) {
   try { await doneTask(filename); await loadTasks(); }
   catch (e) { document.getElementById('task-error').textContent = `Done failed: ${e.message}`; }
@@ -1962,6 +2002,8 @@ function agentSelectHtml(forAssign, filename) {
     <button class="task-btn-assign" onclick="handleAssign('${escHtml(filename)}', document.getElementById('${escHtml(id)}'))">Assign</button>`;
 }
 async function renderTaskManager() {
+  const runAllBtn = document.getElementById('run-all-btn');
+  runAllBtn.classList.toggle('visible', (taskData.active || []).length > 0);
   const allFiles = [...taskData.backlog.slice(0,30), ...taskData.active.slice(0,30), ...taskData.completed.slice(0,20)];
   await Promise.all(allFiles.map(f => fetchTaskContent(f)));
   function renderCard(filename, bucket) {

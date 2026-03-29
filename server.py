@@ -173,6 +173,8 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
             self._handle_post_project_run(slug)
         elif rest == "kickoff":
             self._handle_post_project_kickoff(slug)
+        elif rest == "run/all":
+            self._handle_post_project_run_all(slug)
         else:
             self._error(404, f"Not found: /api/projects/{sub}")
 
@@ -281,6 +283,94 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
             return
         self._json_response({"ok": True})
 
+    def _handle_post_project_run_all(self, slug):
+        """Start all active tasks for a project concurrently."""
+        active_dir = BASE_DIR / "projects" / slug / "tasks" / "active"
+        if not active_dir.exists():
+            self._json_response({"started": []})
+            return
+
+        started = []
+        for task_file in sorted(active_dir.glob("*.md")):
+            filename = task_file.name
+            # Parse agent from task file
+            content = task_file.read_text(encoding="utf-8")
+            match = re.search(r'^\*\*Agent:\*\*\s*(.+)$', content, re.MULTILINE)
+            agent = match.group(1).strip() if match else "orchestrator"
+            if agent not in agent_registry.VALID_AGENTS:
+                agent = "orchestrator"
+
+            key = (slug, filename)
+            if key in _live_procs:
+                continue  # already running
+
+            prompt = (
+                f"You are the {agent} agent in the ai-office multi-agent framework.\n\n"
+                f"You are working on project: '{slug}'\n\n"
+                "Steps to follow:\n"
+                "1. Read CLAUDE.md for session protocol\n"
+                f"2. Read agents/{agent}.md for your full role definition\n"
+                f"3. Read projects/{slug}/memory/project_memory.json for project context\n"
+                f"4. Read the task file at projects/{slug}/tasks/active/{filename}\n"
+                "5. Complete the task as described\n"
+                f"6. Write all deliverables to projects/{slug}/output/ — name files clearly\n"
+                f"7. Update projects/{slug}/output/README.md with your new file\n"
+                f"8. Update projects/{slug}/memory/project_memory.json with your notes\n"
+                f"9. Move the task to projects/{slug}/tasks/completed/ and delete it from active/\n\n"
+                "Work autonomously. Produce real, useful output."
+            )
+
+            proc = subprocess.Popen(
+                ["claude", "--print", "--dangerously-skip-permissions",
+                 "--verbose", "--output-format", "stream-json", prompt],
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                stdin=subprocess.DEVNULL, text=True, cwd=str(BASE_DIR),
+            )
+            _live_procs[key] = proc
+            mem.write_run(filename, [], False, project_slug=slug)
+
+            def _make_reader(k, fname, p, proj_slug):
+                def _reader():
+                    lines = []
+                    try:
+                        for line in p.stdout:
+                            line = line.rstrip("\n")
+                            if not line:
+                                continue
+                            try:
+                                event = json.loads(line)
+                                t = event.get("type")
+                                formatted = None
+                                if t == "assistant":
+                                    for item in event.get("message", {}).get("content", []):
+                                        if item.get("type") == "text" and item.get("text", "").strip():
+                                            formatted = item["text"].strip()
+                                        elif item.get("type") == "tool_use":
+                                            n = item.get("name", ""); i = item.get("input", {})
+                                            if n == "Read": formatted = f"> Read: {i.get('file_path', '')}"
+                                            elif n == "Write": formatted = f"> Write: {i.get('file_path', '')}"
+                                            elif n == "Edit": formatted = f"> Edit: {i.get('file_path', '')}"
+                                            elif n == "Bash": formatted = f"> $ {i.get('command', '')[:80]}"
+                                            else: formatted = f"> {n}()"
+                                elif t == "result":
+                                    cost = event.get("total_cost_usd", 0)
+                                    formatted = f"✓ Done  (${cost:.4f})" if event.get("subtype") == "success" else f"✗ Error: {event.get('result', '')}"
+                                if formatted:
+                                    lines.append(formatted)
+                                    mem.write_run(fname, lines, False, project_slug=proj_slug)
+                            except Exception:
+                                pass
+                    finally:
+                        p.wait()
+                        mem.write_run(fname, lines, True, project_slug=proj_slug)
+                        _live_procs.pop(k, None)
+                return _reader
+
+            threading.Thread(target=_make_reader(key, filename, proc, slug), daemon=True).start()
+            started.append({"filename": filename, "agent": agent})
+
+        self._json_response({"started": started})
+
     def _handle_post_project_kickoff(self, slug):
         try:
             body = json.loads(self._read_body())
@@ -356,7 +446,7 @@ Reply with ONLY a JSON array, no markdown, no explanation:
         created = []
         valid_agents = agent_registry.VALID_AGENTS
         for item in plan:
-            agent = str(item.get("agent", "orchestrator")).strip()
+            agent = str(item.get("agent", "orchestrator")).strip().lower()
             title = str(item.get("title", "Untitled")).strip()
             desc  = str(item.get("description", "")).strip()
             if agent not in valid_agents:
