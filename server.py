@@ -8,85 +8,30 @@ Run with: python3 server.py
 import http.server
 import json
 import os
-import re
-import shutil
 import subprocess
 import threading
-from datetime import date
 from pathlib import Path
+
+from core import agents as agent_registry
+from core import memory as mem
+from core import tasks as task_mgr
 
 PORT = 8000
 BASE_DIR = Path(__file__).parent.resolve()
-TASKS_DIR = BASE_DIR / "tasks"
-MEMORY_FILE = BASE_DIR / "memory" / "team_memory.json"
 
-VALID_AGENTS = {
-    "orchestrator", "arve", "bjorn", "dag", "else", "frode",
-    "halvard", "guro", "jorunn", "ingrid", "knut", "laila",
-    "magnus", "nora", "odd", "per",
-}
-
-TASK_DIRS = {
-    "backlog":   TASKS_DIR / "backlog",
-    "active":    TASKS_DIR / "active",
-    "completed": TASKS_DIR / "completed",
-}
-
-# Tracks in-flight claude subprocess runs keyed by filename.
-# Each value: { "process": Popen, "output": [str], "done": bool, "agent": str }
-running_tasks: dict = {}
-
-
-def slugify(text: str) -> str:
-    """Lowercase, strip non-alphanumeric chars, replace spaces/underscores with hyphens."""
-    text = text.lower()
-    text = re.sub(r"[^a-z0-9\s_-]", "", text)
-    text = re.sub(r"[\s_]+", "-", text)
-    text = re.sub(r"-+", "-", text)
-    return text.strip("-")
-
-
-def find_task(filename: str):
-    """Search backlog, active, completed for a task file. Returns (bucket, path) or (None, None)."""
-    for bucket, directory in TASK_DIRS.items():
-        candidate = directory / filename
-        if candidate.exists():
-            return bucket, candidate
-    return None, None
-
-
-def update_markdown_fields(content: str, agent: str = None, status: str = None) -> str:
-    """Use re.sub to update **Agent:** and **Status:** lines in markdown."""
-    if agent is not None:
-        content = re.sub(
-            r"^\*\*Agent:\*\*.*$",
-            f"**Agent:** {agent}",
-            content,
-            flags=re.MULTILINE,
-        )
-    if status is not None:
-        content = re.sub(
-            r"^\*\*Status:\*\*.*$",
-            f"**Status:** {status}",
-            content,
-            flags=re.MULTILINE,
-        )
-    return content
+# Tracks live subprocess references keyed by filename so we can stream output.
+# Run output is also written to runs/<filename>.json for persistence.
+_live_procs: dict = {}
 
 
 class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
     """Extends SimpleHTTPRequestHandler to intercept /api/* routes."""
 
-    # Serve static files from the project root, not cwd
     def translate_path(self, path):
-        # Let the parent resolve the path relative to BASE_DIR
         import urllib.parse
         path = urllib.parse.unquote(path)
-        # Strip query string
         path = path.split("?", 1)[0].split("#", 1)[0]
-        # Normalise
         path = os.path.normpath(path)
-        # Join with BASE_DIR instead of os.getcwd()
         return str(BASE_DIR / path.lstrip("/"))
 
     # ------------------------------------------------------------------
@@ -99,13 +44,12 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
 
     def do_OPTIONS(self):
-        """Handle CORS preflight."""
         self.send_response(200)
         self._send_cors_headers()
         self.end_headers()
 
     # ------------------------------------------------------------------
-    # JSON response helpers
+    # Response helpers
     # ------------------------------------------------------------------
 
     def _json_response(self, data, status=200):
@@ -143,8 +87,7 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
         if path == "/api/tasks":
             self._handle_get_tasks()
         elif path.startswith("/api/tasks/"):
-            filename = path[len("/api/tasks/"):]
-            self._handle_get_task_file(filename)
+            self._handle_get_task_file(path[len("/api/tasks/"):])
         elif path == "/api/memory":
             self._handle_get_memory()
         elif path == "/api/run/output":
@@ -152,7 +95,6 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
         elif path == "/api/run/status":
             self._handle_get_run_status()
         else:
-            # Fall through to static file serving
             super().do_GET()
 
     def do_POST(self):
@@ -176,8 +118,6 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
     # ------------------------------------------------------------------
 
     def _handle_post_login(self):
-        """Simple credential check against OFFICE_USER / OFFICE_PASS env vars.
-        Defaults to admin / admin if not set."""
         try:
             body = json.loads(self._read_body())
         except (json.JSONDecodeError, ValueError):
@@ -193,23 +133,14 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
             self._json_response({"ok": False, "error": "Invalid credentials."}, status=401)
 
     def _handle_get_tasks(self):
-        result = {}
-        for bucket, directory in TASK_DIRS.items():
-            directory.mkdir(parents=True, exist_ok=True)
-            files = sorted(
-                f.name for f in directory.iterdir()
-                if f.is_file() and f.name.endswith(".md")
-            )
-            result[bucket] = files
-        self._json_response(result)
+        self._json_response(task_mgr.list_tasks())
 
     def _handle_get_task_file(self, filename):
-        # Prevent path traversal
         if "/" in filename or ".." in filename:
             self._error(400, "Invalid filename")
             return
 
-        bucket, path = find_task(filename)
+        bucket, path = task_mgr.find_task(filename)
         if path is None:
             self._error(404, "Task not found")
             return
@@ -234,32 +165,10 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
             self._error(400, "agent is required")
             return
 
-        today = date.today().isoformat()
-        slug = slugify(title)
-        filename = f"{today}-{slug}.md"
-
-        backlog_dir = TASK_DIRS["backlog"]
-        backlog_dir.mkdir(parents=True, exist_ok=True)
-
-        task_path = backlog_dir / filename
-
-        # Build markdown content
-        content_lines = [
-            f"# {title}",
-            "",
-            f"**Agent:** {agent}",
-            f"**Status:** backlog",
-            f"**Created:** {today}",
-            "",
-        ]
-        if description:
-            content_lines += ["## Description", "", description, ""]
-
-        task_path.write_text("\n".join(content_lines), encoding="utf-8")
-
+        filename = task_mgr.create_task(title, agent, description)
         self._json_response({
             "filename": filename,
-            "path": str(task_path.relative_to(BASE_DIR)),
+            "path": f"tasks/backlog/{filename}",
         })
 
     def _handle_post_assign(self):
@@ -276,22 +185,11 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
             self._error(400, "filename and agent are required")
             return
 
-        bucket, src_path = find_task(filename)
-        if src_path is None:
-            self._error(404, "Task not found")
+        try:
+            task_mgr.assign_task(filename, agent)
+        except FileNotFoundError as e:
+            self._error(404, str(e))
             return
-
-        active_dir = TASK_DIRS["active"]
-        active_dir.mkdir(parents=True, exist_ok=True)
-        dest_path = active_dir / filename
-
-        # Update fields in markdown before moving
-        content = src_path.read_text(encoding="utf-8")
-        content = update_markdown_fields(content, agent=agent, status="active")
-
-        dest_path.write_text(content, encoding="utf-8")
-        if src_path != dest_path:
-            src_path.unlink()
 
         self._json_response({"ok": True})
 
@@ -307,21 +205,11 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
             self._error(400, "filename is required")
             return
 
-        bucket, src_path = find_task(filename)
-        if src_path is None:
-            self._error(404, "Task not found")
+        try:
+            task_mgr.complete_task(filename)
+        except FileNotFoundError as e:
+            self._error(404, str(e))
             return
-
-        completed_dir = TASK_DIRS["completed"]
-        completed_dir.mkdir(parents=True, exist_ok=True)
-        dest_path = completed_dir / filename
-
-        content = src_path.read_text(encoding="utf-8")
-        content = update_markdown_fields(content, status="completed")
-
-        dest_path.write_text(content, encoding="utf-8")
-        if src_path != dest_path:
-            src_path.unlink()
 
         self._json_response({"ok": True})
 
@@ -339,13 +227,11 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
             self._error(400, "filename and agent are required")
             return
 
-        # Task must be in active/
-        active_path = TASK_DIRS["active"] / filename
+        active_path = task_mgr.TASK_DIRS["active"] / filename
         if not active_path.exists():
             self._error(400, f"Task not found in active/: {filename}")
             return
 
-        # Build the prompt that claude will receive
         prompt = (
             f"You are the {agent} agent in the ai-office multi-agent framework.\n\n"
             "Your job: complete the task assigned to you.\n\n"
@@ -361,7 +247,6 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
             "Work autonomously. Use your tools. Complete the task fully."
         )
 
-        # Spawn claude subprocess with streaming JSON output
         proc = subprocess.Popen(
             ["claude", "--print", "--dangerously-skip-permissions",
              "--verbose", "--output-format", "stream-json", prompt],
@@ -372,25 +257,18 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
             cwd=str(BASE_DIR),
         )
 
-        running_tasks[filename] = {
-            "process": proc,
-            "output": [],
-            "done": False,
-            "agent": agent,
-        }
+        _live_procs[filename] = proc
+        mem.write_run(filename, [], False)
 
         def _parse_stream_event(line):
-            """Parse a stream-json event into a human-readable string, or None to skip."""
             try:
                 event = json.loads(line)
             except Exception:
                 return line if line.strip() else None
 
             t = event.get("type")
-
             if t == "assistant":
-                content = event.get("message", {}).get("content", [])
-                for item in content:
+                for item in event.get("message", {}).get("content", []):
                     if item.get("type") == "text" and item.get("text", "").strip():
                         return item["text"].strip()
                     elif item.get("type") == "tool_use":
@@ -403,8 +281,7 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
                         elif name == "Edit":
                             return f"> Edit: {inp.get('file_path', '')}"
                         elif name == "Bash":
-                            cmd = inp.get("command", "")[:80]
-                            return f"> $ {cmd}"
+                            return f"> $ {inp.get('command', '')[:80]}"
                         elif name == "Glob":
                             return f"> Glob: {inp.get('pattern', '')}"
                         elif name == "Grep":
@@ -412,16 +289,15 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
                         else:
                             return f"> {name}()"
             elif t == "result":
-                subtype = event.get("subtype", "")
                 cost = event.get("total_cost_usd", 0)
-                if subtype == "success":
+                if event.get("subtype") == "success":
                     return f"✓ Done  (${cost:.4f})"
                 else:
                     return f"✗ Error: {event.get('result', '')}"
-
             return None
 
         def _reader(fname, p):
+            lines = []
             try:
                 for line in p.stdout:
                     line = line.rstrip("\n")
@@ -430,59 +306,36 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
                     try:
                         formatted = _parse_stream_event(line)
                         if formatted:
-                            running_tasks[fname]["output"].append(formatted)
+                            lines.append(formatted)
+                            mem.write_run(fname, lines, False)
                     except Exception:
                         pass
             finally:
                 p.wait()
-                running_tasks[fname]["done"] = True
+                mem.write_run(fname, lines, True)
+                _live_procs.pop(fname, None)
 
-        t = threading.Thread(target=_reader, args=(filename, proc), daemon=True)
-        t.start()
-
+        threading.Thread(target=_reader, args=(filename, proc), daemon=True).start()
         self._json_response({"ok": True, "task_id": filename})
 
     def _handle_get_run_output(self):
         import urllib.parse
         qs = urllib.parse.parse_qs(self.path.split("?", 1)[1] if "?" in self.path else "")
         task_id = (qs.get("task_id") or [""])[0]
-
-        if task_id not in running_tasks:
-            self._json_response({"lines": [], "done": False})
-            return
-
-        entry = running_tasks[task_id]
-        self._json_response({
-            "lines": list(entry["output"]),
-            "done": entry["done"],
-        })
+        self._json_response(mem.read_run(task_id))
 
     def _handle_get_run_status(self):
-        running = []
-        done = []
-        for fname, entry in running_tasks.items():
-            if entry["done"]:
-                done.append(fname)
-            else:
-                running.append(fname)
-        self._json_response({"running": running, "done": done})
+        self._json_response(mem.list_runs())
 
     def _handle_get_memory(self):
-        if not MEMORY_FILE.exists():
-            self._error(404, "team_memory.json not found")
-            return
         try:
-            data = json.loads(MEMORY_FILE.read_text(encoding="utf-8"))
-            self._json_response(data)
+            self._json_response(mem.read_memory())
+        except FileNotFoundError:
+            self._error(404, "team_memory.json not found")
         except (json.JSONDecodeError, IOError) as e:
             self._error(500, str(e))
 
-    # ------------------------------------------------------------------
-    # Suppress noisy default logging (keep it clean)
-    # ------------------------------------------------------------------
-
     def log_message(self, format, *args):
-        # Only log API requests, suppress static file noise
         if "/api/" in (args[0] if args else ""):
             super().log_message(format, *args)
 

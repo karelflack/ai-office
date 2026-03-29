@@ -11,105 +11,58 @@ Usage:
 """
 
 import argparse
-import json
-import os
-import re
-import shutil
 import sys
-from datetime import date
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
-TASKS_BACKLOG = ROOT / "tasks" / "backlog"
-TASKS_ACTIVE = ROOT / "tasks" / "active"
-TASKS_COMPLETED = ROOT / "tasks" / "completed"
-MEMORY_JSON = ROOT / "memory" / "team_memory.json"
-AGENTS_DIR = ROOT / "agents"
+# Allow importing core/ from the repo root
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-VALID_AGENTS = ["orchestrator", "arve", "bjorn", "dag", "else", "frode", "halvard", "guro", "jorunn", "ingrid", "knut", "laila", "magnus", "nora", "odd", "per"]
+from core import agents as agent_registry
+from core import memory as mem
+from core import tasks as task_mgr
 
-
-def slugify(text: str) -> str:
-    text = text.lower().strip()
-    text = re.sub(r"[^\w\s-]", "", text)
-    text = re.sub(r"[\s_-]+", "-", text)
-    return text
+AGENTS_DIR = task_mgr.BASE_DIR / "agents"
 
 
 def new_task(title: str, agent: str) -> None:
-    if agent not in VALID_AGENTS:
-        print(f"Error: unknown agent '{agent}'. Valid agents: {', '.join(VALID_AGENTS)}")
+    if not agent_registry.is_valid(agent):
+        print(f"Error: unknown agent '{agent}'. Valid agents: {', '.join(sorted(agent_registry.VALID_AGENTS))}")
         sys.exit(1)
 
-    today = date.today().isoformat()
-    slug = slugify(title)
-    filename = f"{today}-{slug}.md"
-    filepath = TASKS_BACKLOG / filename
-
-    content = f"""# {title}
-
-**Agent:** {agent}
-**Status:** backlog
-**Created:** {today}
-
-## Description
-
-_Add task description here._
-
-## Acceptance Criteria
-
-- [ ] _Define what done looks like._
-"""
-    filepath.write_text(content)
+    filename = task_mgr.create_task(title, agent)
     print(f"Created: tasks/backlog/{filename}")
 
 
 def assign(task_file: str, agent: str) -> None:
-    if agent not in VALID_AGENTS:
-        print(f"Error: unknown agent '{agent}'. Valid agents: {', '.join(VALID_AGENTS)}")
+    if not agent_registry.is_valid(agent):
+        print(f"Error: unknown agent '{agent}'. Valid agents: {', '.join(sorted(agent_registry.VALID_AGENTS))}")
         sys.exit(1)
 
-    src = TASKS_BACKLOG / task_file
-    if not src.exists():
-        src = TASKS_ACTIVE / task_file
-    if not src.exists():
+    try:
+        task_mgr.assign_task(task_file, agent)
+    except FileNotFoundError:
         print(f"Error: task file '{task_file}' not found in backlog or active.")
         sys.exit(1)
 
-    content = src.read_text()
-    content = re.sub(r"(\*\*Agent:\*\*\s*)[\w]+", f"**Agent:** {agent}", content)
-    content = re.sub(r"(\*\*Status:\*\*\s*)[\w]+", "**Status:** active", content)
-
-    dest = TASKS_ACTIVE / task_file
-    dest.write_text(content)
-    if src != dest:
-        src.unlink()
     print(f"Assigned '{task_file}' to {agent} → tasks/active/")
 
 
 def done(task_file: str) -> None:
-    src = TASKS_ACTIVE / task_file
-    if not src.exists():
-        src = TASKS_BACKLOG / task_file
-    if not src.exists():
+    try:
+        task_mgr.complete_task(task_file)
+    except FileNotFoundError:
         print(f"Error: task file '{task_file}' not found.")
         sys.exit(1)
 
-    content = src.read_text()
-    content = re.sub(r"(\*\*Status:\*\*\s*)[\w]+", "**Status:** completed", content)
-
-    dest = TASKS_COMPLETED / task_file
-    dest.write_text(content)
-    src.unlink()
     print(f"Moved '{task_file}' → tasks/completed/")
 
 
 def status() -> None:
-    if not MEMORY_JSON.exists():
+    try:
+        memory = mem.read_memory()
+    except FileNotFoundError:
         print("Error: memory/team_memory.json not found.")
         sys.exit(1)
-
-    memory = json.loads(MEMORY_JSON.read_text())
 
     ps = memory.get("project_status", {})
     print(f"\n=== Project Status ===")
@@ -132,13 +85,11 @@ def status() -> None:
     for agent, note in notes.items():
         print(f"  {agent}: {note}")
 
-    active = list(TASKS_ACTIVE.glob("*.md"))
-    backlog = list(TASKS_BACKLOG.glob("*.md"))
-    completed = list(TASKS_COMPLETED.glob("*.md"))
+    counts = task_mgr.list_tasks()
     print(f"\n=== Tasks ===")
-    print(f"  Backlog:   {len(backlog)}")
-    print(f"  Active:    {len(active)}")
-    print(f"  Completed: {len(completed)}")
+    print(f"  Backlog:   {len(counts['backlog'])}")
+    print(f"  Active:    {len(counts['active'])}")
+    print(f"  Completed: {len(counts['completed'])}")
     print()
 
 
