@@ -21,9 +21,21 @@ def slugify(text: str) -> str:
     return text.strip("-")
 
 
-def find_task(filename: str):
+def _get_task_dirs(project_slug: str = None) -> dict:
+    """Return task directories — project-scoped if slug given, global otherwise."""
+    if project_slug:
+        base = BASE_DIR / "projects" / project_slug / "tasks"
+        return {
+            "backlog":   base / "backlog",
+            "active":    base / "active",
+            "completed": base / "completed",
+        }
+    return TASK_DIRS
+
+
+def find_task(filename: str, project_slug: str = None):
     """Search backlog → active → completed. Returns (bucket, Path) or (None, None)."""
-    for bucket, directory in TASK_DIRS.items():
+    for bucket, directory in _get_task_dirs(project_slug).items():
         candidate = directory / filename
         if candidate.exists():
             return bucket, candidate
@@ -44,11 +56,12 @@ def update_markdown_fields(content: str, agent: str = None, status: str = None) 
     return content
 
 
-def create_task(title: str, agent: str, description: str = "") -> str:
+def create_task(title: str, agent: str, description: str = "", project_slug: str = None) -> str:
     """Write a new task file to backlog/. Returns the filename."""
     today = date.today().isoformat()
     filename = f"{today}-{slugify(title)}.md"
-    backlog_dir = TASK_DIRS["backlog"]
+    dirs = _get_task_dirs(project_slug)
+    backlog_dir = dirs["backlog"]
     backlog_dir.mkdir(parents=True, exist_ok=True)
 
     lines = [
@@ -66,13 +79,14 @@ def create_task(title: str, agent: str, description: str = "") -> str:
     return filename
 
 
-def assign_task(filename: str, agent: str) -> None:
+def assign_task(filename: str, agent: str, project_slug: str = None) -> None:
     """Move task to active/ and update Agent + Status fields."""
-    bucket, src = find_task(filename)
+    bucket, src = find_task(filename, project_slug)
     if src is None:
         raise FileNotFoundError(f"Task not found: {filename}")
 
-    active_dir = TASK_DIRS["active"]
+    dirs = _get_task_dirs(project_slug)
+    active_dir = dirs["active"]
     active_dir.mkdir(parents=True, exist_ok=True)
     dest = active_dir / filename
 
@@ -83,13 +97,14 @@ def assign_task(filename: str, agent: str) -> None:
         src.unlink()
 
 
-def complete_task(filename: str) -> None:
+def complete_task(filename: str, project_slug: str = None) -> None:
     """Move task to completed/ and update Status field."""
-    bucket, src = find_task(filename)
+    bucket, src = find_task(filename, project_slug)
     if src is None:
         raise FileNotFoundError(f"Task not found: {filename}")
 
-    completed_dir = TASK_DIRS["completed"]
+    dirs = _get_task_dirs(project_slug)
+    completed_dir = dirs["completed"]
     completed_dir.mkdir(parents=True, exist_ok=True)
     dest = completed_dir / filename
 
@@ -100,10 +115,10 @@ def complete_task(filename: str) -> None:
         src.unlink()
 
 
-def list_tasks() -> dict:
+def list_tasks(project_slug: str = None) -> dict:
     """Return {"backlog": [...], "active": [...], "completed": [...]} sorted filenames."""
     result = {}
-    for bucket, directory in TASK_DIRS.items():
+    for bucket, directory in _get_task_dirs(project_slug).items():
         directory.mkdir(parents=True, exist_ok=True)
         result[bucket] = sorted(
             f.name for f in directory.iterdir()

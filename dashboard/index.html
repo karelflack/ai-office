@@ -285,6 +285,121 @@
     .status-state.walking { color: var(--accent); }
     .status-state.idle { color: var(--text-tertiary); }
 
+    /* ---- PROJECT SWITCHER ---- */
+    #project-switcher { position: relative; }
+    #project-btn {
+      background: rgba(255,255,255,0.78);
+      border: 1px solid rgba(0,0,0,0.09);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      font-family: var(--font);
+      font-size: 13px;
+      font-weight: 500;
+      padding: 5px 12px 5px 10px;
+      cursor: pointer;
+      display: flex; align-items: center; gap: 6px;
+      box-shadow: var(--shadow-sm);
+      transition: background 0.15s, box-shadow 0.15s;
+    }
+    #project-btn:hover { background: rgba(255,255,255,0.96); box-shadow: var(--shadow-md); }
+    #project-btn-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+    #project-btn-label { max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #project-btn-caret { font-size: 9px; color: var(--text-tertiary); margin-left: 2px; }
+    #project-menu {
+      display: none;
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0;
+      min-width: 200px;
+      background: rgba(255,255,255,0.96);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      border: 1px solid rgba(0,0,0,0.1);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-md);
+      z-index: 200;
+      overflow: hidden;
+    }
+    #project-menu.open { display: block; }
+    .project-menu-item {
+      padding: 9px 14px;
+      font-size: 13px;
+      cursor: pointer;
+      display: flex; align-items: center; gap: 8px;
+      transition: background 0.1s;
+      color: var(--text-primary);
+    }
+    .project-menu-item:hover { background: rgba(0,0,0,0.04); }
+    .project-menu-item.active { font-weight: 600; }
+    .project-menu-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .project-menu-divider { height: 1px; background: var(--glass-border); margin: 4px 0; }
+    .project-menu-new {
+      padding: 9px 14px;
+      font-size: 13px;
+      cursor: pointer;
+      color: var(--accent);
+      display: flex; align-items: center; gap: 6px;
+      transition: background 0.1s;
+    }
+    .project-menu-new:hover { background: rgba(0,113,227,0.06); }
+
+    /* ---- NEW PROJECT MODAL ---- */
+    #modal-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.18);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      z-index: 500;
+      align-items: center;
+      justify-content: center;
+    }
+    #modal-overlay.open { display: flex; }
+    #modal-card {
+      background: rgba(255,255,255,0.96);
+      border: 1px solid rgba(0,0,0,0.1);
+      border-radius: 16px;
+      padding: 2rem 2rem 1.5rem;
+      width: 360px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.18);
+    }
+    #modal-card h3 { font-size: 16px; font-weight: 600; margin-bottom: 1.25rem; }
+    .modal-field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 0.875rem; }
+    .modal-field label { font-size: 11px; font-weight: 600; color: var(--text-secondary); letter-spacing: 0.3px; text-transform: uppercase; }
+    .modal-field input, .modal-field textarea {
+      background: rgba(255,255,255,0.9);
+      border: 1px solid rgba(0,0,0,0.1);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      font-family: var(--font);
+      font-size: 14px;
+      padding: 8px 12px;
+      width: 100%;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .modal-field textarea { resize: vertical; min-height: 70px; }
+    .modal-field input:focus, .modal-field textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(0,113,227,0.15);
+    }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 1.25rem; }
+    .modal-btn-cancel {
+      background: rgba(0,0,0,0.05); border: 1px solid rgba(0,0,0,0.08);
+      border-radius: var(--radius-sm); color: var(--text-secondary);
+      font-family: var(--font); font-size: 13px; font-weight: 500;
+      padding: 7px 16px; cursor: pointer; transition: background 0.15s;
+    }
+    .modal-btn-cancel:hover { background: rgba(0,0,0,0.09); }
+    .modal-btn-create {
+      background: var(--accent); border: none;
+      border-radius: var(--radius-sm); color: #fff;
+      font-family: var(--font); font-size: 13px; font-weight: 500;
+      padding: 7px 16px; cursor: pointer; transition: opacity 0.15s;
+    }
+    .modal-btn-create:hover { opacity: 0.85; }
+    #modal-error { font-size: 12px; color: var(--accent-red); margin-top: 6px; min-height: 16px; }
+
     /* ---- TOGGLE BAR ---- */
     #toggle-bar {
       background: rgba(255,255,255,0.6);
@@ -366,10 +481,42 @@
   <div id="header-left">
     <div id="live-dot"></div>
     <h1>AI Office</h1>
+    <div id="project-switcher">
+      <button id="project-btn" onclick="toggleProjectMenu(event)">
+        <span id="project-btn-dot"></span>
+        <span id="project-btn-label">Neutral</span>
+        <span id="project-btn-caret">&#9660;</span>
+      </button>
+      <div id="project-menu">
+        <div id="project-menu-list"></div>
+        <div class="project-menu-divider"></div>
+        <div class="project-menu-new" onclick="openNewProjectModal()">&#43; New Project</div>
+      </div>
+    </div>
   </div>
   <div style="display:flex;gap:8px;align-items:center;">
     <button class="glass-btn" onclick="toggleTasks()">Task Manager</button>
     <button class="glass-btn" onclick="toggleTech()">Behind the Scenes</button>
+  </div>
+</div>
+
+<!-- NEW PROJECT MODAL -->
+<div id="modal-overlay" onclick="handleModalOverlayClick(event)">
+  <div id="modal-card">
+    <h3>New Project</h3>
+    <div class="modal-field">
+      <label>Name</label>
+      <input id="modal-name" type="text" placeholder="e.g. My SaaS App" autofocus />
+    </div>
+    <div class="modal-field">
+      <label>Description <span style="font-weight:400;text-transform:none;">(optional)</span></label>
+      <textarea id="modal-desc" placeholder="What is this project?"></textarea>
+    </div>
+    <div id="modal-error"></div>
+    <div class="modal-actions">
+      <button class="modal-btn-cancel" onclick="closeNewProjectModal()">Cancel</button>
+      <button class="modal-btn-create" onclick="handleCreateProject()">Create</button>
+    </div>
   </div>
 </div>
 
@@ -434,7 +581,7 @@
 <div id="tech-panel">
   <h2>Technical Dashboard</h2>
   <div style="margin-bottom:1rem;">
-    <button id="tech-load-btn" onclick="loadMemory()">Load team_memory.json</button>
+    <button id="tech-load-btn" onclick="loadMemory()">Load Project Memory</button>
     <div id="tech-error"></div>
   </div>
   <div id="tech-dashboard">
@@ -1127,10 +1274,10 @@ async function loadMemory() {
   const errEl = document.getElementById('tech-error');
   errEl.textContent = '';
   try {
-    const resp = await fetch('../memory/team_memory.json');
+    const resp = await fetch(`/api/projects/${currentProject}/memory`);
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     renderTechDashboard(await resp.json());
-  } catch (e) { errEl.textContent = `Could not load team_memory.json: ${e.message}`; }
+  } catch (e) { errEl.textContent = `Could not load project memory: ${e.message}`; }
 }
 function renderTechDashboard(data) {
   document.getElementById('tech-dashboard').classList.add('visible');
@@ -1156,6 +1303,112 @@ function escHtml(str) {
 }
 
 // ============================================================
+// PROJECT SWITCHER
+// ============================================================
+let currentProject = 'neutral';
+let projectList = [];
+
+const PROJECT_COLORS = [
+  '#8b5cf6','#3b82f6','#10b981','#f59e0b','#ef4444',
+  '#0ea5e9','#f97316','#14b8a6','#a855f7','#d97706',
+];
+function projectColor(slug) {
+  let h = 0;
+  for (let i = 0; i < slug.length; i++) h = (h * 31 + slug.charCodeAt(i)) & 0xffffffff;
+  return PROJECT_COLORS[Math.abs(h) % PROJECT_COLORS.length];
+}
+
+async function loadProjects() {
+  try {
+    const r = await fetch('/api/projects');
+    if (!r.ok) return;
+    projectList = await r.json();
+    renderProjectMenu();
+    updateProjectButton();
+  } catch (e) {}
+}
+
+function renderProjectMenu() {
+  const list = document.getElementById('project-menu-list');
+  list.innerHTML = projectList.map(p => `
+    <div class="project-menu-item ${p.slug === currentProject ? 'active' : ''}"
+         onclick="switchProject('${escHtml(p.slug)}')">
+      <span class="project-menu-dot" style="background:${projectColor(p.slug)}"></span>
+      ${escHtml(p.name)}
+    </div>
+  `).join('');
+}
+
+function updateProjectButton() {
+  const proj = projectList.find(p => p.slug === currentProject);
+  document.getElementById('project-btn-label').textContent = proj ? proj.name : currentProject;
+  document.getElementById('project-btn-dot').style.background = projectColor(currentProject);
+}
+
+function toggleProjectMenu(e) {
+  e.stopPropagation();
+  document.getElementById('project-menu').classList.toggle('open');
+}
+
+document.addEventListener('click', () => {
+  document.getElementById('project-menu').classList.remove('open');
+});
+
+function switchProject(slug) {
+  currentProject = slug;
+  // Clear task cache when switching projects
+  Object.keys(taskContentCache).forEach(k => delete taskContentCache[k]);
+  document.getElementById('project-menu').classList.remove('open');
+  updateProjectButton();
+  renderProjectMenu();
+  if (tasksVisible) loadTasks();
+}
+
+function openNewProjectModal() {
+  document.getElementById('project-menu').classList.remove('open');
+  document.getElementById('modal-name').value = '';
+  document.getElementById('modal-desc').value = '';
+  document.getElementById('modal-error').textContent = '';
+  document.getElementById('modal-overlay').classList.add('open');
+  setTimeout(() => document.getElementById('modal-name').focus(), 50);
+}
+
+function closeNewProjectModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+}
+
+function handleModalOverlayClick(e) {
+  if (e.target === document.getElementById('modal-overlay')) closeNewProjectModal();
+}
+
+async function handleCreateProject() {
+  const name = document.getElementById('modal-name').value.trim();
+  const desc = document.getElementById('modal-desc').value.trim();
+  const errEl = document.getElementById('modal-error');
+  errEl.textContent = '';
+  if (!name) { errEl.textContent = 'Name is required.'; return; }
+  try {
+    const r = await fetch('/api/projects', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, description: desc }),
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
+    closeNewProjectModal();
+    await loadProjects();
+    switchProject(data.slug);
+  } catch (e) {
+    errEl.textContent = `Error: ${e.message}`;
+  }
+}
+
+// Enter key in modal name field
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeNewProjectModal();
+});
+
+// ============================================================
 // TASK MANAGER
 // ============================================================
 let taskData = { backlog: [], active: [], completed: [] };
@@ -1173,7 +1426,7 @@ const taskContentCache = {};
 async function fetchTaskContent(filename) {
   if (taskContentCache[filename]) return taskContentCache[filename];
   try {
-    const resp = await fetch(`/api/tasks/${encodeURIComponent(filename)}`);
+    const resp = await fetch(`/api/projects/${currentProject}/tasks/${encodeURIComponent(filename)}`);
     if (!resp.ok) return null;
     const text = await resp.text();
     taskContentCache[filename] = text; return text;
@@ -1188,14 +1441,14 @@ async function loadTasks() {
   const errEl = document.getElementById('task-error');
   errEl.textContent = '';
   try {
-    const resp = await fetch('/api/tasks');
+    const resp = await fetch(`/api/projects/${currentProject}/tasks`);
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     taskData = await resp.json();
     await renderTaskManager();
   } catch (e) { errEl.textContent = 'Start server.py to enable task management.'; }
 }
 async function createTask(title, agent, description) {
-  const resp = await fetch('/api/tasks', {
+  const resp = await fetch(`/api/projects/${currentProject}/tasks`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ title, agent, description }),
   });
@@ -1203,7 +1456,7 @@ async function createTask(title, agent, description) {
   return resp.json();
 }
 async function assignTask(filename, agent) {
-  const resp = await fetch('/api/tasks/assign', {
+  const resp = await fetch(`/api/projects/${currentProject}/tasks/assign`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ filename, agent }),
   });
@@ -1211,7 +1464,7 @@ async function assignTask(filename, agent) {
   delete taskContentCache[filename]; return resp.json();
 }
 async function doneTask(filename) {
-  const resp = await fetch('/api/tasks/done', {
+  const resp = await fetch(`/api/projects/${currentProject}/tasks/done`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ filename }),
   });
@@ -1298,7 +1551,7 @@ let terminalPollInterval = null;
 function pollRunStatus() {
   setInterval(async () => {
     try {
-      const r = await fetch('/api/run/status');
+      const r = await fetch(`/api/projects/${currentProject}/run/status`);
       if (!r.ok) return;
       const d = await r.json();
       runningAgents = new Set((d.running || []).map(fname => {
@@ -1315,7 +1568,7 @@ async function runTask(filename, agent) {
   document.getElementById('terminal-status').textContent = 'Starting...';
   document.getElementById('terminal-panel').scrollIntoView({ behavior: 'smooth' });
   try {
-    const res = await fetch('/api/run', {
+    const res = await fetch(`/api/projects/${currentProject}/run`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ filename, agent }),
     });
@@ -1331,7 +1584,7 @@ async function runTask(filename, agent) {
     let linesShown = 0;
     clearInterval(terminalPollInterval);
     terminalPollInterval = setInterval(async () => {
-      const r = await fetch(`/api/run/output?task_id=${encodeURIComponent(filename)}`);
+      const r = await fetch(`/api/projects/${currentProject}/run/output?task_id=${encodeURIComponent(filename)}`);
       const d = await r.json();
       const output = document.getElementById('terminal-output');
       const newLines = d.lines.slice(linesShown);
@@ -1370,15 +1623,7 @@ function closeTerminal() {
 // ============================================================
 // AUTO-LOAD + START
 // ============================================================
-async function autoLoadMemory() {
-  try {
-    const resp = await fetch('../memory/team_memory.json');
-    if (!resp.ok) return;
-    renderTechDashboard(await resp.json());
-  } catch (e) {}
-}
-
-autoLoadMemory();
+loadProjects();
 pollRunStatus();
 requestAnimationFrame(gameLoop);
 </script>
