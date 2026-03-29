@@ -699,26 +699,6 @@ const DESKS = {
   per:          { tx: 18, ty: 11 },
 };
 
-const MESSAGES = [
-  { from: 'orchestrator', to: 'arve',    text: 'New task in queue.' },
-  { from: 'orchestrator', to: 'else',    text: 'Research needed.' },
-  { from: 'orchestrator', to: 'frode',   text: 'Break down milestone.' },
-  { from: 'arve',         to: 'odd',     text: 'PR ready for review.' },
-  { from: 'odd',          to: 'arve',    text: 'LGTM. Merging.' },
-  { from: 'bjorn',        to: 'arve',    text: 'Architecture ready.' },
-  { from: 'dag',          to: 'bjorn',   text: 'Deploy pipeline set.' },
-  { from: 'else',         to: 'guro',    text: 'Findings ready.' },
-  { from: 'guro',         to: 'orchestrator', text: 'Content draft done.' },
-  { from: 'halvard',      to: 'orchestrator', text: 'Growth plan ready.' },
-  { from: 'jorunn',       to: 'ingrid',  text: 'Brand guidelines done.' },
-  { from: 'ingrid',       to: 'arve',    text: 'Designs ready to build.' },
-  { from: 'knut',         to: 'orchestrator', text: 'Milestone on track.' },
-  { from: 'laila',        to: 'arve',    text: 'Bug reported by user.' },
-  { from: 'magnus',       to: 'orchestrator', text: 'GDPR check complete.' },
-  { from: 'nora',         to: 'orchestrator', text: 'Pricing model ready.' },
-  { from: 'frode',        to: 'orchestrator', text: 'Sprint planned.' },
-  { from: 'per',          to: 'dag',     text: 'Benchmark results in.' },
-];
 
 // ============================================================
 // HELPERS
@@ -797,28 +777,7 @@ function tickAgents() {
         agent.x = agent.targetX; agent.y = agent.targetY;
         agent.walkFrame = 0; agent.walkTick = 0;
         if (agent.pendingState === 'working') {
-          agent.state = 'working'; agent.stateTimer = randi(90, 180);
-          const selfMsg = MESSAGES.find(m => m.from === agent.id && m.to === agent.id);
-          if (selfMsg) { agent.bubble = { text: selfMsg.text, timer: 90 }; addLog(agent.id, null, selfMsg.text); }
-        } else if (agent.pendingState === 'talking') {
-          agent.state = 'talking'; agent.stateTimer = randi(60, 120);
-          const targetAgent = agents.find(a => a.id === agent.pendingTarget);
-          if (targetAgent && agent.pendingMsg) {
-            agent.bubble = { text: agent.pendingMsg.text, timer: 100 };
-            if (targetAgent) {
-              const replyOptions = MESSAGES.filter(m => m.from === targetAgent.id && m.to !== targetAgent.id);
-              if (replyOptions.length > 0) {
-                const reply = pickRandom(replyOptions);
-                setTimeout(() => { if (targetAgent.bubble === null) targetAgent.bubble = { text: reply.text, timer: 80 }; }, 1200);
-              }
-            }
-            addLog(agent.id, agent.pendingTarget, agent.pendingMsg.text);
-          }
-          agent.pendingTarget = null; agent.pendingMsg = null;
-        } else if (agent.pendingState === 'meeting') {
-          agent.state = 'talking'; agent.stateTimer = randi(90, 150);
-          const mtg = MESSAGES.filter(m => m.from === agent.id);
-          if (mtg.length > 0) { const m = pickRandom(mtg); agent.bubble = { text: m.text, timer: 90 }; }
+          agent.state = 'working'; agent.stateTimer = 9999;
         } else {
           agent.state = 'idle'; agent.stateTimer = randi(30, 90);
         }
@@ -836,12 +795,7 @@ function tickAgents() {
       } else {
         agent.stateTimer--;
         if (agent.stateTimer <= 0) {
-          if (agent.state === 'talking') {
-            // Return to own desk after conversation
-            agent.bubble = null;
-            const pos = deskStandPos(agent.id);
-            startWalking(agent, pos.x, pos.y, 'idle');
-          } else if (agent.state === 'working') {
+          if (agent.state === 'working') {
             agent.state = 'idle'; agent.bubble = null; agent.stateTimer = randi(120, 240);
           } else if (agent.state === 'idle') { decideNextAction(agent); }
         }
@@ -859,23 +813,12 @@ function tickAgents() {
 }
 
 function decideNextAction(agent) {
-  const roll = Math.random();
-  if (roll < 0.85) {
-    // Stay at / return to own desk
+  {
+    // Stay at desk — agents only move when given a real task
     const pos = deskStandPos(agent.id);
     agent.x = pos.x; agent.y = pos.y;
     agent.state = 'idle';
-    agent.stateTimer = randi(120, 300);
-  } else {
-    // Walk to another agent's desk to deliver a message, then return
-    const msgs = MESSAGES.filter(m => m.from === agent.id && m.to !== agent.id);
-    if (msgs.length === 0) {
-      agent.state = 'idle'; agent.stateTimer = randi(120, 300); return;
-    }
-    const msg = pickRandom(msgs);
-    const pos = deskStandPos(msg.to);
-    agent.pendingTarget = msg.to; agent.pendingMsg = msg;
-    startWalking(agent, pos.x + randi(-5, 5), pos.y - 4, 'talking');
+    agent.stateTimer = randi(300, 600);
   }
 }
 
@@ -1612,11 +1555,12 @@ async function runTask(filename, agent) {
     const data = await res.json();
     if (!data.ok) throw new Error(data.error || 'Failed to start');
     runningAgents.add(agent);
+    addLog(agent, null, `Started: ${taskLabel(filename)}`);
     const runningCanvasAgent = agents.find(a => a.id === agent);
     if (runningCanvasAgent && DESKS[agent]) {
       const pos = deskStandPos(agent);
       startWalking(runningCanvasAgent, pos.x, pos.y, 'working');
-      runningCanvasAgent.bubble = { text: 'On it...', timer: 80 };
+      runningCanvasAgent.bubble = { text: taskLabel(filename), timer: 300 };
     }
     let linesShown = 0;
     clearInterval(terminalPollInterval);
@@ -1640,8 +1584,9 @@ async function runTask(filename, agent) {
         document.getElementById('terminal-status').textContent = '\u2713 Done';
         document.getElementById('terminal-status').style.color = '#1a7a38';
         runningAgents.delete(agent);
+        addLog(agent, null, `Completed: ${taskLabel(filename)}`);
         const doneCanvasAgent = agents.find(a => a.id === agent);
-        if (doneCanvasAgent) { doneCanvasAgent.state = 'idle'; doneCanvasAgent.stateTimer = randi(20, 40); doneCanvasAgent.bubble = { text: 'Done!', timer: 100 }; }
+        if (doneCanvasAgent) { doneCanvasAgent.state = 'idle'; doneCanvasAgent.stateTimer = randi(20, 40); doneCanvasAgent.bubble = { text: 'Done!', timer: 120 }; }
         setTimeout(() => loadTasks().then(renderTaskManager), 1500);
       } else {
         document.getElementById('terminal-status').textContent = `Running... (${linesShown} lines)`;
