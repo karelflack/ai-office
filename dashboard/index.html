@@ -240,7 +240,7 @@
     }
     #activity-log {
       position: absolute;
-      top: 36px; bottom: 220px;
+      top: 36px; bottom: 0;
       left: 0; right: 0;
       overflow-y: auto;
       padding: 8px 10px;
@@ -400,6 +400,35 @@
     .modal-btn-create:hover { opacity: 0.85; }
     #modal-error { font-size: 12px; color: var(--accent-red); margin-top: 6px; min-height: 16px; }
 
+    /* ---- AGENTS PANEL ---- */
+    #agents-panel {
+      display: none;
+      background: rgba(255,255,255,0.72);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--glass-border);
+      padding: 1.5rem 2rem;
+    }
+    #agents-panel.visible { display: block; }
+    #agents-panel h2 { font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 1.25rem; }
+    #agents-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 0.625rem;
+    }
+    .agent-card {
+      background: rgba(255,255,255,0.88);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-sm);
+      padding: 0.625rem 0.75rem;
+      display: flex; align-items: center; gap: 10px;
+      box-shadow: var(--shadow-sm);
+    }
+    .agent-card-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .agent-card-info { min-width: 0; }
+    .agent-card-name { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+    .agent-card-role { font-size: 11px; color: var(--text-secondary); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
     /* ---- TOGGLE BAR ---- */
     #toggle-bar {
       background: rgba(255,255,255,0.6);
@@ -495,6 +524,7 @@
     </div>
   </div>
   <div style="display:flex;gap:8px;align-items:center;">
+    <button class="glass-btn" onclick="toggleAgents()">Agents</button>
     <button class="glass-btn" onclick="toggleTasks()">Task Manager</button>
     <button class="glass-btn" onclick="toggleTech()">Behind the Scenes</button>
   </div>
@@ -528,10 +558,6 @@
   <div id="sidebar">
     <div id="sidebar-header">Activity</div>
     <div id="activity-log"></div>
-    <div id="agent-status-panel">
-      <h3>Agents</h3>
-      <div id="status-rows"></div>
-    </div>
   </div>
 </div>
 
@@ -575,6 +601,12 @@
     <div id="terminal-output"></div>
     <div id="terminal-status"></div>
   </div>
+</div>
+
+<!-- AGENTS PANEL -->
+<div id="agents-panel">
+  <h2>Agents</h2>
+  <div id="agents-grid"></div>
 </div>
 
 <!-- TECHNICAL PANEL -->
@@ -1204,22 +1236,6 @@ function renderLog() {
 }
 
 // ============================================================
-// AGENT STATUS PANEL
-// ============================================================
-const statusRows = document.getElementById('status-rows');
-function renderStatusPanel() {
-  statusRows.innerHTML = agents.map(agent => {
-    const col = AGENT_COLORS[agent.id];
-    return `
-      <div class="status-agent-row">
-        <span class="status-dot" style="background:${col.primary}"></span>
-        <span class="status-agent-name">${col.name}</span>
-        <span class="status-state ${agent.state}">${agent.state}</span>
-      </div>`;
-  }).join('');
-}
-
-// ============================================================
 // HOVER TOOLTIP
 // ============================================================
 const agentTooltip = document.getElementById('agent-tooltip');
@@ -1256,9 +1272,30 @@ function gameLoop(timestamp) {
   const elapsed = timestamp - lastFrameTime;
   if (elapsed >= FRAME_MS) {
     lastFrameTime = timestamp - (elapsed % FRAME_MS);
-    tickAgents(); draw(); renderStatusPanel();
+    tickAgents(); draw();
   }
   requestAnimationFrame(gameLoop);
+}
+
+// ============================================================
+// AGENTS PANEL
+// ============================================================
+let agentsVisible = false;
+function toggleAgents() {
+  agentsVisible = !agentsVisible;
+  document.getElementById('agents-panel').classList.toggle('visible', agentsVisible);
+  if (agentsVisible) renderAgentsPanel();
+}
+function renderAgentsPanel() {
+  document.getElementById('agents-grid').innerHTML = Object.entries(AGENT_COLORS).map(([id, col]) => `
+    <div class="agent-card">
+      <span class="agent-card-dot" style="background:${col.primary}"></span>
+      <div class="agent-card-info">
+        <div class="agent-card-name">${escHtml(col.name)}</div>
+        <div class="agent-card-role">${escHtml(col.role)}</div>
+      </div>
+    </div>
+  `).join('');
 }
 
 // ============================================================
