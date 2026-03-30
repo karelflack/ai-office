@@ -4,7 +4,8 @@
   "description": "Default sandbox workspace for testing and experimentation.",
   "created": "2026-03-29",
   "agent_notes": {
-    "ingrid": "Completed visual design direction and homepage wireframe (2026-03-30). Deliverable: output/2026-03-30-design-direction.md. Covers color palette (dark/light), typography (Inter + JetBrains Mono), 8px spacing system, component styles, and ASCII wireframe for all homepage sections. Accent color placeholder is #7C6FFF (violet) — pending Jorunn confirmation. Left open questions for Jorunn (brand name, tagline, voice, accent color, logo format) and implementation notes for Arve (Tailwind, dark mode strategy, Framer Motion, Lucide icons)."
+    "ingrid": "Completed visual design direction and homepage wireframe (2026-03-30). Deliverable: output/2026-03-30-design-direction.md. Covers color palette (dark/light), typography (Inter + JetBrains Mono), 8px spacing system, component styles, and ASCII wireframe for all homepage sections. Accent color placeholder is #7C6FFF (violet) — pending Jorunn confirmation. Left open questions for Jorunn (brand name, tagline, voice, accent color, logo format) and implementation notes for Arve (Tailwind, dark mode strategy, Framer Motion, Lucide icons).",
+    "bjorn": "Completed tech stack selection (2026-03-30). Deliverable: output/2026-03-30-tech-stack.md. Decision: Next.js 15 App Router with output: 'export' (fully static), Tailwind CSS v4, Framer Motion, Lucide React, next-themes for dark mode, fontsource for self-hosted fonts, deploy to Vercel free tier. No decisions are hard to reverse at this stage. Arve should use placeholder images and text wordmark until Jorunn delivers brand assets. Accent color (#7C6FFF) wired as CSS variable for single-line swap pending Jorunn confirmation."
   },
   "kickoff_description": "A marketing landing page for an AI productivity tool. Needs brand identity, visual design direction, and homepage copy. No backend",
   "kickoff_plan": [
