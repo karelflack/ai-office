@@ -4,7 +4,8 @@
   "description": "",
   "created": "2026-03-30",
   "agent_notes": {
-    "bjorn": "Tech stack selected 2026-03-30. Astro (framework) + Tailwind CSS v3 + Vercel (hosting) + Motion One (animations). ADR at output/2026-03-30-tech-stack-adr.md. Key constraint: use Astro components by default — only hydrate React islands if client-side interactivity is genuinely needed. Brand tokens go in tailwind.config.ts theme.extend."
+    "bjorn": "Tech stack selected 2026-03-30. Astro (framework) + Tailwind CSS v3 + Vercel (hosting) + Motion One (animations). ADR at output/2026-03-30-tech-stack-adr.md. Key constraint: use Astro components by default — only hydrate React islands if client-side interactivity is genuinely needed. Brand tokens go in tailwind.config.ts theme.extend.",
+    "jorunn": "Brand identity and homepage copy completed 2026-03-30. Deliverable at output/2026-03-30-brand-identity-homepage-copy.md. Key decisions: (1) Brand voice — confident, direct, number-led; (2) Five tone of voice principles established with dos/don'ts; (3) Full homepage copy written: hero ('Stop paying for the same prompt twice'), 3 feature sections (proxy mechanics, semantic matching, observability), social proof placeholders, closing CTA; (4) Name 'AI Office' flagged as potentially generic — risks confusion with Microsoft Office branding — flag for strategic review; (5) Logo must include a standalone icon that works at 16x16px favicon scale — do not rely on wordmark alone."
   },
   "kickoff_description": "A marketing landing page for an AI productivity tool called \"AI Office\".    \n  Needs brand identity and tone of voice, homepage copy and messaging, visual \n  design direction, and a competitive analysis of similar tools.",
   "kickoff_plan": [
