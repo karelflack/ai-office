@@ -182,29 +182,50 @@
     }
     .run-btn:hover { background: rgba(48,209,88,0.22); }
 
-    #terminal-panel {
+    /* ---- WORK WINDOWS ---- */
+    #work-windows {
+      display: flex; flex-wrap: wrap; gap: 0.75rem;
       margin-top: 1rem;
-      background: rgba(255,255,255,0.85);
+    }
+    #work-windows:empty { display: none; }
+    .work-window {
+      flex: 1 1 340px; min-width: 300px; max-width: 520px;
+      background: rgba(255,255,255,0.88);
       border: 1px solid var(--glass-border);
       border-radius: var(--radius-md);
+      box-shadow: var(--shadow-sm);
       font-family: var(--font-mono);
       font-size: 0.75rem;
-      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+      transition: box-shadow 0.2s;
     }
-    #terminal-header {
-      display: flex; justify-content: space-between;
-      padding: 0.5rem 0.875rem; border-bottom: 1px solid var(--glass-border);
-      color: var(--text-secondary); font-family: var(--font); font-size: 12px; font-weight: 500;
+    .work-window.running { box-shadow: 0 0 0 2px rgba(0,113,227,0.25), var(--shadow-md); }
+    .work-window.done    { box-shadow: 0 0 0 2px rgba(48,209,88,0.3), var(--shadow-sm); }
+    .work-window-header {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--glass-border);
+      font-family: var(--font); font-size: 12px; font-weight: 600;
     }
-    #terminal-output {
-      height: 220px; overflow-y: auto;
-      padding: 0.875rem; color: var(--text-primary);
+    .work-window-accent {
+      width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+    }
+    .work-window-title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .work-window-close {
+      background: none; border: none; color: var(--text-tertiary);
+      cursor: pointer; font-size: 14px; line-height: 1; padding: 2px 4px;
+      border-radius: 4px; transition: color 0.15s, background 0.15s;
+    }
+    .work-window-close:hover { color: var(--accent-red); background: rgba(255,59,48,0.08); }
+    .work-window-output {
+      height: 180px; overflow-y: auto;
+      padding: 0.75rem; color: var(--text-primary);
       white-space: pre-wrap; word-break: break-all; line-height: 1.6;
     }
-    #terminal-output::-webkit-scrollbar { width: 4px; }
-    #terminal-output::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 2px; }
-    #terminal-status {
-      padding: 0.4rem 0.875rem; border-top: 1px solid var(--glass-border);
+    .work-window-output::-webkit-scrollbar { width: 4px; }
+    .work-window-output::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 2px; }
+    .work-window-status {
+      padding: 5px 12px; border-top: 1px solid var(--glass-border);
       color: var(--text-tertiary); font-size: 11px; font-family: var(--font);
     }
 
@@ -822,14 +843,7 @@
       <div id="task-col-completed"></div>
     </div>
   </div>
-  <div id="terminal-panel" style="display:none;">
-    <div id="terminal-header">
-      <span id="terminal-title">Agent Output</span>
-      <button onclick="closeTerminal()" style="background:none;border:none;color:var(--text-secondary);cursor:pointer;font-size:1rem;line-height:1;">&#10005;</button>
-    </div>
-    <div id="terminal-output"></div>
-    <div id="terminal-status"></div>
-  </div>
+  <div id="work-windows"></div>
 </div>
 
 <!-- KICKOFF PANEL -->
@@ -1981,14 +1995,16 @@ async function handleRunAll() {
     const data = await r.json();
     const started = data.started || [];
     started.forEach(({ filename, agent }) => {
+      _openWorkWindow(agent, filename);
+      runningAgents.add(agent);
       addLog(agent, null, `Started: ${taskLabel(filename)}`);
-      const canvasAgent = agents.find(a => a.id === agent);
-      if (canvasAgent) {
-        runningAgents.add(agent);
+      const ca = agents.find(a => a.id === agent);
+      if (ca && DESKS[agent]) {
         const pos = deskStandPos(agent);
-        startWalking(canvasAgent, pos.x, pos.y, 'working');
-        canvasAgent.bubble = { text: taskLabel(filename), timer: 300 };
+        startWalking(ca, pos.x, pos.y, 'working');
+        ca.bubble = { text: taskLabel(filename), timer: 300 };
       }
+      _startPolling(agent, filename);
     });
     btn.textContent = `▶ ${started.length} running`;
     setTimeout(() => { btn.disabled = false; btn.textContent = '▶ Run All Active'; }, 3000);
@@ -2072,7 +2088,9 @@ async function renderTaskManager() {
 // RUNNING AGENTS
 // ============================================================
 let runningAgents = new Set();
-let terminalPollInterval = null;
+// Per-agent poll intervals: { agent -> intervalId }
+const _agentPolls = {};
+
 function pollRunStatus() {
   setInterval(async () => {
     try {
@@ -2086,12 +2104,89 @@ function pollRunStatus() {
     } catch (e) {}
   }, 3000);
 }
+
+// ---- Work windows ----
+function _openWorkWindow(agent, filename) {
+  const winId = `ww-${agent}`;
+  let win = document.getElementById(winId);
+  if (win) {
+    // reuse — reset content
+    win.querySelector('.work-window-output').innerHTML = '';
+    win.querySelector('.work-window-status').textContent = 'Starting...';
+    win.querySelector('.work-window-status').style.color = '';
+    win.className = 'work-window running';
+    win.querySelector('.work-window-title').textContent =
+      `${agent.charAt(0).toUpperCase() + agent.slice(1)} — ${taskLabel(filename)}`;
+    return win;
+  }
+  const color = AGENT_COLORS[agent]?.primary || '#888';
+  win = document.createElement('div');
+  win.className = 'work-window running';
+  win.id = winId;
+  win.innerHTML = `
+    <div class="work-window-header">
+      <span class="work-window-accent" style="background:${color}"></span>
+      <span class="work-window-title">${agent.charAt(0).toUpperCase() + agent.slice(1)} — ${taskLabel(filename)}</span>
+      <button class="work-window-close" onclick="closeWorkWindow('${agent}')">&#10005;</button>
+    </div>
+    <div class="work-window-output" id="${winId}-output"></div>
+    <div class="work-window-status" id="${winId}-status">Starting...</div>`;
+  document.getElementById('work-windows').appendChild(win);
+  win.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  return win;
+}
+
+function closeWorkWindow(agent) {
+  clearInterval(_agentPolls[agent]);
+  delete _agentPolls[agent];
+  runningAgents.delete(agent);
+  const win = document.getElementById(`ww-${agent}`);
+  if (win) win.remove();
+}
+
+function _appendLine(outputEl, line) {
+  const div = document.createElement('div');
+  div.textContent = line;
+  if (line.startsWith('✓') || line.includes('completed') || line.includes('Done')) div.style.color = '#1a7a38';
+  else if (line.startsWith('Error') || line.startsWith('✗')) div.style.color = 'var(--accent-red)';
+  else if (line.startsWith('>') || line.startsWith('$')) div.style.color = 'var(--accent)';
+  outputEl.appendChild(div);
+  outputEl.scrollTop = outputEl.scrollHeight;
+}
+
+function _startPolling(agent, filename) {
+  clearInterval(_agentPolls[agent]);
+  let linesShown = 0;
+  _agentPolls[agent] = setInterval(async () => {
+    try {
+      const r = await fetch(`/api/projects/${currentProject}/run/output?task_id=${encodeURIComponent(filename)}`);
+      const d = await r.json();
+      const outputEl = document.getElementById(`ww-${agent}-output`);
+      const statusEl = document.getElementById(`ww-${agent}-status`);
+      if (!outputEl) { clearInterval(_agentPolls[agent]); return; }
+      d.lines.slice(linesShown).forEach(line => _appendLine(outputEl, line));
+      linesShown = d.lines.length;
+      if (d.done) {
+        clearInterval(_agentPolls[agent]);
+        delete _agentPolls[agent];
+        statusEl.textContent = '✓ Done';
+        statusEl.style.color = '#1a7a38';
+        const win = document.getElementById(`ww-${agent}`);
+        if (win) win.className = 'work-window done';
+        runningAgents.delete(agent);
+        addLog(agent, null, `Completed: ${taskLabel(filename)}`);
+        const ca = agents.find(a => a.id === agent);
+        if (ca) { ca.state = 'idle'; ca.stateTimer = randi(20, 40); ca.bubble = { text: 'Done!', timer: 120 }; }
+        setTimeout(() => { loadTasks().then(renderTaskManager); refreshOutputAfterRun(); }, 1500);
+      } else {
+        statusEl.textContent = `Running… (${linesShown} lines)`;
+      }
+    } catch (e) {}
+  }, 400);
+}
+
 async function runTask(filename, agent) {
-  document.getElementById('terminal-panel').style.display = 'block';
-  document.getElementById('terminal-output').innerHTML = '';
-  document.getElementById('terminal-title').textContent = `${agent.charAt(0).toUpperCase() + agent.slice(1)} — ${taskLabel(filename)}`;
-  document.getElementById('terminal-status').textContent = 'Starting...';
-  document.getElementById('terminal-panel').scrollIntoView({ behavior: 'smooth' });
+  _openWorkWindow(agent, filename);
   try {
     const res = await fetch(`/api/projects/${currentProject}/run`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -2101,50 +2196,21 @@ async function runTask(filename, agent) {
     if (!data.ok) throw new Error(data.error || 'Failed to start');
     runningAgents.add(agent);
     addLog(agent, null, `Started: ${taskLabel(filename)}`);
-    const runningCanvasAgent = agents.find(a => a.id === agent);
-    if (runningCanvasAgent && DESKS[agent]) {
+    const ca = agents.find(a => a.id === agent);
+    if (ca && DESKS[agent]) {
       const pos = deskStandPos(agent);
-      startWalking(runningCanvasAgent, pos.x, pos.y, 'working');
-      runningCanvasAgent.bubble = { text: taskLabel(filename), timer: 300 };
+      startWalking(ca, pos.x, pos.y, 'working');
+      ca.bubble = { text: taskLabel(filename), timer: 300 };
     }
-    let linesShown = 0;
-    clearInterval(terminalPollInterval);
-    terminalPollInterval = setInterval(async () => {
-      const r = await fetch(`/api/projects/${currentProject}/run/output?task_id=${encodeURIComponent(filename)}`);
-      const d = await r.json();
-      const output = document.getElementById('terminal-output');
-      const newLines = d.lines.slice(linesShown);
-      newLines.forEach(line => {
-        const div = document.createElement('div');
-        div.textContent = line;
-        if (line.startsWith('\u2713') || line.includes('completed') || line.includes('Done')) div.style.color = '#1a7a38';
-        else if (line.startsWith('Error') || line.startsWith('\u2717')) div.style.color = 'var(--accent-red)';
-        else if (line.startsWith('>') || line.startsWith('$')) div.style.color = 'var(--accent)';
-        output.appendChild(div);
-      });
-      linesShown = d.lines.length;
-      output.scrollTop = output.scrollHeight;
-      if (d.done) {
-        clearInterval(terminalPollInterval);
-        document.getElementById('terminal-status').textContent = '\u2713 Done';
-        document.getElementById('terminal-status').style.color = '#1a7a38';
-        runningAgents.delete(agent);
-        addLog(agent, null, `Completed: ${taskLabel(filename)}`);
-        const doneCanvasAgent = agents.find(a => a.id === agent);
-        if (doneCanvasAgent) { doneCanvasAgent.state = 'idle'; doneCanvasAgent.stateTimer = randi(20, 40); doneCanvasAgent.bubble = { text: 'Done!', timer: 120 }; }
-        setTimeout(() => { loadTasks().then(renderTaskManager); refreshOutputAfterRun(); }, 1500);
-      } else {
-        document.getElementById('terminal-status').textContent = `Running... (${linesShown} lines)`;
-      }
-    }, 400);
+    _startPolling(agent, filename);
   } catch (e) {
-    document.getElementById('terminal-output').textContent = `Error: ${e.message}\n\nMake sure server.py is running.`;
-    document.getElementById('terminal-status').textContent = 'Failed';
+    const outputEl = document.getElementById(`ww-${agent}-output`);
+    const statusEl = document.getElementById(`ww-${agent}-status`);
+    if (outputEl) outputEl.textContent = `Error: ${e.message}\n\nMake sure server.py is running.`;
+    if (statusEl) { statusEl.textContent = 'Failed'; statusEl.style.color = 'var(--accent-red)'; }
+    const win = document.getElementById(`ww-${agent}`);
+    if (win) win.className = 'work-window';
   }
-}
-function closeTerminal() {
-  clearInterval(terminalPollInterval);
-  document.getElementById('terminal-panel').style.display = 'none';
 }
 
 // ============================================================
