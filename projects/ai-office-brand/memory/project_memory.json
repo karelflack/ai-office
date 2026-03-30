@@ -1,0 +1,32 @@
+{
+  "project": "AI office (brand)",
+  "slug": "ai-office-brand",
+  "description": "",
+  "created": "2026-03-30",
+  "agent_notes": {
+    "bjorn": "Tech stack selected 2026-03-30. Astro (framework) + Tailwind CSS v3 + Vercel (hosting) + Motion One (animations). ADR at output/2026-03-30-tech-stack-adr.md. Key constraint: use Astro components by default — only hydrate React islands if client-side interactivity is genuinely needed. Brand tokens go in tailwind.config.ts theme.extend."
+  },
+  "kickoff_description": "A marketing landing page for an AI productivity tool called \"AI Office\".    \n  Needs brand identity and tone of voice, homepage copy and messaging, visual \n  design direction, and a competitive analysis of similar tools.",
+  "kickoff_plan": [
+    {
+      "agent": "else",
+      "title": "Market & Competitor Research"
+    },
+    {
+      "agent": "jorunn",
+      "title": "Brand Identity & Homepage Copy"
+    },
+    {
+      "agent": "bjorn",
+      "title": "Tech Stack Selection"
+    },
+    {
+      "agent": "ingrid",
+      "title": "Visual Design Direction & Wireframes"
+    },
+    {
+      "agent": "arve",
+      "title": "Landing Page Implementation"
+    }
+  ]
+}
