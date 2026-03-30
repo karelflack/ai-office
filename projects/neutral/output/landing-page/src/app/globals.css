@@ -1,0 +1,48 @@
+@import "tailwindcss";
+
+/*
+  CSS variables for the design token system.
+  Dark mode is the default. Light mode overrides below.
+  These map to the color tokens defined by Ingrid in 2026-03-30-design-direction.md.
+*/
+:root {
+  --bg-base: #0A0A0B;
+  --bg-surface: #111113;
+  --bg-border: #1E1E22;
+  --text-primary: #F2F2F3;
+  --text-secondary: #8A8A96;
+  --text-muted: #4A4A56;
+  --accent: #7C6FFF;
+  --accent-hover: #9589FF;
+  --accent-subtle: rgba(124, 111, 255, 0.1);
+  --success: #22C55E;
+  --warning: #F59E0B;
+  --destructive: #EF4444;
+}
+
+/* Light mode: only bg and text tokens change. Accent stays the same. */
+[data-theme="light"] {
+  --bg-base: #FAFAFA;
+  --bg-surface: #FFFFFF;
+  --bg-border: #E4E4E7;
+  --text-primary: #0A0A0B;
+  --text-secondary: #52525B;
+  --text-muted: #A1A1AA;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+  font-family: 'Inter', ui-sans-serif, system-ui;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Utility class for the accent background used in badges */
+.bg-accent-subtle {
+  background-color: var(--accent-subtle);
+}
