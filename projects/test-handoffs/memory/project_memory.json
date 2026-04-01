@@ -4,7 +4,8 @@
   "description": "A Python REST API for a URL shortener.",
   "created": "2026-04-01",
   "agent_notes": {
-    "bjorn": "Architecture complete. Stack: FastAPI + Postgres (Supabase) + Redis (Upstash) on Railway. Short codes are 7-char base-62, cryptographically random. Three tables: urls, clicks, api_keys. Redirect flow uses Redis read-through cache (1h TTL). Clicks written async (fire-and-forget). Hard constraint: short codes are permanent identifiers — code generation algorithm must not change after first link is issued. See output/2026-04-01-system-architecture.md for full spec including folder structure for Arve."
+    "bjorn": "Architecture complete. Stack: FastAPI + Postgres (Supabase) + Redis (Upstash) on Railway. Short codes are 7-char base-62, cryptographically random. Three tables: urls, clicks, api_keys. Redirect flow uses Redis read-through cache (1h TTL). Clicks written async (fire-and-forget). Hard constraint: short codes are permanent identifiers — code generation algorithm must not change after first link is issued. See output/2026-04-01-system-architecture.md for full spec including folder structure for Arve.",
+    "dag": "2026-04-01: Docker and CI/CD setup complete. Deliverables in output/: Dockerfile (multi-stage python:3.12-slim, non-root user appuser, /health HEALTHCHECK), docker-compose.yml (app + postgres:16-alpine + redis:7-alpine, healthcheck-gated startup, named volume for Postgres), .env.example (all required vars), GitHub Actions CI (lint+test with live Postgres+Redis service containers on all pushes; Docker build+push to ghcr.io on main merges only), ops-README.md. Stack aligned with bjorn's architecture: FastAPI + uvicorn, Postgres, Redis. Redis configured with allkeys-lru eviction and 128mb cap. Arve should verify app entrypoint path (assumed app.main:app) matches actual project structure."
   },
   "kickoff_description": "A Python REST API for a URL shortener. Needs system architecture, backend implementation, and API testing.",
   "kickoff_plan": [
@@ -21,7 +22,7 @@
     {
       "agent": "dag",
       "title": "Docker and CI/CD Setup",
-      "status": "pending"
+      "status": "completed"
     }
   ]
 }
