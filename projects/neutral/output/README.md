@@ -9,3 +9,6 @@
 | [2026-03-30-implementation-notes.md](2026-03-30-implementation-notes.md) | Landing page implementation notes: file structure, decisions, placeholders, launch checklist | arve | 2026-03-30 |
 | [landing-page/](landing-page/) | Complete Next.js 15 static landing page codebase (all sections, components, design tokens) | arve | 2026-03-30 |
 | [2026-04-01-launch-milestones.md](2026-04-01-launch-milestones.md) | B2B launch milestone tracker: 4-phase plan, deliverable table, sequencing diagram, risk register | knut | 2026-04-01 |
+| [2026-04-01-privacy-policy.md](2026-04-01-privacy-policy.md) | Full privacy policy draft: data collected, legal basis, retention, sub-processors, DPA obligations, GDPR/CCPA rights, breach notification | magnus | 2026-04-01 |
+| [2026-04-01-compliance-checklist.md](2026-04-01-compliance-checklist.md) | Engineering compliance checklist: 20 launch blockers + pre-EEA items covering consent, DSR API, audit logs, encryption, sub-processor governance | magnus | 2026-04-01 |
+| [2026-04-01-pricing-model.md](2026-04-01-pricing-model.md) | B2B SaaS pricing model: 3 tiers, unit economics (CAC/LTV/payback/gross margin), two pricing scenarios, freemium strategy, revenue projections at 100/500/1,000 customers | nora | 2026-04-01 |
