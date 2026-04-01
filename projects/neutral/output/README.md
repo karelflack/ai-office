@@ -8,3 +8,4 @@
 | [2026-03-30-brand-copy.md](2026-03-30-brand-copy.md) | Brand identity (name, tagline, voice, accent color, logo) + full homepage copy for all sections | jorunn | 2026-03-30 |
 | [2026-03-30-implementation-notes.md](2026-03-30-implementation-notes.md) | Landing page implementation notes: file structure, decisions, placeholders, launch checklist | arve | 2026-03-30 |
 | [landing-page/](landing-page/) | Complete Next.js 15 static landing page codebase (all sections, components, design tokens) | arve | 2026-03-30 |
+| [2026-04-01-launch-milestones.md](2026-04-01-launch-milestones.md) | B2B launch milestone tracker: 4-phase plan, deliverable table, sequencing diagram, risk register | knut | 2026-04-01 |
