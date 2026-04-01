@@ -43,3 +43,32 @@ Welcome. If you are a Claude Code agent starting a session in this repository, f
 - Do not overwrite another agent's notes — only append
 - All deliverables go in `output/` — never scatter files across the root of the repo
 - If you are unsure what to do, leave a note in `## Agent Notes` and stop
+
+## Upstream Output Rule
+Every agent must list at the top of their completion doc which upstream output files they actually read. If a required upstream file does not exist yet, stop and leave a note — do not proceed with assumptions.
+
+Example:
+```
+## Upstream outputs read
+- projects/my-project/output/2026-04-01-system-architecture.md (bjorn)
+- projects/my-project/output/2026-04-01-compliance-checklist.md (magnus)
+```
+
+## Phased Execution — Non-Negotiable Ordering Rules
+
+These rules exist because parallel agents cannot read each other's output. Violating them causes silent coordination failures.
+
+**Phase 1 — runs first, in parallel:**
+- bjorn (architecture)
+- dag (infrastructure, Docker, CI/CD)
+- magnus (compliance, GDPR, legal) — required whenever the project touches user data, auth, or personal information
+
+**Phase 2 — runs after Phase 1 is complete:**
+- arve (implementation) — must explicitly reference bjorn's architecture output AND magnus's compliance output if magnus ran. Must implement any LAUNCH BLOCKER items from magnus's checklist that are in scope.
+- ingrid, jorunn, else, frode — may run in parallel with arve if their inputs are ready
+
+**Phase 3 — runs after Phase 2:**
+- odd (API testing)
+- per (performance benchmarking)
+
+**Never run arve in parallel with magnus on any project touching user data.** Magnus's compliance output is an input to arve's implementation, not a parallel concern.
