@@ -259,6 +259,19 @@
     .task-card:hover .task-delete-btn { opacity: 1; }
     .task-delete-btn:hover { color: var(--accent-red); background: rgba(255,59,48,0.08); }
     .task-col-empty { font-size: 12px; color: var(--text-tertiary); font-style: italic; }
+    .task-card.blocked { opacity: 0.55; }
+    .task-card.blocked .task-card-name { color: var(--text-secondary); }
+    .task-depends-badge {
+      font-size: 10px; color: var(--text-tertiary);
+      background: rgba(0,0,0,0.04); border: 1px solid var(--glass-border);
+      border-radius: 4px; padding: 2px 6px; margin-bottom: 6px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    @keyframes task-unlock {
+      0%   { box-shadow: 0 0 0 3px rgba(48,209,88,0.6); }
+      100% { box-shadow: var(--shadow-sm); }
+    }
+    .task-card.unlocked { animation: task-unlock 1.2s ease-out forwards; }
     #task-error { font-size: 12px; color: var(--accent-red); margin-top: 0.5rem; }
     #task-form-error { font-size: 11px; color: var(--accent-red); margin-top: 4px; }
 
@@ -2028,8 +2041,19 @@ async function handleDeleteTask(filename) {
 }
 
 async function handleDone(filename) {
-  try { await doneTask(filename); await loadTasks(); }
-  catch (e) { document.getElementById('task-error').textContent = `Done failed: ${e.message}`; }
+  try {
+    const result = await doneTask(filename);
+    await loadTasks();
+    // Flash any tasks that were just unlocked by this completion
+    const activated = result.activated || [];
+    if (activated.length > 0) {
+      activated.forEach(f => {
+        const card = document.querySelector(`[data-filename="${CSS.escape(f)}"]`);
+        if (card) card.classList.add('unlocked');
+      });
+      addLog('orchestrator', null, `Handoff: unlocked ${activated.map(f => taskLabel(f)).join(', ')}`);
+    }
+  } catch (e) { document.getElementById('task-error').textContent = `Done failed: ${e.message}`; }
 }
 function agentDotHtml(agentId) {
   const color = AGENT_COLORS[agentId]?.primary || '#888';
@@ -2046,6 +2070,21 @@ async function renderTaskManager() {
   runAllBtn.classList.toggle('visible', (taskData.active || []).length > 0);
   const allFiles = [...taskData.backlog.slice(0,30), ...taskData.active.slice(0,30), ...taskData.completed.slice(0,20)];
   await Promise.all(allFiles.map(f => fetchTaskContent(f)));
+  function parseDependsOn(content) {
+    if (!content) return null;
+    const m = content.match(/^\*\*depends_on:\*\*\s*(.+)$/m);
+    if (!m) return null;
+    const val = m[1].trim();
+    return (val && val.toLowerCase() !== 'none') ? val : null;
+  }
+  function isBlocked(filename, bucket) {
+    if (bucket !== 'backlog') return false;
+    const content = taskContentCache[filename];
+    const dep = parseDependsOn(content);
+    if (!dep) return false;
+    // Blocked if the dependency is not in completed
+    return !(taskData.completed || []).includes(dep);
+  }
   function renderCard(filename, bucket) {
     const label = taskLabel(filename);
     const content = taskContentCache[filename];
@@ -2054,12 +2093,17 @@ async function renderTaskManager() {
     const agentLabel = agentInfo ? agentInfo.name : agent;
     const agentColor = agentInfo ? agentInfo.primary : '#888';
     const deleteBtn = `<button class="task-delete-btn" onclick="handleDeleteTask('${escHtml(filename)}')" title="Delete task">&#215;</button>`;
+    const dep = parseDependsOn(content);
+    const blocked = isBlocked(filename, bucket);
+    const depBadge = dep ? `<div class="task-depends-badge">⏳ after: ${escHtml(taskLabel(dep))}</div>` : '';
     let actionsHtml = '';
     if (bucket === 'backlog') {
-      actionsHtml = `<div class="task-card-actions">
-        <button class="task-btn-assign" onclick="handleActivate('${escHtml(filename)}')">&#8594; Activate</button>
-        ${deleteBtn}
-      </div>`;
+      actionsHtml = blocked
+        ? `<div class="task-card-actions"><span style="font-size:11px;color:var(--text-tertiary);">blocked</span>${deleteBtn}</div>`
+        : `<div class="task-card-actions">
+            <button class="task-btn-assign" onclick="handleActivate('${escHtml(filename)}')">&#8594; Activate</button>
+            ${deleteBtn}
+          </div>`;
     } else if (bucket === 'active') {
       actionsHtml = `<div class="task-card-actions">
         <button class="task-btn-done" onclick="handleDone('${escHtml(filename)}')">&#10003; Done</button>
@@ -2069,9 +2113,11 @@ async function renderTaskManager() {
     } else if (bucket === 'completed') {
       actionsHtml = `<div class="task-card-actions">${deleteBtn}</div>`;
     }
-    return `<div class="task-card" title="${escHtml(filename)}">
+    const cardClass = blocked ? 'task-card blocked' : 'task-card';
+    return `<div class="${cardClass}" title="${escHtml(filename)}" data-filename="${escHtml(filename)}">
       <div class="task-card-name">${escHtml(label)}</div>
       <div class="task-card-agent">${agentDotHtml(agent)}<span style="color:${agentColor}">${escHtml(agentLabel)}</span></div>
+      ${depBadge}
       ${actionsHtml}
     </div>`;
   }

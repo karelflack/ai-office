@@ -56,7 +56,16 @@ def update_markdown_fields(content: str, agent: str = None, status: str = None) 
     return content
 
 
-def create_task(title: str, agent: str, description: str = "", project_slug: str = None) -> str:
+def parse_depends_on(content: str) -> str | None:
+    """Return the depends_on filename from task content, or None."""
+    m = re.search(r"^\*\*depends_on:\*\*\s*(.+)$", content, re.MULTILINE)
+    if m:
+        val = m.group(1).strip()
+        return val if val and val.lower() != "none" else None
+    return None
+
+
+def create_task(title: str, agent: str, description: str = "", project_slug: str = None, depends_on: str = None) -> str:
     """Write a new task file to backlog/. Returns the filename."""
     today = date.today().isoformat()
     filename = f"{today}-{slugify(title)}.md"
@@ -70,13 +79,41 @@ def create_task(title: str, agent: str, description: str = "", project_slug: str
         f"**Agent:** {agent}",
         f"**Status:** backlog",
         f"**Created:** {today}",
-        "",
     ]
+    if depends_on:
+        lines.append(f"**depends_on:** {depends_on}")
+    lines.append("")
     if description:
         lines += ["## Description", "", description, ""]
 
     (backlog_dir / filename).write_text("\n".join(lines), encoding="utf-8")
     return filename
+
+
+def resolve_handoffs(completed_filename: str, project_slug: str = None) -> list:
+    """After a task completes, activate any backlog tasks that were waiting on it.
+
+    Returns list of filenames that were activated.
+    """
+    dirs = _get_task_dirs(project_slug)
+    backlog_dir = dirs["backlog"]
+    if not backlog_dir.exists():
+        return []
+
+    activated = []
+    for f in backlog_dir.glob("*.md"):
+        try:
+            content = f.read_text(encoding="utf-8")
+            dep = parse_depends_on(content)
+            if dep and dep == completed_filename:
+                # Parse the agent from the waiting task
+                m = re.search(r"^\*\*Agent:\*\*\s*(.+)$", content, re.MULTILINE)
+                agent = m.group(1).strip() if m else "orchestrator"
+                assign_task(f.name, agent, project_slug=project_slug)
+                activated.append(f.name)
+        except Exception:
+            pass
+    return activated
 
 
 def assign_task(filename: str, agent: str, project_slug: str = None) -> None:

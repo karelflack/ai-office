@@ -283,7 +283,8 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
         except FileNotFoundError as e:
             self._error(404, str(e))
             return
-        self._json_response({"ok": True})
+        activated = task_mgr.resolve_handoffs(filename, project_slug=slug)
+        self._json_response({"ok": True, "activated": activated})
 
     def _handle_post_project_task_delete(self, slug):
         try:
@@ -424,9 +425,11 @@ Rules:
 - Only include agents genuinely relevant to this project type
 - Order tasks logically: research/architecture first, implementation last
 - Each description must be specific — what exactly to produce, what format, what decisions to make
+- Use the "depends_on" field to declare which task (by title) must complete before this one starts. Set to null if the task can start immediately.
+- Example: arve's implementation should depend on bjorn's architecture. odd's testing should depend on arve's implementation.
 
 Reply with ONLY a JSON array, no markdown, no explanation:
-[{{"agent":"bjorn","title":"System Architecture","description":"Design the full system..."}},...]"""
+[{{"agent":"bjorn","title":"System Architecture","description":"Design the full system...","depends_on":null}},{{"agent":"arve","title":"Implementation","description":"...","depends_on":"System Architecture"}}]"""
 
         try:
             proc = subprocess.run(
@@ -462,16 +465,22 @@ Reply with ONLY a JSON array, no markdown, no explanation:
             return
 
         # Validate and create task files
+        # First pass: create all tasks, build title → filename map
         created = []
         valid_agents = agent_registry.VALID_AGENTS
+        title_to_filename: dict = {}
         for item in plan:
             agent = str(item.get("agent", "orchestrator")).strip().lower()
             title = str(item.get("title", "Untitled")).strip()
             desc  = str(item.get("description", "")).strip()
+            raw_dep = item.get("depends_on")
             if agent not in valid_agents:
                 agent = "orchestrator"
-            filename = task_mgr.create_task(title, agent, desc, project_slug=slug)
-            created.append({"filename": filename, "agent": agent, "title": title, "description": desc})
+            # Resolve depends_on title → filename from previously created tasks
+            depends_on = title_to_filename.get(raw_dep) if raw_dep else None
+            filename = task_mgr.create_task(title, agent, desc, project_slug=slug, depends_on=depends_on)
+            title_to_filename[title] = filename
+            created.append({"filename": filename, "agent": agent, "title": title, "description": desc, "depends_on": depends_on})
 
         # Update project memory with the kickoff description
         mem_path = BASE_DIR / "projects" / slug / "memory" / "project_memory.json"
