@@ -1,0 +1,27 @@
+{
+  "project": "Test Handoffs",
+  "slug": "test-handoffs",
+  "description": "A Python REST API for a URL shortener.",
+  "created": "2026-04-01",
+  "agent_notes": {
+    "bjorn": "Architecture complete. Stack: FastAPI + Postgres (Supabase) + Redis (Upstash) on Railway. Short codes are 7-char base-62, cryptographically random. Three tables: urls, clicks, api_keys. Redirect flow uses Redis read-through cache (1h TTL). Clicks written async (fire-and-forget). Hard constraint: short codes are permanent identifiers — code generation algorithm must not change after first link is issued. See output/2026-04-01-system-architecture.md for full spec including folder structure for Arve."
+  },
+  "kickoff_description": "A Python REST API for a URL shortener. Needs system architecture, backend implementation, and API testing.",
+  "kickoff_plan": [
+    {
+      "agent": "bjorn",
+      "title": "System Architecture",
+      "status": "completed"
+    },
+    {
+      "agent": "arve",
+      "title": "Backend Implementation",
+      "status": "active"
+    },
+    {
+      "agent": "dag",
+      "title": "Docker and CI/CD Setup",
+      "status": "pending"
+    }
+  ]
+}
