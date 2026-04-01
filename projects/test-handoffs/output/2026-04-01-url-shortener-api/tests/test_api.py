@@ -230,3 +230,104 @@ def test_delete_requires_auth():
     code = client.post("/shorten", json={"url": "https://example.com"}).json()["code"]
     resp = client.delete(f"/{code}")
     assert resp.status_code == 401
+
+
+# ---------------------------------------------------------------------------
+# /auth/* router — register, login, refresh, me
+# ---------------------------------------------------------------------------
+
+def test_auth_register_returns_both_tokens():
+    resp = client.post("/auth/register", json={"email": "auth_reg@example.com", "password": "pass1234"})
+    assert resp.status_code == 201
+    data = resp.json()
+    assert "access_token" in data
+    assert "refresh_token" in data
+    assert data["token_type"] == "bearer"
+
+
+def test_auth_register_duplicate_returns_409():
+    client.post("/auth/register", json={"email": "dup_auth@example.com", "password": "pass"})
+    resp = client.post("/auth/register", json={"email": "dup_auth@example.com", "password": "pass"})
+    assert resp.status_code == 409
+
+
+def test_auth_login_valid_credentials():
+    client.post("/auth/register", json={"email": "auth_login@example.com", "password": "secret"})
+    resp = client.post("/auth/login", data={"username": "auth_login@example.com", "password": "secret"})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "access_token" in data
+    assert "refresh_token" in data
+
+
+def test_auth_login_wrong_password_is_401():
+    client.post("/auth/register", json={"email": "auth_bad@example.com", "password": "correct"})
+    resp = client.post("/auth/login", data={"username": "auth_bad@example.com", "password": "wrong"})
+    assert resp.status_code == 401
+
+
+def test_auth_login_unknown_user_is_401():
+    resp = client.post("/auth/login", data={"username": "ghost@example.com", "password": "x"})
+    assert resp.status_code == 401
+
+
+def test_auth_me_returns_user_profile():
+    resp = client.post("/auth/register", json={"email": "auth_me@example.com", "password": "pass"})
+    token = resp.json()["access_token"]
+    me = client.get("/auth/me", headers={"Authorization": f"Bearer {token}"})
+    assert me.status_code == 200
+    data = me.json()
+    assert data["email"] == "auth_me@example.com"
+    assert "id" in data
+    assert "created_at" in data
+
+
+def test_auth_me_requires_auth():
+    resp = client.get("/auth/me")
+    assert resp.status_code == 401
+
+
+def test_auth_refresh_issues_new_tokens():
+    reg = client.post("/auth/register", json={"email": "auth_refresh@example.com", "password": "pass"})
+    refresh_token = reg.json()["refresh_token"]
+
+    resp = client.post("/auth/refresh", json={"refresh_token": refresh_token})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "access_token" in data
+    assert "refresh_token" in data
+
+    # Verify the new access token actually works for a protected endpoint
+    me = client.get("/auth/me", headers={"Authorization": f"Bearer {data['access_token']}"})
+    assert me.status_code == 200
+    assert me.json()["email"] == "auth_refresh@example.com"
+
+
+def test_auth_refresh_with_invalid_token_is_401():
+    resp = client.post("/auth/refresh", json={"refresh_token": "not.a.valid.token"})
+    assert resp.status_code == 401
+
+
+def test_auth_refresh_token_rejected_as_access_token():
+    """A refresh token must not be accepted where an access token is required."""
+    reg = client.post("/auth/register", json={"email": "auth_rt_check@example.com", "password": "pass"})
+    refresh_token = reg.json()["refresh_token"]
+
+    # Attempt to use the refresh token to hit a protected endpoint
+    resp = client.get("/auth/me", headers={"Authorization": f"Bearer {refresh_token}"})
+    assert resp.status_code == 401
+
+
+def test_token_response_includes_refresh_token_on_legacy_register():
+    """Legacy /register endpoint must also return a refresh_token field."""
+    resp = client.post("/register", json={"email": "legacy_rt@example.com", "password": "pass"})
+    assert resp.status_code == 201
+    assert "refresh_token" in resp.json()
+
+
+def test_token_response_includes_refresh_token_on_legacy_login():
+    """Legacy /login endpoint must also return a refresh_token field."""
+    client.post("/register", json={"email": "legacy_login@example.com", "password": "pass"})
+    resp = client.post("/login", data={"username": "legacy_login@example.com", "password": "pass"})
+    assert resp.status_code == 200
+    assert "refresh_token" in resp.json()

@@ -1,5 +1,5 @@
 import os
-from fastapi import FastAPI, Depends, HTTPException, Request, status
+from fastapi import APIRouter, FastAPI, Depends, HTTPException, Request, status
 from fastapi.responses import RedirectResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
@@ -10,6 +10,8 @@ from .auth import (
     hash_password,
     verify_password,
     create_access_token,
+    create_refresh_token,
+    decode_refresh_token,
     get_current_user,
     get_optional_user,
 )
@@ -21,9 +23,63 @@ app = FastAPI(title="URL Shortener", version="2.0.0")
 
 BASE_URL = os.getenv("BASE_URL", "http://localhost:8000")
 
+# ---------------------------------------------------------------------------
+# Auth router  (/auth/register, /auth/login, /auth/refresh, /auth/me)
+# ---------------------------------------------------------------------------
+
+auth_router = APIRouter(prefix="/auth", tags=["auth"])
+
+
+def _issue_tokens(email: str) -> schemas.Token:
+    """Create a matched access+refresh token pair for the given email."""
+    return schemas.Token(
+        access_token=create_access_token({"sub": email}),
+        refresh_token=create_refresh_token({"sub": email}),
+    )
+
+
+@auth_router.post("/register", response_model=schemas.Token, status_code=201)
+def auth_register(body: schemas.UserCreate, db: Session = Depends(get_db)):
+    if crud.get_user_by_email(db, body.email):
+        raise HTTPException(status_code=409, detail="Email already registered")
+    hashed = hash_password(body.password)
+    user = crud.create_user(db, email=body.email, hashed_password=hashed)
+    return _issue_tokens(user.email)
+
+
+@auth_router.post("/login", response_model=schemas.Token)
+def auth_login(form: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    user = crud.get_user_by_email(db, form.username)
+    if not user or not verify_password(form.password, user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return _issue_tokens(user.email)
+
+
+@auth_router.post("/refresh", response_model=schemas.Token)
+def auth_refresh(body: schemas.RefreshRequest, db: Session = Depends(get_db)):
+    """Exchange a valid refresh token for a new access+refresh token pair."""
+    email = decode_refresh_token(body.refresh_token)
+    user = crud.get_user_by_email(db, email)
+    if user is None:
+        raise HTTPException(status_code=401, detail="User no longer exists")
+    return _issue_tokens(user.email)
+
+
+@auth_router.get("/me", response_model=schemas.UserResponse)
+def auth_me(current_user: models.User = Depends(get_current_user)):
+    """Return the profile of the currently authenticated user."""
+    return current_user
+
+
+app.include_router(auth_router)
+
 
 # ---------------------------------------------------------------------------
-# Auth endpoints
+# Legacy flat auth endpoints (kept for backward compatibility)
 # ---------------------------------------------------------------------------
 
 @app.post("/register", response_model=schemas.Token, status_code=201)
@@ -32,8 +88,7 @@ def register(body: schemas.UserCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=409, detail="Email already registered")
     hashed = hash_password(body.password)
     user = crud.create_user(db, email=body.email, hashed_password=hashed)
-    token = create_access_token({"sub": user.email})
-    return schemas.Token(access_token=token)
+    return _issue_tokens(user.email)
 
 
 @app.post("/login", response_model=schemas.Token)
@@ -46,8 +101,7 @@ def login(form: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    token = create_access_token({"sub": user.email})
-    return schemas.Token(access_token=token)
+    return _issue_tokens(user.email)
 
 
 # ---------------------------------------------------------------------------

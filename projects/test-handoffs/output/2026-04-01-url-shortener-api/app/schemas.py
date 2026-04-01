@@ -40,12 +40,17 @@ class UserResponse(BaseModel):
 
 class Token(BaseModel):
     access_token: str
+    refresh_token: str
     token_type: str = "bearer"
 
 
 class TokenData(BaseModel):
     # Subject field holds the user's email
     sub: str
+
+
+class RefreshRequest(BaseModel):
+    refresh_token: str
 
 
 class LinkResponse(BaseModel):
