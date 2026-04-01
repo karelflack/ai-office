@@ -6,13 +6,19 @@
 
 ---
 
+## Context Note
+
+AI Office is an **LLM API proxy with semantic prompt caching**. It sits between your application and the LLM provider, caches identical and semantically similar prompts, and returns stored responses without making new API calls. The primary value prop is cost reduction (40–80% in month one). The audience is CTOs and engineering leads. Copy is from Jorunn; tech stack (Astro + Tailwind + Vercel + Motion One) is from Bjorn.
+
+---
+
 ## 1. Design Direction Brief
 
 ### Philosophy
 
-Minimal, data-forward, and confident. The design should feel like the product: intelligent and precise without being cold. Inspired by Linear, Vercel dashboard, and Stripe — built on dark mode first, with space for the product to breathe.
+Minimal, data-forward, and precise. The design signals trust to a technical buyer who has seen every SaaS landing page and distrusts anything decorative. Inspired by Linear, Vercel dashboard, and Stripe — built dark-mode first. Space and type do the heavy lifting. The numbers are the hero.
 
-No glassmorphism. No gradients for the sake of it. Earn every visual element.
+No glassmorphism. No illustration. Earn every visual element.
 
 ---
 
@@ -23,34 +29,46 @@ No glassmorphism. No gradients for the sake of it. Earn every visual element.
 | Background | `bg-base` | `#0A0A0F` | Page background |
 | Surface | `bg-surface` | `#111118` | Cards, panels |
 | Surface raised | `bg-surface-raised` | `#16161F` | Hover states, elevated cards |
-| Border | `border-subtle` | `#1E1E2E` | Dividers, card outlines |
+| Border subtle | `border-subtle` | `#1E1E2E` | Dividers, card outlines |
 | Border active | `border-active` | `#2D2D42` | Focused/hover borders |
 | Primary | `indigo-500` | `#6366F1` | CTAs, links, active states |
 | Primary hover | `indigo-400` | `#818CF8` | Button hover |
-| Primary glow | — | `rgba(99,102,241,0.15)` | Subtle glow on hero badge, buttons |
+| Primary glow | — | `rgba(99,102,241,0.12)` | Radial glow behind hero mockup |
 | Text primary | `text-primary` | `#F1F1FA` | Headlines, strong body |
 | Text secondary | `text-secondary` | `#94A3B8` | Body copy, captions |
-| Text muted | `text-muted` | `#4B5563` | Metadata, footnotes |
-| Accent green | `emerald-500` | `#10B981` | Success states, "live" indicators |
+| Text muted | `text-muted` | `#4B5563` | Metadata, footnotes, stat labels |
+| Accent green | `emerald-500` | `#10B981` | Cache hit indicators, live stat dots |
+| Accent amber | `amber-400` | `#FBBF24` | Savings highlight numbers in stat bar |
 
-**Light mode:** Invert base (`#FFFFFF`), surface (`#F9FAFB`), border (`#E5E7EB`). Primary remains `#6366F1`. Text primary becomes `#0A0A0F`.
+**Light mode:** Background → `#FFFFFF`, surface → `#F9FAFB`, border → `#E5E7EB`. Primary remains `#6366F1`. Text primary → `#0A0A0F`. Provide via CSS `prefers-color-scheme: light` or Tailwind `dark:` classes.
 
 ---
 
 ### Typography
 
-All fonts are Google Fonts. Tailwind-compatible via `font-sans` / `font-mono`.
+All Google Fonts. Configured in `tailwind.config.ts` under `theme.extend.fontFamily`.
 
-| Role | Font | Weight(s) | Size scale |
-|------|------|-----------|------------|
-| Display / Hero | **Geist** (or Inter fallback) | 700, 800 | `text-5xl` → `text-7xl` |
-| Headings | **Inter** | 600, 700 | `text-2xl` → `text-4xl` |
-| Body | **Inter** | 400, 500 | `text-base` (`16px`), `text-lg` (`18px`) |
-| Labels / Badges | **Inter** | 500, 600 | `text-xs` → `text-sm` |
-| Code / Mono | **JetBrains Mono** | 400 | `text-sm` |
+| Role | Font | Weight(s) | Tailwind |
+|------|------|-----------|----------|
+| Display / Hero | **Geist** (fallback: Inter) | 700, 800 | `font-display` |
+| Headings | **Inter** | 600, 700 | `font-sans` |
+| Body | **Inter** | 400, 500 | `font-sans` |
+| Labels / Badges | **Inter** | 500, 600 | `font-sans` |
+| Code / Mono | **JetBrains Mono** | 400 | `font-mono` |
 
-**Line height:** `leading-tight` (1.2) for display; `leading-relaxed` (1.625) for body.
-**Letter spacing:** `-0.02em` for display headings (feels tight and deliberate); normal for body.
+**Size scale in use:**
+
+| Context | Tailwind | px |
+|---------|----------|----|
+| Hero headline | `text-6xl lg:text-7xl` | 60–72px |
+| Section headline | `text-3xl lg:text-4xl` | 30–36px |
+| Feature card title | `text-xl` | 20px |
+| Body copy | `text-base lg:text-lg` | 16–18px |
+| Badge / label | `text-xs sm:text-sm` | 12–14px |
+| Code snippet | `text-sm` | 14px |
+
+**Letter spacing:** `-0.025em` on display/hero (`tracking-tight`). Normal on body.
+**Line height:** `leading-tight` (1.2) for headlines. `leading-relaxed` (1.625) for body.
 
 ---
 
@@ -58,8 +76,8 @@ All fonts are Google Fonts. Tailwind-compatible via `font-sans` / `font-mono`.
 
 Base unit: `4px`
 
-| Token | px | Tailwind |
-|-------|----|----------|
+| Name | px | Tailwind |
+|------|----|----------|
 | xs | 4 | `p-1` |
 | sm | 8 | `p-2` |
 | md | 16 | `p-4` |
@@ -70,37 +88,37 @@ Base unit: `4px`
 | 4xl | 96 | `p-24` |
 | 5xl | 128 | `p-32` |
 
-Section padding: `py-24` desktop, `py-16` mobile.
-Container max-width: `max-w-6xl` with `px-6`.
+Section vertical padding: `py-24` desktop, `py-16` mobile.
+Container: `max-w-6xl mx-auto px-6`.
 
 ---
 
 ### Component Style
 
-**Style:** Minimal dark with fine borders and selective indigo glow accents. No gradients on surfaces. No shadows — use borders instead. Occasional radial glow behind the hero dashboard mockup.
+**Approach:** Fine borders on dark surfaces. No drop shadows — use border and background contrast instead. Indigo reserved for primary actions and key data highlights. Motion One scroll animations only — no hover scale effects.
 
-| Component | Style notes |
-|-----------|-------------|
-| Buttons (primary) | `bg-indigo-500`, `rounded-lg`, `px-5 py-2.5`, `text-white font-medium`, hover: `bg-indigo-400` |
-| Buttons (secondary/ghost) | `border border-[#1E1E2E]`, `bg-transparent`, hover: `bg-surface-raised` |
-| Cards / Feature tiles | `bg-surface`, `border border-[#1E1E2E]`, `rounded-xl`, `p-6` |
-| Badge / Pill | `bg-[rgba(99,102,241,0.1)] border border-[rgba(99,102,241,0.3)]`, `text-indigo-400`, `rounded-full`, `text-xs font-medium px-3 py-1` |
-| Nav | Sticky, `bg-[rgba(10,10,15,0.8)] backdrop-blur`, `border-b border-[#1E1E2E]` |
-| Divider | `border-t border-[#1E1E2E]` |
-| Input | `bg-surface`, `border border-[#1E1E2E]`, `rounded-lg`, focus: `border-indigo-500 ring-1 ring-indigo-500/20` |
+| Component | Style |
+|-----------|-------|
+| **Button — primary** | `bg-indigo-500 hover:bg-indigo-400 text-white font-medium rounded-lg px-5 py-2.5 transition-colors duration-150` |
+| **Button — ghost** | `border border-[#1E1E2E] hover:border-[#2D2D42] hover:bg-[#16161F] text-primary rounded-lg px-5 py-2.5 transition-colors duration-150` |
+| **Feature card** | `bg-[#111118] border border-[#1E1E2E] rounded-xl p-6 hover:border-[#2D2D42] transition-colors duration-150` |
+| **Badge / pill** | `bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 rounded-full text-xs font-medium px-3 py-1` |
+| **Nav bar** | `sticky top-0 h-14 backdrop-blur-md bg-[#0A0A0F]/80 border-b border-[#1E1E2E]` |
+| **Stat number** | `text-amber-400 font-bold text-3xl` + `text-muted text-sm` label below |
+| **Code block** | `bg-[#16161F] border border-[#1E1E2E] rounded-lg font-mono text-sm text-emerald-400 px-4 py-3` |
+| **Logo favicon mark** | Geometric, single-color-capable, readable at 16×16px — no wordmark at small sizes |
 
-**Icons:** Lucide React — stroke weight `1.5`, size `20px` inline / `24px` feature icons.
+**Icons:** Lucide — stroke `1.5`, inline `20px`, feature `24px`.
 
 ---
 
 ## 2. Wireframes
 
-Notation key:
-- `[TEXT]` = copy placeholder
-- `[IMG]` = image or illustration asset
+Notation:
+- `[COPY: ...]` = exact copy from Jorunn's deliverable
+- `[IMG]` = image or screenshot asset
 - `[BTN]` = interactive button
-- `···` = implied repetition
-- Columns separated by `|`
+- `···` = repeated pattern
 
 ---
 
@@ -108,17 +126,18 @@ Notation key:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│  [logo icon] AI Office          [Features]  [Pricing]  [Docs]  [Sign in]   │
-│                                                              [→ Get started] │
+│  [icon mark]  AI Office        [Docs]   [Pricing]   [GitHub]   [Sign in]   │
+│                                                         [→ Start saving now]│
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-- Sticky, full-width, `h-14`
-- Logo left-aligned; nav links centered (desktop) or hidden behind hamburger (mobile)
-- Primary CTA button right-aligned, always visible
-- Background: frosted blur on scroll — `backdrop-blur-md bg-[#0A0A0F]/80`
+- Full-width sticky, `h-14`
+- Left: logo mark (geometric icon, 20px) + wordmark `font-medium`
+- Center: nav links `text-sm text-secondary hover:text-primary`
+- Right: ghost "Sign in" + primary CTA "Start saving now"
+- Frosted blur on scroll
 
-**Mobile:** Hamburger menu reveals full-screen drawer with stacked nav links + CTA.
+**Mobile:** Logo left. Hamburger right. Drawer with stacked links + primary CTA at bottom.
 
 ---
 
@@ -127,273 +146,366 @@ Notation key:
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                                                                             │
-│                    ┌─────────────────────────┐                             │
-│                    │ ✦ Now in public beta     │  ← indigo pill badge        │
-│                    └─────────────────────────┘                             │
+│                  ┌──────────────────────────────────┐                      │
+│                  │  ✦  Now in public beta            │  ← indigo pill badge │
+│                  └──────────────────────────────────┘                      │
 │                                                                             │
-│              Your entire office,                                            │
-│              run by AI.                                                     │
+│                 Stop paying for the                                         │
+│                 same prompt twice.                                          │
 │                                                                             │
-│         AI agents for every role. One platform.                             │
-│         No headcount required.                                              │
+│      AI Office caches your LLM API calls — so repeated and                  │
+│      semantically similar prompts return instantly, without                 │
+│      a new API charge. Most teams cut their LLM costs                       │
+│      by 40–80% in the first month.                                          │
 │                                                                             │
-│              [→ Start for free]    [Watch the demo  ▶]                     │
+│              [→ Start saving now]      [See how it works]                   │
 │                                                                             │
-│         ─────────────────────────────────────────────                      │
+│       ─────────────────────────────────────────────────                    │
 │                                                                             │
-│    ┌────────────────────────────────────────────────────────────────┐      │
-│    │                                                                │      │
-│    │          [PRODUCT DASHBOARD MOCKUP / SCREENSHOT]               │      │
-│    │                                                                │      │
-│    │   ┌──────────────┐  ┌─────────────────┐  ┌───────────────┐   │      │
-│    │   │  Agent: Arve │  │  Agent: Ingrid  │  │  Agent: Else  │   │      │
-│    │   │  ● Working   │  │  ● Reviewing    │  │  ● Standby    │   │      │
-│    │   └──────────────┘  └─────────────────┘  └───────────────┘   │      │
-│    │                                                                │      │
-│    └────────────────────────────────────────────────────────────────┘      │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-**Layout:** Single column, center-aligned text, max-width `max-w-3xl` for headline, `max-w-5xl` for mockup.
-**Headline:** `text-6xl font-bold tracking-tight` (desktop); `text-4xl` (mobile).
-**Subheadline:** `text-xl text-secondary` (desktop); `text-lg` (mobile).
-**Mockup:** Rounded corners (`rounded-2xl`), `border border-[#1E1E2E]`, subtle radial glow behind in indigo (`bg-radial-gradient(indigo-500/5)`).
-**Button gap:** `gap-4`, buttons side-by-side (desktop), stacked (mobile).
-
----
-
-### 2.3 Features Section
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                                                                             │
-│                  How AI Office works                                        │
-│              [One platform. Every role. Always on.]                         │
-│                                                                             │
-│  ┌────────────────────────┐  ┌────────────────────────┐  ┌───────────────┐ │
-│  │                        │  │                        │  │               │ │
-│  │  [icon: cpu]           │  │  [icon: users]         │  │  [icon: bolt] │ │
-│  │                        │  │                        │  │               │ │
-│  │  Agents for every role │  │  Works as a team       │  │  Always on    │ │
-│  │                        │  │                        │  │               │ │
-│  │  [body copy: 2-3 lines │  │  [body copy: 2-3 lines │  │  [body copy:  │ │
-│  │   describing the feat] │  │   describing the feat] │  │   2-3 lines]  │ │
-│  │                        │  │                        │  │               │ │
-│  │  [→ Learn more]        │  │  [→ Learn more]        │  │  [→ Learn more│ │
-│  └────────────────────────┘  └────────────────────────┘  └───────────────┘ │
+│   ┌─────────────────────────────────────────────────────────────────┐      │
+│   │                                                                 │      │
+│   │   ┌────────────────────────────────────────────────────────┐   │      │
+│   │   │  $ curl https://api.aioffice.dev/v1/chat/completions  │   │      │
+│   │   │    -H "Authorization: Bearer $API_KEY"                 │   │      │
+│   │   │    ...                                                  │   │      │
+│   │   │                                                         │   │      │
+│   │   │  ← 200 OK  ● Cache hit  ↩ 4ms  Saved: $0.024          │   │      │
+│   │   └────────────────────────────────────────────────────────┘   │      │
+│   │                                                                 │      │
+│   │   [Dashboard chart: cost over time, showing drop after deploy] │      │
+│   │                                                                 │      │
+│   └─────────────────────────────────────────────────────────────────┘      │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Layout:** 3-column grid (`grid-cols-3`) desktop; `grid-cols-1` mobile.
-**Cards:** `bg-surface border border-[#1E1E2E] rounded-xl p-6`; hover: `border-[#2D2D42]` with subtle transition.
-**Icon:** `24px` Lucide icon in indigo `text-indigo-400`, inside a `rounded-lg bg-indigo-500/10 w-10 h-10 flex items-center justify-center` container.
-**Card link:** Ghost text link `text-sm text-indigo-400 hover:text-indigo-300`.
+**Layout:** Single column, center-aligned, `max-w-3xl` for text, `max-w-5xl` for mockup.
+**Headline:** `text-6xl lg:text-7xl font-bold tracking-tight`; desktop 2 lines, mobile wraps to 3.
+**Subheadline:** `text-lg lg:text-xl text-secondary max-w-2xl mx-auto leading-relaxed`.
+**Buttons:** `flex gap-4 justify-center` desktop; `flex-col items-center` mobile.
+**Mockup:** Terminal/dashboard preview image. `rounded-2xl border border-[#1E1E2E]`. Radial indigo glow behind: `bg-[radial-gradient(ellipse_at_center,_rgba(99,102,241,0.12)_0%,_transparent_70%)]`.
+**Animation (Motion One):** Badge fades in first; headline fades + translates up 6px (150ms delay); subheadline (250ms); buttons (350ms); mockup (500ms).
 
 ---
 
-### 2.4 Deep Feature — Alternating Row Layout (optional expansion)
-
-If 3 features need more breathing room, use an alternating text/image layout below the card grid:
+### 2.3 Stats Bar
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                                                                             │
-│   ┌──────────────────────────────┐     ┌────────────────────────────────┐  │
-│   │                              │     │                                │  │
-│   │  [FEATURE SCREENSHOT / GIF] │     │  Feature title                 │  │
-│   │                              │     │                                │  │
-│   │                              │     │  [Body copy — 3-4 sentences]   │  │
-│   │                              │     │                                │  │
-│   └──────────────────────────────┘     │  ✓ Bullet point 1              │  │
-│                                        │  ✓ Bullet point 2              │  │
-│                                        │  ✓ Bullet point 3              │  │
-│                                        │                                │  │
-│                                        │  [→ See how it works]          │  │
-│                                        └────────────────────────────────┘  │
-│                                                                             │
-│   ┌────────────────────────────────┐   ┌──────────────────────────────┐    │
-│   │  Feature title (reversed)      │   │                              │    │
-│   │  ...                           │   │  [FEATURE SCREENSHOT / GIF]  │    │
-│   └────────────────────────────────┘   └──────────────────────────────┘    │
+│    40–80%           4ms            200M+             500+                  │
+│  avg cost         cache hit     cached responses   engineering teams       │
+│  reduction        latency          served           in production          │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Layout:** `grid-cols-2 gap-16 items-center` — alternates image left/right per row.
-**Mobile:** Stack vertically, image always above text.
+**Layout:** `grid-cols-4` desktop; `grid-cols-2` mobile.
+**Numbers:** `text-3xl font-bold text-amber-400`.
+**Labels:** `text-sm text-muted mt-1`.
+**Dividers:** `border-t border-b border-[#1E1E2E]`.
+**Note:** Use `[X]` placeholders per Jorunn's copy — real numbers from the product team fill these at launch.
 
 ---
 
-### 2.5 Social Proof — Logos Bar
+### 2.4 Features Section — Card Grid
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                                                                             │
-│              Trusted by teams building what's next                          │
+│               How AI Office works                                           │
+│                                                                             │
+│  ┌───────────────────────────┐  ┌──────────────────────────┐  ┌──────────┐ │
+│  │                           │  │                          │  │          │ │
+│  │  [icon: git-merge]        │  │  [icon: brain]           │  │ [icon:   │ │
+│  │                           │  │                          │  │  eye]    │ │
+│  │  A proxy that sits        │  │  Exact matches are easy. │  │          │ │
+│  │  between your app and     │  │  We catch the near-      │  │  Full    │ │
+│  │  the LLM. Nothing to      │  │  misses too.             │  │  observa-│ │
+│  │  rip out.                 │  │                          │  │  bility. │ │
+│  │                           │  │                          │  │  You     │ │
+│  │  Point your existing API  │  │  Most caching systems    │  │  decide  │ │
+│  │  calls at AI Office. No   │  │  only match identical    │  │  what    │ │
+│  │  SDK changes, no model    │  │  strings. AI Office uses │  │  gets    │ │
+│  │  switching...             │  │  semantic similarity...  │  │  cached. │ │
+│  │                           │  │                          │  │          │ │
+│  └───────────────────────────┘  └──────────────────────────┘  └──────────┘ │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+**Layout:** `grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6`.
+**Cards:** `bg-[#111118] border border-[#1E1E2E] rounded-xl p-6 hover:border-[#2D2D42] transition-colors`.
+**Icon container:** `w-10 h-10 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-400 mb-4`.
+**Title:** `text-xl font-semibold text-primary mb-3`.
+**Body:** `text-base text-secondary leading-relaxed`.
+**Section intro:** `text-sm font-medium text-indigo-400 uppercase tracking-wide mb-3` label above heading.
+
+**Animation (Motion One):** Cards fade-in + slide-up 8px on scroll entry, staggered 80ms per card.
+
+---
+
+### 2.5 Feature Deep Dive — Alternating Rows
+
+Used to expand each of the 3 features with more detail, a screenshot or diagram, and bullet proof-points.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  ┌──────────────────────────────────┐  ┌───────────────────────────────┐   │
+│  │                                  │  │                               │   │
+│  │  [PROXY DIAGRAM: app → AI Office │  │  A proxy that sits between    │   │
+│  │   → LLM, with cache hit path     │  │  your app and the LLM.        │   │
+│  │   shown as bypass arrow]         │  │  Nothing to rip out.          │   │
+│  │                                  │  │                               │   │
+│  │                                  │  │  Point your existing API      │   │
+│  │                                  │  │  calls at AI Office. No SDK   │   │
+│  │                                  │  │  changes, no model switching, │   │
+│  │                                  │  │  no migration...              │   │
+│  │                                  │  │                               │   │
+│  │                                  │  │  ✓ Setup in under 10 minutes  │   │
+│  │                                  │  │  ✓ Works with any LLM provider│   │
+│  │                                  │  │  ✓ Your team doesn't need to  │   │
+│  │                                  │  │    know it's there            │   │
+│  │                                  │  │                               │   │
+│  └──────────────────────────────────┘  └───────────────────────────────┘   │
+│                                                                             │
+│  ┌───────────────────────────────┐  ┌──────────────────────────────────┐   │
+│  │                               │  │                                  │   │
+│  │  Exact matches are easy.      │  │  [SIMILARITY DIAGRAM: prompt     │   │
+│  │  We catch the near-misses too.│  │   variants → embedding space →   │   │
+│  │                               │  │   cache hit]                     │   │
+│  │  Most caching systems only    │  │                                  │   │
+│  │  match identical strings...   │  │                                  │   │
+│  │                               │  │                                  │   │
+│  │  ✓ Rephrased queries          │  │                                  │   │
+│  │  ✓ Variant inputs             │  │                                  │   │
+│  │  ✓ User-generated text        │  │                                  │   │
+│  │                               │  │                                  │   │
+│  └───────────────────────────────┘  └──────────────────────────────────┘   │
+│                                                                             │
+│  ┌──────────────────────────────────┐  ┌───────────────────────────────┐   │
+│  │                                  │  │                               │   │
+│  │  [DASHBOARD SCREENSHOT: cache    │  │  Full observability.          │   │
+│  │   hit rate chart, cost savings   │  │  You decide what gets cached  │   │
+│  │   graph, per-endpoint table]     │  │  and what doesn't.            │   │
+│  │                                  │  │                               │   │
+│  │                                  │  │  Every request is logged...   │   │
+│  │                                  │  │                               │   │
+│  │                                  │  │  ✓ Cache hits/misses/savings  │   │
+│  │                                  │  │  ✓ TTL controls per route     │   │
+│  │                                  │  │  ✓ Similarity thresholds      │   │
+│  │                                  │  │  ✓ Exclude sensitive prompts  │   │
+│  │                                  │  │                               │   │
+│  └──────────────────────────────────┘  └───────────────────────────────┘   │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+**Layout:** `grid grid-cols-1 lg:grid-cols-2 gap-16 items-center`. Row 1 + Row 3: image left, text right. Row 2: text left, image right.
+**Mobile:** Always `grid-cols-1`; image above text regardless of desktop order. Use `order-first lg:order-none` on image for rows where desktop shows text first.
+**Checkmarks:** `text-emerald-500` Lucide `check` icon inline before list items.
+**Diagrams / screenshots:** `rounded-2xl border border-[#1E1E2E]` asset containers.
+
+---
+
+### 2.6 Social Proof — Logos Bar
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    border-t border-[#1E1E2E]                                │
+│                                                                             │
+│            Trusted by engineering teams moving fast on AI                   │
 │                                                                             │
 │   [Logo 1]    [Logo 2]    [Logo 3]    [Logo 4]    [Logo 5]    [Logo 6]     │
 │                                                                             │
+│                    border-b border-[#1E1E2E]                                │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Layout:** Single row, `flex justify-center items-center gap-12 flex-wrap`.
-**Logos:** Rendered in `opacity-40`, hover: `opacity-70`. Monochrome white treatment.
-**Label:** `text-sm text-muted text-center mb-8`.
-**Divider:** `border-t border-[#1E1E2E]` above and below this section.
+**Layout:** `flex flex-wrap justify-center items-center gap-10 lg:gap-16`.
+**Logos:** SVG, `opacity-40 hover:opacity-65 transition-opacity grayscale`. White/light treatment on dark background.
+**Label:** `text-sm text-muted text-center mb-10`.
 
 ---
 
-### 2.6 Testimonials (optional — placeholder block)
+### 2.7 Testimonials
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                                                                             │
-│              What teams say                                                 │
-│                                                                             │
-│  ┌─────────────────────────────────┐  ┌─────────────────────────────────┐  │
-│  │ "Quote from user. Short,        │  │ "Quote from user. Short,        │  │
-│  │  punchy, specific."             │  │  punchy, specific."             │  │
-│  │                                 │  │                                 │  │
-│  │  [avatar]  Name, Role @ Co.     │  │  [avatar]  Name, Role @ Co.     │  │
-│  └─────────────────────────────────┘  └─────────────────────────────────┘  │
+│  ┌─────────────────────────────────────┐  ┌───────────────────────────┐   │
+│  │                                     │  │                           │   │
+│  │  "We were spending $X on LLM calls  │  │  "The semantic matching   │   │
+│  │   every month. After deploying      │  │   was the differentiator  │   │
+│  │   AI Office, that dropped to $Y     │  │   for us. AI Office       │   │
+│  │   within four weeks."               │  │   caught 60% of our       │   │
+│  │                                     │  │   calls."                 │   │
+│  │  [avatar]  Name                     │  │                           │   │
+│  │            Title, Company           │  │  [avatar]  Name           │   │
+│  │                                     │  │            Title, Company │   │
+│  └─────────────────────────────────────┘  └───────────────────────────┘   │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Layout:** 2-column grid desktop; single column mobile.
-**Card:** `bg-surface border border-[#1E1E2E] rounded-xl p-6`.
-**Quote text:** `text-base text-primary italic leading-relaxed`.
-**Attribution:** `flex items-center gap-3 mt-4` — avatar `w-8 h-8 rounded-full`, name `text-sm font-medium`, role `text-xs text-muted`.
+**Layout:** `grid grid-cols-1 md:grid-cols-2 gap-6`.
+**Card:** `bg-[#111118] border border-[#1E1E2E] rounded-xl p-6`.
+**Quote:** `text-base text-primary leading-relaxed mb-6` — no italic (too informal for this tone).
+**Avatar:** `w-8 h-8 rounded-full bg-[#1E1E2E]` placeholder; `text-sm font-medium text-primary`, `text-xs text-muted` role.
 
 ---
 
-### 2.7 CTA Section
+### 2.8 Closing CTA Section
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                                                                             │
-│   ┌─────────────────────────────────────────────────────────────────────┐  │
-│   │                                                                     │  │
-│   │              Your team is waiting.                                  │  │
-│   │                                                                     │  │
-│   │       Hire your first AI agent today — free to start.              │  │
-│   │                                                                     │  │
-│   │              [→ Get started free]    [Talk to us]                  │  │
-│   │                                                                     │  │
-│   │         No credit card required · Cancel any time                  │  │
-│   │                                                                     │  │
-│   └─────────────────────────────────────────────────────────────────────┘  │
+│  ┌───────────────────────────────────────────────────────────────────────┐ │
+│  │                                                                       │ │
+│  │           Your LLM bill is predictable.                               │ │
+│  │           Your engineering time is not.                               │ │
+│  │                                                                       │ │
+│  │     AI Office handles cost optimization at the infrastructure         │ │
+│  │     layer so your team doesn't have to. Deploy once.                  │ │
+│  │     Reduce costs continuously.                                        │ │
+│  │                                                                       │ │
+│  │              [→ Get started free]      [Talk to an engineer]          │ │
+│  │                                                                       │ │
+│  │         No credit card required  ·  Works with any LLM provider       │ │
+│  │                                                                       │ │
+│  └───────────────────────────────────────────────────────────────────────┘ │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Layout:** Full-width `bg-surface` panel with `rounded-2xl border border-[#1E1E2E]`, inside standard container. Center-aligned.
-**Headline:** `text-4xl font-bold` (desktop); `text-3xl` (mobile).
-**Sub-copy:** `text-lg text-secondary`.
-**Buttons:** Side-by-side, primary + ghost. Stack on mobile.
-**Fine print:** `text-xs text-muted mt-3`.
-**Optional:** Faint indigo radial glow behind the panel for visual emphasis.
+**Layout:** Full container width. Panel: `bg-[#111118] border border-[#1E1E2E] rounded-2xl p-12 lg:p-16`. Center-aligned content.
+**Headline:** `text-4xl lg:text-5xl font-bold tracking-tight`.
+**Body:** `text-lg text-secondary max-w-2xl mx-auto mt-4 mb-8 leading-relaxed`.
+**Buttons:** `flex flex-col sm:flex-row justify-center gap-4`.
+**Fine print:** `text-xs text-muted mt-4`.
+**Optional glow:** Faint indigo radial glow behind panel for final visual emphasis — use sparingly.
 
 ---
 
-### 2.8 Footer
+### 2.9 Footer
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│  ─────────────────────────────────────────────────────────────────────────  │
+│                    border-t border-[#1E1E2E]                                │
 │                                                                             │
-│  [logo] AI Office              Product      Company      Legal             │
-│  © 2026 AI Office                                                           │
-│  All rights reserved.         [Features]   [About]      [Privacy]          │
-│                               [Pricing]    [Blog]       [Terms]            │
-│  [twitter] [github]           [Docs]       [Careers]    [Security]         │
-│                               [Changelog]  [Contact]                       │
+│  [icon] AI Office          Product        Company       Legal              │
+│                                                                             │
+│  © 2026 AI Office          Docs           About         Privacy policy     │
+│  All rights reserved.      Pricing        Blog          Terms of service   │
+│                            Changelog      Careers       Security           │
+│  [x/twitter] [github]      Status         Contact                          │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Layout:** `grid-cols-4` desktop — logo/legal left, 3 link columns right. `grid-cols-2` tablet. `grid-cols-1` mobile (stacked).
-**Links:** `text-sm text-secondary hover:text-primary`.
-**Social icons:** Lucide icons, `20px`, `text-muted hover:text-secondary`.
-**Divider:** `border-t border-[#1E1E2E] mb-12` above footer content.
+**Layout:** `grid grid-cols-2 lg:grid-cols-4 gap-10` — logo column + 3 link columns.
+**Links:** `text-sm text-secondary hover:text-primary transition-colors`.
+**Brand column:** Logo mark + wordmark. Copyright + social icons below.
+**Social:** `text-muted hover:text-secondary` Lucide icons, `20px`.
+**Mobile:** `grid-cols-1` — brand block full width, then 3 link columns in `grid-cols-2` sub-grid.
 
 ---
 
-## 3. Responsive Behavior Notes
+## 3. Responsive Behavior Reference
 
-### Breakpoints (Tailwind standard)
+### Breakpoints
 
-| Breakpoint | Width | Behavior |
-|------------|-------|----------|
-| Mobile | < 640px (`sm`) | Single column. Buttons stacked. Nav collapses to hamburger. Reduced font sizes. |
-| Tablet | 640–1024px (`md`) | 2-column grids. Nav visible but compact. |
-| Desktop | > 1024px (`lg`) | Full layouts as wireframed above. |
+| Breakpoint | Width | Notes |
+|------------|-------|-------|
+| Base (mobile) | < 640px | Single column, reduced font sizes, stacked CTAs |
+| `sm` | 640px+ | 2-col grids begin, buttons side-by-side |
+| `md` | 768px+ | Testimonials 2-col, nav fully visible |
+| `lg` | 1024px+ | Full desktop layouts, 3-col features, alternating rows |
 
-### Key responsive rules
+### Key responsive rules per section
 
-**Hero:**
-- Headline: `text-5xl md:text-6xl lg:text-7xl`
-- Buttons: `flex-col sm:flex-row`
-- Dashboard mockup: full width on mobile, `max-w-5xl` centered on desktop
+**Hero headline:**
+`text-5xl sm:text-6xl lg:text-7xl` — reduce to 3 lines on mobile.
 
-**Features (3-column card grid):**
-- `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3`
-- Cards maintain consistent padding at all breakpoints (`p-6`)
+**Dashboard mockup:**
+`w-full max-w-5xl mx-auto` — full width on mobile, capped on desktop. Ensure border-radius matches at all sizes.
 
-**Alternating feature rows:**
-- `grid-cols-1 lg:grid-cols-2`
-- On mobile: image first, then text (regardless of desktop order)
-- Use `order-first lg:order-none` to control image position per row
+**Stats bar:**
+`grid-cols-2 lg:grid-cols-4` — 4 stats wrap to 2×2 on mobile.
+
+**Feature card grid:**
+`grid-cols-1 sm:grid-cols-2 lg:grid-cols-3` — single column on mobile to give each card room to breathe.
+
+**Alternating rows:**
+`grid-cols-1 lg:grid-cols-2` — always stack on mobile, image always first. Use `order-first lg:order-none` for rows that are image-right on desktop.
 
 **Logo bar:**
-- `flex-wrap justify-center` — logos wrap to 2–3 rows on small screens
-- Reduce gap: `gap-8 sm:gap-12`
+`flex-wrap gap-8 sm:gap-12` — logos wrap freely; never clip.
 
 **CTA panel:**
-- Full viewport width on mobile (no horizontal margin)
-- `rounded-none sm:rounded-2xl`
+`rounded-none sm:rounded-2xl` — full bleed on mobile for visual impact, rounded only on tablet+.
 
 **Footer:**
-- `grid-cols-2 lg:grid-cols-4`
-- Logo and copyright span full width on mobile above link columns
+`grid-cols-1` brand block, then `grid-cols-2` for link columns on mobile. Full `grid-cols-4` on `lg`.
 
 ---
 
-## 4. Animation & Motion Notes
+## 4. Animation Notes (Motion One)
 
-Keep motion minimal and purposeful. No auto-play animations. Respect `prefers-reduced-motion`.
+All animations respect `prefers-reduced-motion: reduce`.
 
-| Element | Animation |
-|---------|-----------|
-| Hero badge | Fade in + subtle upward translate on load (`opacity-0 → opacity-100`, `translateY(4px) → 0`) |
-| Hero headline | Staggered fade-in, 100ms delay after badge |
-| Dashboard mockup | Fade in on scroll enter (Intersection Observer, 200ms delay) |
-| Feature cards | Fade up on scroll into view, staggered 80ms per card |
-| CTA panel | Fade in on scroll |
-| Buttons | `transition-colors duration-150` only — no scale effects |
+| Element | Animation | Delay |
+|---------|-----------|-------|
+| Hero badge | `opacity: [0, 1]` + `y: [4, 0]` | 0ms |
+| Hero headline | `opacity: [0, 1]` + `y: [8, 0]` | 100ms |
+| Hero subheadline | `opacity: [0, 1]` + `y: [8, 0]` | 200ms |
+| Hero buttons | `opacity: [0, 1]` | 300ms |
+| Dashboard mockup | `opacity: [0, 1]` on scroll enter | 0ms (scroll trigger) |
+| Stats bar numbers | Count-up from 0 on scroll enter | staggered 80ms |
+| Feature cards | `opacity: [0, 1]` + `y: [12, 0]` on scroll enter | staggered 80ms |
+| Alternating row blocks | `opacity: [0, 1]` + `y: [8, 0]` on scroll enter | 0ms |
+| CTA panel | `opacity: [0, 1]` + `y: [8, 0]` on scroll enter | 0ms |
 
-**Library:** CSS transitions + minimal JS Intersection Observer. No heavy animation library unless Bjorn selects Framer Motion in the tech stack ADR.
+**Durations:** 300ms for UI element fades; 500ms for larger sections. Easing: `ease-out`.
+**No scale effects.** No parallax. No continuous animations (no spinners, no looping).
 
 ---
 
-## 5. Copy Section Mapping
+## 5. Logo / Favicon Mark Notes
 
-The wireframes above map to Jorunn's expected homepage copy sections:
+Per Jorunn's brand notes: the name "AI Office" must not rely solely on the wordmark. A standalone geometric icon is required that works at 16×16px.
 
-| Wireframe section | Expected copy |
+**Recommendation:** A single glyph — e.g., a stylised `[/]` or `{◦}` or a simple grid-of-dots mark — that reads as "structured intelligence." Single-color capable. Works white-on-dark and dark-on-white.
+
+**What to avoid:** Anything that looks like the Microsoft Office grid of squares. Any organic shape. Any multi-color treatment at small sizes.
+
+The icon should be designed as an SVG with a single path, optimisable to ~200 bytes. Arve will need it as an `.svg` file in `public/` for the Astro build.
+
+---
+
+## 6. Copy → Wireframe Mapping
+
+| Wireframe section | Jorunn's copy |
 |-------------------|---------------|
-| Hero badge | Short launch / beta label |
-| Hero headline + subheadline | Primary value proposition |
-| Features (3 cards) | Feature 1, 2, 3 headers + body |
-| Alternating rows | Expanded feature details (if used) |
-| Logo bar label | Social proof intro text |
-| CTA headline | Closing value statement |
-| CTA sub-copy | Friction-reducing reassurance |
-| CTA buttons | Primary CTA text + secondary CTA text |
-| Footer | Product / company / legal link labels |
+| Hero badge | "Now in public beta" (or launch label TBD) |
+| Hero headline | "Stop paying for the same prompt twice." |
+| Hero subheadline | Full paragraph from hero section |
+| Hero CTA primary | "Start saving now" |
+| Hero CTA secondary | "See how it works" |
+| Stats bar | `[X]%`, `[X]ms`, `[X]M+`, `[X]+` placeholders |
+| Feature 1 card title | "A proxy that sits between your app and the LLM. Nothing to rip out." |
+| Feature 2 card title | "Exact matches are easy. We catch the near-misses too." |
+| Feature 3 card title | "Full observability. You decide what gets cached and what doesn't." |
+| Social proof label | "Trusted by engineering teams moving fast on AI" |
+| Testimonial 1 | Placeholder quote 1 (cost reduction) |
+| Testimonial 2 | Placeholder quote 2 (semantic matching) |
+| CTA headline | "Your LLM bill is predictable. Your engineering time is not." |
+| CTA body | "AI Office handles cost optimization..." + "Deploy once. Reduce costs continuously." |
+| CTA primary | "Get started free" |
+| CTA secondary | "Talk to an engineer" |
 
 ---
 
 *Deliverable by Ingrid — visual design direction and wireframes for AI Office landing page.*
+*Aligns with: Jorunn's brand/copy (2026-03-30), Bjorn's tech stack ADR (2026-03-30).*
