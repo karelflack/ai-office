@@ -8,3 +8,4 @@
 | [2026-04-01-env-example](2026-04-01-env-example) | .env.example with all required environment variables | dag | 2026-04-01 |
 | [2026-04-01-github-actions-ci.yml](2026-04-01-github-actions-ci.yml) | GitHub Actions CI: lint+test on push, Docker build on main | dag | 2026-04-01 |
 | [2026-04-01-ops-readme.md](2026-04-01-ops-readme.md) | Ops README: local dev, env vars, CI/CD, deployment guide | dag | 2026-04-01 |
+| [2026-04-01-url-shortener-api/](2026-04-01-url-shortener-api/) | FastAPI URL shortener — full implementation with models, CRUD, endpoints, and 9 passing tests | arve | 2026-04-01 |

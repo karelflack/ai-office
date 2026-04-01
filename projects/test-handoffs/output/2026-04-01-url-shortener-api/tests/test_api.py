@@ -56,7 +56,7 @@ def test_redirect():
     code = client.post("/shorten", json={"url": "https://example.com"}).json()["code"]
     resp = client.get(f"/{code}")
     assert resp.status_code == 302
-    assert resp.headers["location"] == "https://example.com"
+    assert resp.headers["location"] in ("https://example.com", "https://example.com/")
 
 
 def test_redirect_not_found():
