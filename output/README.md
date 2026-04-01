@@ -6,8 +6,8 @@ Each file is the direct result of an agent session — documents, plans, researc
 
 ---
 
-| File | Agent | Date |
-|---|---|---|
-| [ai-agent-usage-policy.md](ai-agent-usage-policy.md) | Magnus (legal) | 2026-03-27 |
-| [2026-03-27-ai-agent-platform-competitor-research.md](2026-03-27-ai-agent-platform-competitor-research.md) | Orchestrator | 2026-03-27 |
-| [2026-03-27-top-5-open-source-multi-agent-frameworks.md](2026-03-27-top-5-open-source-multi-agent-frameworks.md) | Else (research) | 2026-03-27 |
+| File | Description | Agent | Date |
+|------|-------------|-------|------|
+| [ai-agent-usage-policy.md](ai-agent-usage-policy.md) | AI Agent Usage Policy: GDPR, EU AI Act, liability, transparency, incident response, Agent Registry requirement | Magnus | 2026-03-27 |
+| [2026-03-27-ai-agent-platform-competitor-research.md](2026-03-27-ai-agent-platform-competitor-research.md) | Top 5 AI agent platform competitors: LangGraph, Microsoft Agent Framework, CrewAI, OpenAI Agents SDK, Salesforce Agentforce | Else | 2026-03-27 |
+| [2026-03-27-top-5-open-source-multi-agent-frameworks.md](2026-03-27-top-5-open-source-multi-agent-frameworks.md) | Top 5 open source multi-agent frameworks: LangGraph, AutoGen, CrewAI, OpenAI Agents SDK, OpenHands | Else | 2026-03-27 |

@@ -1,52 +1,45 @@
 {
   "project_status": {
-    "phase": "Initialization",
-    "last_updated": "2026-03-27",
-    "summary": "The ai-office framework has been initialized with the Norwegian team agents."
+    "phase": "Active development",
+    "last_updated": "2026-04-01",
+    "summary": "The ai-office framework is operational. Full Norwegian team integrated and completing real tasks across projects. Dashboard has visual office floor, per-agent work windows, kickoff flow, project workspaces, and output panel."
   },
   "active_decisions": [
     "Agents should always read team_memory.json before starting work",
     "Task files use the naming convention YYYY-MM-DD-<slug>.md",
     "One agent per task — no concurrent ownership",
-    "Shared memory lives at memory/team_memory.json and memory/team_memory.md"
+    "Shared memory lives at memory/team_memory.json and memory/team_memory.md",
+    "Project-scoped memory lives at projects/{slug}/memory/project_memory.json",
+    "All deliverables go to projects/{slug}/output/ — never to repo root",
+    "Orchestrator must delegate specialist work — never do it directly"
   ],
   "recent_updates": [
-    {
-      "date": "2026-03-27",
-      "note": "Framework initialized. Repo structure created."
-    },
-    {
-      "date": "2026-03-27",
-      "note": "Norwegian team agents integrated: Arve, Bjørn, Dag, Else, Frode, Halvard, Guro, Jorunn, Ingrid, Knut, Laila, Magnus, Nora, Odd, Per."
-    },
-    {
-      "date": "2026-03-27",
-      "note": "Login page built: dashboard/login.html + /api/login endpoint in server.py."
-    },
-    {
-      "date": "2026-03-27",
-      "note": "Login page rebuilt (self-contained sessionStorage auth). Credentials: admin/office. Dashboard auth-gated."
-    },
-    {
-      "date": "2026-03-27",
-      "note": "Competitor research completed. Top 5 AI agent platforms documented: LangGraph, Microsoft Agent Framework, CrewAI, OpenAI Agents SDK, Salesforce Agentforce. Report at output/2026-03-27-ai-agent-platform-competitor-research.md."
-    }
+    { "date": "2026-03-27", "note": "Framework initialized. Norwegian team integrated." },
+    { "date": "2026-03-27", "note": "Login page built: dashboard/login.html, sessionStorage auth, credentials admin/office." },
+    { "date": "2026-03-27", "note": "Else — top 5 open source multi-agent frameworks researched. Report at output/2026-03-27-top-5-open-source-multi-agent-frameworks.md." },
+    { "date": "2026-03-27", "note": "Else — top 5 AI agent platform competitors researched. Report at output/2026-03-27-ai-agent-platform-competitor-research.md." },
+    { "date": "2026-03-27", "note": "Magnus — AI Agent Usage Policy drafted. At output/ai-agent-usage-policy.md." },
+    { "date": "2026-03-28", "note": "core/ module extracted. Project workspaces added." },
+    { "date": "2026-03-29", "note": "Dashboard redesigned with glass UI. Kickoff flow and output panel added." },
+    { "date": "2026-03-30", "note": "Neutral project: Bjorn (tech stack), Ingrid (design), Else (market research), Jorunn (brand/copy), Arve (landing page implementation) all completed." },
+    { "date": "2026-04-01", "note": "Neutral project: Else (competitive analysis), Magnus (privacy policy + compliance checklist), Nora (pricing model), Halvard (growth strategy) all completed." },
+    { "date": "2026-04-01", "note": "Per-agent work windows added to dashboard. Each running agent gets its own live output window." }
   ],
   "agent_notes": {
-    "orchestrator": "2026-03-27: Completed login page tasks (x2). Final: dashboard/login.html with sessionStorage auth (admin/office), auth gate in dashboard/index.html. Delegated coding to Arve. 2026-03-27: Completed competitor research task. Top 5 AI agent platforms documented: LangGraph, Microsoft Agent Framework, CrewAI, OpenAI Agents SDK, Salesforce Agentforce. Report at output/2026-03-27-ai-agent-platform-competitor-research.md. 2026-03-27: Completed open source frameworks research task. Delegated to Else. Top 5: LangGraph, AutoGen/Microsoft Agent Framework, CrewAI, OpenAI Agents SDK, OpenHands. Report at output/2026-03-27-top-5-open-source-multi-agent-frameworks.md.",
-    "arve": "Ready. No active tasks.",
-    "bjorn": "Ready. No active tasks.",
+    "orchestrator": "Routes and delegates. Completed login page (delegated to Arve) and frameworks research (delegated to Else). Cleaned up duplicate competitor research task.",
+    "arve": "2026-03-30: Completed landing page implementation for Neutral. Full Next.js 15 codebase at projects/neutral/output/landing-page/.",
+    "bjorn": "2026-03-30: Completed tech stack selection for Neutral. Next.js static export, Tailwind v4, Framer Motion, Vercel.",
     "dag": "Ready. No active tasks.",
-    "else": "2026-03-27: Completed task — top 5 open source multi-agent frameworks. Covered LangGraph, AutoGen/Microsoft Agent Framework, CrewAI, OpenAI Agents SDK, OpenHands. Key flags: AutoGen is in maintenance mode (risk for new projects); no single framework dominates across all dimensions; OpenHands is a specialized category (software engineering), not a general orchestration alternative. Report at output/2026-03-27-top-5-open-source-multi-agent-frameworks.md.",
+    "else": "2026-03-27: Top 5 open source multi-agent frameworks (output/2026-03-27-top-5-open-source-multi-agent-frameworks.md). 2026-03-27: AI agent platform competitor research (output/2026-03-27-ai-agent-platform-competitor-research.md). 2026-03-30: Neutral market research (projects/neutral/output/2026-03-30-market-research.md). 2026-04-01: AI Office competitive analysis (projects/neutral/output/2026-04-01-competitive-analysis.md).",
     "frode": "Ready. No active tasks.",
-    "halvard": "Ready. No active tasks.",
+    "halvard": "2026-04-01: Go-to-market playbook for first 100 customers at projects/neutral/output/2026-04-01-growth-strategy.md.",
     "guro": "Ready. No active tasks.",
-    "jorunn": "Ready. No active tasks.",
-    "ingrid": "Ready. No active tasks.",
-    "knut": "Ready. No active tasks.",
+    "jorunn": "2026-03-30: Brand identity and homepage copy for Neutral at projects/neutral/output/2026-03-30-brand-copy.md.",
+    "ingrid": "2026-03-30: Visual design system and wireframe for Neutral at projects/neutral/output/2026-03-30-design-direction.md.",
+    "knut": "2026-04-01: B2B launch milestone tracker for Neutral at projects/neutral/output/2026-04-01-launch-milestones.md.",
     "laila": "Ready. No active tasks.",
-    "magnus": "2026-03-27: Drafted docs/ai-agent-usage-policy.md — AI Agent Usage Policy v1.0 covering GDPR, EU AI Act, liability, transparency, and incident response. New compliance requirement: Agent Registry mandatory before production deployment. Recommend professional legal review before external adoption.",
-    "nora": "Ready. No active tasks.",
+    "magnus": "2026-03-27: AI Agent Usage Policy at output/ai-agent-usage-policy.md. 2026-04-01: Privacy policy at projects/neutral/output/2026-04-01-privacy-policy.md. 2026-04-01: Engineering compliance checklist at projects/neutral/output/2026-04-01-compliance-checklist.md.",
+    "nora": "2026-04-01: B2B SaaS pricing model (3 tiers, unit economics, revenue projections) at projects/neutral/output/2026-04-01-pricing-model.md.",
     "odd": "Ready. No active tasks.",
     "per": "Ready. No active tasks."
   }
