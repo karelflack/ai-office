@@ -2,6 +2,12 @@ fastapi>=0.115.0
 uvicorn[standard]>=0.30.0
 sqlalchemy>=2.0.29
 pydantic>=2.10.0
+pydantic[email]>=2.10.0
 httpx>=0.27.0
 pytest>=8.1.1
 pytest-asyncio>=0.23.6
+# Use bcrypt directly rather than via passlib; passlib 1.7.4 is unmaintained
+# and incompatible with bcrypt >=4.x (removed __about__ and strict 72-byte limit).
+bcrypt>=4.0.0
+python-jose[cryptography]>=3.3.0
+python-multipart>=0.0.9

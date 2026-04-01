@@ -31,6 +31,25 @@ app.dependency_overrides[get_db] = override_get_db
 client = TestClient(app, follow_redirects=False)
 
 
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def register_user(email: str = "user@example.com", password: str = "secret123") -> str:
+    """Register a user and return the access token."""
+    resp = client.post("/register", json={"email": email, "password": password})
+    assert resp.status_code == 201, resp.text
+    return resp.json()["access_token"]
+
+
+def auth_headers(token: str) -> dict:
+    return {"Authorization": f"Bearer {token}"}
+
+
+# ---------------------------------------------------------------------------
+# Original tests (unauthenticated shorten still works)
+# ---------------------------------------------------------------------------
+
 def test_shorten_url():
     resp = client.post("/shorten", json={"url": "https://example.com/some/long/path"})
     assert resp.status_code == 201
@@ -38,6 +57,8 @@ def test_shorten_url():
     assert "code" in data
     assert data["original_url"] == "https://example.com/some/long/path"
     assert data["code"] in data["short_url"]
+    # Anonymous links have no owner
+    assert data["owner_id"] is None
 
 
 def test_shorten_custom_code():
@@ -81,13 +102,131 @@ def test_stats_after_clicks():
     assert resp.json()["total_clicks"] == 2
 
 
+# ---------------------------------------------------------------------------
+# DELETE now requires auth — update the original delete tests
+# ---------------------------------------------------------------------------
+
 def test_delete():
+    token = register_user()
     code = client.post("/shorten", json={"url": "https://example.com"}).json()["code"]
-    resp = client.delete(f"/{code}")
+    # Anonymous link — any authenticated user can delete it
+    resp = client.delete(f"/{code}", headers=auth_headers(token))
     assert resp.status_code == 204
     assert client.get(f"/{code}").status_code == 404
 
 
 def test_delete_not_found():
-    resp = client.delete("/ghost")
+    token = register_user()
+    resp = client.delete("/ghost", headers=auth_headers(token))
     assert resp.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Auth tests
+# ---------------------------------------------------------------------------
+
+def test_register_new_user():
+    resp = client.post("/register", json={"email": "alice@example.com", "password": "pass1234"})
+    assert resp.status_code == 201
+    data = resp.json()
+    assert "access_token" in data
+    assert data["token_type"] == "bearer"
+
+
+def test_register_duplicate_email():
+    client.post("/register", json={"email": "bob@example.com", "password": "pass1234"})
+    resp = client.post("/register", json={"email": "bob@example.com", "password": "other"})
+    assert resp.status_code == 409
+
+
+def test_login_valid_credentials():
+    client.post("/register", json={"email": "carol@example.com", "password": "mypassword"})
+    resp = client.post("/login", data={"username": "carol@example.com", "password": "mypassword"})
+    assert resp.status_code == 200
+    assert "access_token" in resp.json()
+
+
+def test_login_wrong_password():
+    client.post("/register", json={"email": "dave@example.com", "password": "correct"})
+    resp = client.post("/login", data={"username": "dave@example.com", "password": "wrong"})
+    assert resp.status_code == 401
+
+
+def test_login_unknown_user():
+    resp = client.post("/login", data={"username": "nobody@example.com", "password": "pass"})
+    assert resp.status_code == 401
+
+
+# ---------------------------------------------------------------------------
+# Shorten as authenticated user — link is owned
+# ---------------------------------------------------------------------------
+
+def test_shorten_authenticated_sets_owner():
+    token = register_user("owner@example.com")
+    resp = client.post(
+        "/shorten",
+        json={"url": "https://example.com/owned"},
+        headers=auth_headers(token),
+    )
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["owner_id"] is not None
+
+
+# ---------------------------------------------------------------------------
+# GET /me/links
+# ---------------------------------------------------------------------------
+
+def test_me_links_returns_owned_links():
+    token = register_user("me@example.com")
+    client.post("/shorten", json={"url": "https://a.com"}, headers=auth_headers(token))
+    client.post("/shorten", json={"url": "https://b.com"}, headers=auth_headers(token))
+    # Create an anonymous link — should NOT appear in /me/links
+    client.post("/shorten", json={"url": "https://anon.com"})
+
+    resp = client.get("/me/links", headers=auth_headers(token))
+    assert resp.status_code == 200
+    links = resp.json()
+    assert len(links) == 2
+    urls = {l["original_url"] for l in links}
+    assert urls == {"https://a.com/", "https://b.com/"}
+
+
+def test_me_links_requires_auth():
+    resp = client.get("/me/links")
+    assert resp.status_code == 401
+
+
+# ---------------------------------------------------------------------------
+# DELETE ownership enforcement
+# ---------------------------------------------------------------------------
+
+def test_delete_own_link():
+    token = register_user("del_owner@example.com")
+    code = client.post(
+        "/shorten",
+        json={"url": "https://example.com/owned"},
+        headers=auth_headers(token),
+    ).json()["code"]
+    resp = client.delete(f"/{code}", headers=auth_headers(token))
+    assert resp.status_code == 204
+
+
+def test_delete_other_users_link_is_403():
+    token_a = register_user("user_a@example.com")
+    token_b = register_user("user_b@example.com")
+    # User A creates a link
+    code = client.post(
+        "/shorten",
+        json={"url": "https://example.com/user-a"},
+        headers=auth_headers(token_a),
+    ).json()["code"]
+    # User B tries to delete it
+    resp = client.delete(f"/{code}", headers=auth_headers(token_b))
+    assert resp.status_code == 403
+
+
+def test_delete_requires_auth():
+    code = client.post("/shorten", json={"url": "https://example.com"}).json()["code"]
+    resp = client.delete(f"/{code}")
+    assert resp.status_code == 401
