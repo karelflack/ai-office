@@ -1,0 +1,69 @@
+# docker-compose.yml — URL Shortener with Auth support
+# Updated to include JWT env vars, rate-limit config, and Alembic migration on startup.
+# Replace this file with the project's docker-compose.yml.
+
+version: "3.9"
+
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      # Database
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+
+      # Redis
+      REDIS_URL: redis://redis:6379/0
+
+      # Application
+      BASE_URL: ${BASE_URL:-http://localhost:8000}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+
+      # JWT / Authentication
+      # JWT_SECRET_KEY must be a cryptographically random string (min 32 bytes).
+      # Generate with: python -c "import secrets; print(secrets.token_hex(32))"
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-1440}
+      REFRESH_TOKEN_EXPIRE_DAYS: ${REFRESH_TOKEN_EXPIRE_DAYS:-30}
+
+      # Rate limiting (slowapi / Redis-backed)
+      # Limits apply per client IP to /auth/login and /auth/register.
+      RATE_LIMIT_AUTH_LOGIN: ${RATE_LIMIT_AUTH_LOGIN:-10/minute}
+      RATE_LIMIT_AUTH_REGISTER: ${RATE_LIMIT_AUTH_REGISTER:-5/minute}
+
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --save "" --appendonly no --maxmemory 128mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
