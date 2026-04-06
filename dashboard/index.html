@@ -229,7 +229,17 @@
       color: var(--text-tertiary); font-size: 11px; font-family: var(--font);
     }
 
-    #task-columns { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+    #task-columns { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+    .task-card.failed {
+      border-color: rgba(255,69,58,0.35);
+      background: rgba(255,69,58,0.06);
+    }
+    .task-card.failed .task-card-name { color: var(--accent-red); }
+    .task-col-header.failed { color: var(--accent-red); }
+    .task-fail-reason {
+      font-size: 10px; color: var(--accent-red); margin-bottom: 6px;
+      opacity: 0.8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
     .task-col-header {
       font-size: 11px; font-weight: 600; letter-spacing: 0.3px;
       text-transform: uppercase; color: var(--text-secondary);
@@ -883,6 +893,10 @@
     <div>
       <div class="task-col-header">Completed</div>
       <div id="task-col-completed"></div>
+    </div>
+    <div>
+      <div class="task-col-header failed">Failed</div>
+      <div id="task-col-failed"></div>
     </div>
   </div>
   <div id="work-windows"></div>
@@ -1950,7 +1964,7 @@ document.addEventListener('keydown', (e) => {
 // ============================================================
 // TASK MANAGER
 // ============================================================
-let taskData = { backlog: [], active: [], completed: [] };
+let taskData = { backlog: [], active: [], completed: [], failed: [] };
 let tasksVisible = false;
 function toggleTasks() {
   tasksVisible = !tasksVisible;
@@ -2077,6 +2091,16 @@ async function handleDeleteTask(filename) {
   } catch (e) { document.getElementById('task-error').textContent = `Delete failed: ${e.message}`; }
 }
 
+async function handleRetry(filename, agent) {
+  try {
+    await fetch(`/api/projects/${currentProject}/tasks/retry`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filename, agent }),
+    });
+    delete taskContentCache[filename];
+    await loadTasks();
+  } catch (e) { document.getElementById('task-error').textContent = `Retry failed: ${e.message}`; }
+}
 async function handleDone(filename) {
   try {
     const result = await doneTask(filename);
@@ -2105,7 +2129,7 @@ function agentSelectHtml(forAssign, filename) {
 async function renderTaskManager() {
   const runAllBtn = document.getElementById('run-all-btn');
   runAllBtn.classList.toggle('visible', (taskData.active || []).length > 0);
-  const allFiles = [...taskData.backlog.slice(0,30), ...taskData.active.slice(0,30), ...taskData.completed.slice(0,20)];
+  const allFiles = [...taskData.backlog.slice(0,30), ...taskData.active.slice(0,30), ...taskData.completed.slice(0,20), ...taskData.failed.slice(0,20)];
   await Promise.all(allFiles.map(f => fetchTaskContent(f)));
   function parseDependsOn(content) {
     if (!content) return null;
@@ -2149,16 +2173,26 @@ async function renderTaskManager() {
       </div>`;
     } else if (bucket === 'completed') {
       actionsHtml = `<div class="task-card-actions">${deleteBtn}</div>`;
+    } else if (bucket === 'failed') {
+      actionsHtml = `<div class="task-card-actions">
+        <button class="task-btn-assign" onclick="handleRetry('${escHtml(filename)}', '${escHtml(agent)}')">↺ Retry</button>
+        ${deleteBtn}
+      </div>`;
     }
-    const cardClass = blocked ? 'task-card blocked' : 'task-card';
+    const failReason = bucket === 'failed' ? (() => {
+      if (!content) return '';
+      const m = content.match(/## Failure Reason\s*\n+(.+)/);
+      return m ? `<div class="task-fail-reason" title="${escHtml(m[1].trim())}">✗ ${escHtml(m[1].trim())}</div>` : '';
+    })() : '';
+    const cardClass = blocked ? 'task-card blocked' : bucket === 'failed' ? 'task-card failed' : 'task-card';
     return `<div class="${cardClass}" title="${escHtml(filename)}" data-filename="${escHtml(filename)}">
       <div class="task-card-name">${escHtml(label)}</div>
       <div class="task-card-agent">${agentDotHtml(agent)}<span style="color:${agentColor}">${escHtml(agentLabel)}</span></div>
-      ${depBadge}
+      ${depBadge}${failReason}
       ${actionsHtml}
     </div>`;
   }
-  for (const bucket of ['backlog', 'active', 'completed']) {
+  for (const bucket of ['backlog', 'active', 'completed', 'failed']) {
     const el = document.getElementById(`task-col-${bucket}`);
     const files = taskData[bucket] || [];
     el.innerHTML = files.length === 0

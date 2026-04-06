@@ -87,6 +87,7 @@ def _spawn_agent_task(slug: str, filename: str, agent: str) -> bool:
 
     def _reader():
         lines = []
+        succeeded = False
         try:
             for line in proc.stdout:
                 line = line.rstrip("\n")
@@ -97,12 +98,29 @@ def _spawn_agent_task(slug: str, filename: str, agent: str) -> bool:
                     if formatted:
                         lines.append(formatted)
                         mem.write_run(filename, lines, False, project_slug=slug)
+                    # Track success/failure from the result event
+                    try:
+                        event = json.loads(line)
+                        if event.get("type") == "result":
+                            succeeded = event.get("subtype") == "success"
+                    except Exception:
+                        pass
                 except Exception:
                     pass
         finally:
-            proc.wait()
+            exit_code = proc.wait()
+            # A non-zero exit or an explicit error result means failure
+            failed = (exit_code != 0) or (not succeeded and exit_code == 0 and any("✗ Error" in l for l in lines))
             mem.write_run(filename, lines, True, project_slug=slug)
             _live_procs.pop(key, None)
+
+            if failed:
+                # Mark task failed and cascade to dependents
+                reason = lines[-1] if lines else f"Process exited with code {exit_code}"
+                task_mgr.fail_task(filename, reason=reason, project_slug=slug)
+                task_mgr.cascade_fail(filename, project_slug=slug)
+                return
+
             # Auto-dispatch: move backlog dependents to active and run them
             newly_activated = task_mgr.resolve_handoffs(filename, project_slug=slug)
             to_run = set(newly_activated)
@@ -278,6 +296,8 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
             self._handle_post_project_run(slug)
         elif rest == "tasks/delete":
             self._handle_post_project_task_delete(slug)
+        elif rest == "tasks/retry":
+            self._handle_post_project_retry(slug)
         elif rest == "kickoff":
             self._handle_post_project_kickoff(slug)
         elif rest == "run/all":
@@ -410,6 +430,26 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
                 dep_agent = "orchestrator"
             _spawn_agent_task(slug, dep_filename, dep_agent)
         self._json_response({"ok": True, "activated": list(to_run)})
+
+    def _handle_post_project_retry(self, slug):
+        try:
+            body = json.loads(self._read_body())
+        except (json.JSONDecodeError, ValueError):
+            self._error(400, "Invalid JSON")
+            return
+        filename = (body.get("filename") or "").strip()
+        agent = (body.get("agent") or "").strip()
+        if not filename or not agent:
+            self._error(400, "filename and agent are required")
+            return
+        # Move from failed/ back to active/
+        bucket, src = task_mgr.find_task(filename, project_slug=slug)
+        if src is None or bucket != "failed":
+            self._error(404, "Task not found in failed/")
+            return
+        task_mgr.assign_task(filename, agent, project_slug=slug)
+        _spawn_agent_task(slug, filename, agent)
+        self._json_response({"ok": True})
 
     def _handle_post_project_task_delete(self, slug):
         try:

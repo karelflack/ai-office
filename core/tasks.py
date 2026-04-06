@@ -29,12 +29,13 @@ def _get_task_dirs(project_slug: str = None) -> dict:
             "backlog":   base / "backlog",
             "active":    base / "active",
             "completed": base / "completed",
+            "failed":    base / "failed",
         }
     return TASK_DIRS
 
 
 def find_task(filename: str, project_slug: str = None):
-    """Search backlog → active → completed. Returns (bucket, Path) or (None, None)."""
+    """Search backlog → active → completed → failed. Returns (bucket, Path) or (None, None)."""
     for bucket, directory in _get_task_dirs(project_slug).items():
         candidate = directory / filename
         if candidate.exists():
@@ -152,8 +153,55 @@ def complete_task(filename: str, project_slug: str = None) -> None:
         src.unlink()
 
 
+def fail_task(filename: str, reason: str = "", project_slug: str = None) -> None:
+    """Move task to failed/ and update Status field."""
+    bucket, src = find_task(filename, project_slug)
+    dirs = _get_task_dirs(project_slug)
+    failed_dir = dirs["failed"]
+    failed_dir.mkdir(parents=True, exist_ok=True)
+    dest = failed_dir / filename
+
+    if src is not None:
+        content = src.read_text(encoding="utf-8")
+        content = update_markdown_fields(content, status="failed")
+        if reason:
+            content += f"\n\n## Failure Reason\n\n{reason}\n"
+        dest.write_text(content, encoding="utf-8")
+        if src != dest:
+            src.unlink()
+    elif not dest.exists():
+        return  # nothing to do
+
+
+def cascade_fail(failed_filename: str, project_slug: str = None) -> list:
+    """Mark all tasks that depend (directly or transitively) on failed_filename as failed.
+
+    Returns list of filenames that were cascade-failed.
+    """
+    dirs = _get_task_dirs(project_slug)
+    cascaded = []
+    reason = f"Blocked: dependency `{failed_filename}` failed."
+
+    for bucket_name in ("backlog", "active"):
+        bucket_dir = dirs.get(bucket_name)
+        if not bucket_dir or not bucket_dir.exists():
+            continue
+        for f in bucket_dir.glob("*.md"):
+            try:
+                content = f.read_text(encoding="utf-8")
+                dep = parse_depends_on(content)
+                if dep and dep == failed_filename:
+                    fail_task(f.name, reason=reason, project_slug=project_slug)
+                    cascaded.append(f.name)
+                    # Recurse for tasks that depend on this one
+                    cascaded.extend(cascade_fail(f.name, project_slug=project_slug))
+            except Exception:
+                pass
+    return cascaded
+
+
 def list_tasks(project_slug: str = None) -> dict:
-    """Return {"backlog": [...], "active": [...], "completed": [...]} sorted filenames."""
+    """Return {"backlog": [...], "active": [...], "completed": [...], "failed": [...]} sorted filenames."""
     result = {}
     for bucket, directory in _get_task_dirs(project_slug).items():
         directory.mkdir(parents=True, exist_ok=True)
