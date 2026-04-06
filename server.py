@@ -103,10 +103,22 @@ def _spawn_agent_task(slug: str, filename: str, agent: str) -> bool:
             proc.wait()
             mem.write_run(filename, lines, True, project_slug=slug)
             _live_procs.pop(key, None)
-            # Auto-dispatch: when this task completes, activate and run dependents
+            # Auto-dispatch: move backlog dependents to active and run them
             newly_activated = task_mgr.resolve_handoffs(filename, project_slug=slug)
-            for dep_filename in newly_activated:
-                dep_path = BASE_DIR / "projects" / slug / "tasks" / "active" / dep_filename
+            to_run = set(newly_activated)
+            # Also pick up any tasks already in active/ that were waiting on this one
+            active_dir = BASE_DIR / "projects" / slug / "tasks" / "active"
+            if active_dir.exists():
+                for f in active_dir.glob("*.md"):
+                    try:
+                        content = f.read_text(encoding="utf-8")
+                        dep = task_mgr.parse_depends_on(content)
+                        if dep and dep == filename:
+                            to_run.add(f.name)
+                    except Exception:
+                        pass
+            for dep_filename in to_run:
+                dep_path = active_dir / dep_filename
                 dep_content = dep_path.read_text(encoding="utf-8") if dep_path.exists() else ""
                 m = re.search(r'^\*\*Agent:\*\*\s*(.+)$', dep_content, re.MULTILINE)
                 dep_agent = m.group(1).strip() if m else "orchestrator"
@@ -377,15 +389,26 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
             self._error(404, str(e))
             return
         activated = task_mgr.resolve_handoffs(filename, project_slug=slug)
-        for dep_filename in activated:
-            dep_path = BASE_DIR / "projects" / slug / "tasks" / "active" / dep_filename
+        to_run = set(activated)
+        active_dir = BASE_DIR / "projects" / slug / "tasks" / "active"
+        if active_dir.exists():
+            for f in active_dir.glob("*.md"):
+                try:
+                    content = f.read_text(encoding="utf-8")
+                    dep = task_mgr.parse_depends_on(content)
+                    if dep and dep == filename:
+                        to_run.add(f.name)
+                except Exception:
+                    pass
+        for dep_filename in to_run:
+            dep_path = active_dir / dep_filename
             dep_content = dep_path.read_text(encoding="utf-8") if dep_path.exists() else ""
             m = re.search(r'^\*\*Agent:\*\*\s*(.+)$', dep_content, re.MULTILINE)
             dep_agent = m.group(1).strip() if m else "orchestrator"
             if dep_agent not in agent_registry.VALID_AGENTS:
                 dep_agent = "orchestrator"
             _spawn_agent_task(slug, dep_filename, dep_agent)
-        self._json_response({"ok": True, "activated": activated})
+        self._json_response({"ok": True, "activated": list(to_run)})
 
     def _handle_post_project_task_delete(self, slug):
         try:

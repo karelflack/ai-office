@@ -6,4 +6,4 @@
 
 ## Description
 
-Define the Docker setup and CI/CD pipeline for the motivational quote API. Produce a Dockerfile, docker-compose.yml for local development, and a GitHub Actions workflow that runs tests on push and builds/pushes the Docker image on merge to main. Include environment variable handling and health check configuration.
+Set up Docker and CI/CD for the joke API. Produce a Dockerfile, docker-compose.yml for local dev, and a GitHub Actions workflow that runs tests and builds the image on push. Define environment variable conventions and health check endpoint requirements. Base infrastructure decisions on bjorn's architecture output.

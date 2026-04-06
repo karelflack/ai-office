@@ -6,15 +6,16 @@
 
 ## Upstream outputs read
 
-- `projects/test-autodispatch/output/2026-04-06-system-architecture.md` (bjorn) — NOT YET AVAILABLE. Running as Phase 1 parallel agent. Assumptions documented below.
+- `projects/test-autodispatch/output/2026-04-06-system-architecture.md` (bjorn) — read and validated.
 
-## Assumptions (to be validated against bjorn's architecture output)
+## Assumptions validated against bjorn's architecture
 
-- Runtime: Python (FastAPI or Flask) or Node.js — design is runtime-agnostic; port is parameterised via `PORT` env var
-- The API is a single stateless service with no persistent database dependency for MVP (quotes stored in-process or a flat file)
-- One process per container — no sidecar required
-- Deployed to Railway (Docker-based) per team stack
-- Container registry: GitHub Container Registry (ghcr.io) — free, integrated with GitHub Actions, no extra account needed
+- Runtime: **Python 3.11+ / FastAPI** ✓ (confirmed)
+- Single stateless service, quotes in bundled `data/quotes.json` — no DB ✓ (confirmed)
+- One process per container, no sidecar ✓ (confirmed)
+- Deployed to Railway ✓ (confirmed)
+- Container registry: GitHub Container Registry (ghcr.io) ✓ (unchanged)
+- **Updated:** `uvicorn` entrypoint is `main:app` (root-level `main.py` per bjorn's component map), not `app.main:app`
 
 ---
 
@@ -48,7 +49,7 @@ EXPOSE ${PORT:-8000}
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:${PORT:-8000}/health')" || exit 1
 
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"]
 ```
 
 **Notes:**

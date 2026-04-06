@@ -1,17 +1,17 @@
-# System Architecture — Daily Motivational Quote API
+# System Architecture — Random Joke REST API
 
 **Agent:** bjorn
 **Date:** 2026-04-06
 **Project:** test-autodispatch
 
 ## Upstream outputs read
-_None required — this is a Phase 1 task and is the first architecture deliverable for this project._
+_None required — this is a Phase 1 task and the first architecture deliverable for this project._
 
 ---
 
 ## Overview
 
-A single-endpoint REST API that returns one motivational quote per calendar day. The system is intentionally minimal: no frontend, no database, no external dependencies beyond the framework itself. A 2-person team should be able to understand, deploy, and debug this at 2am with no runbook.
+A lightweight REST API that returns jokes on demand. Three endpoints: random joke, joke by ID, and full joke list. No database, no auth, no frontend. A 2-person team should be able to understand, deploy, and debug this at 2am with no runbook.
 
 ---
 
@@ -21,14 +21,16 @@ A single-endpoint REST API that returns one motivational quote per calendar day.
 graph TD
     Client[HTTP Client<br/>curl / browser / app]
     API[FastAPI App<br/>Railway — Python]
-    Cache[In-Process Cache<br/>dict keyed by ISO date]
-    Quotes[quotes.json<br/>bundled with app]
+    Service[JokeService<br/>in-process]
+    Data[jokes.json<br/>bundled with app]
 
-    Client -->|GET /quote/daily| API
-    API -->|check| Cache
-    Cache -->|miss| Quotes
-    Quotes -->|selected quote| Cache
-    Cache -->|hit| API
+    Client -->|GET /joke| API
+    Client -->|GET /joke/id| API
+    Client -->|GET /jokes| API
+    API --> Service
+    Service -->|load once at startup| Data
+    Data -->|list of jokes| Service
+    Service -->|random / lookup / full list| API
     API -->|JSON response| Client
 ```
 
@@ -40,75 +42,113 @@ graph TD
 |-------|--------|--------|
 | Language | Python 3.11+ | Team default; FastAPI first-class support |
 | Framework | FastAPI | Lightweight, typed, auto-docs at /docs |
-| Quote storage | Static JSON file (bundled) | No DB, no cost, no migrations |
-| Cache | In-process dict | Zero infra; process restarts once/day max |
+| Joke storage | Static JSON file (bundled) | No DB, no cost, no migrations |
+| In-memory index | Python dict keyed by joke id | O(1) lookup by ID; built at startup |
 | Hosting | Railway | Team default for Python backends |
-| CI/CD | Handled by Dag (see dag task) | Out of scope here |
+| CI/CD | Handled by Dag (see infrastructure deliverable) | Out of scope here |
+
+---
+
+## Data Model
+
+Jokes are stored in `jokes.json`, bundled with the application at build time.
+
+```json
+[
+  {
+    "id": 1,
+    "setup": "Why don't scientists trust atoms?",
+    "punchline": "Because they make up everything.",
+    "category": "science"
+  }
+]
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | integer | Unique identifier, 1-based sequential |
+| `setup` | string | The joke premise / question |
+| `punchline` | string | The payoff |
+| `category` | string | Tag for filtering (e.g. `science`, `programming`, `general`) |
+
+**Minimum viable dataset:** 50 jokes across at least 3 categories. Arve should seed this file.
 
 ---
 
 ## Endpoint Design
 
-### `GET /quote/daily`
+### `GET /joke`
 
-Returns the quote for today's calendar date. The same quote is returned for all requests on the same UTC date.
+Returns one joke selected at random from the full dataset.
 
 **Response — 200 OK**
 
 ```json
 {
-  "quote": "The only way to do great work is to love what you do.",
-  "author": "Steve Jobs",
-  "date": "2026-04-06"
+  "id": 7,
+  "setup": "Why don't scientists trust atoms?",
+  "punchline": "Because they make up everything.",
+  "category": "science"
 }
 ```
 
-**Response — 500 Internal Server Error** (if quotes file is missing or empty)
+**Response — 500 Internal Server Error** (if jokes file is missing or empty)
 
 ```json
 {
-  "detail": "Quote source unavailable."
+  "detail": "Joke source unavailable."
 }
 ```
 
-No authentication. No query parameters. No pagination. One endpoint, one job.
+---
+
+### `GET /joke/{id}`
+
+Returns the joke with the given integer ID.
+
+**Response — 200 OK** — same shape as above.
+
+**Response — 404 Not Found**
+
+```json
+{
+  "detail": "Joke not found."
+}
+```
+
+**Response — 422 Unprocessable Entity** — FastAPI raises this automatically if `id` is not an integer.
 
 ---
 
-## Quote Sourcing Strategy
+### `GET /jokes`
 
-Quotes are stored in `quotes.json`, bundled with the application at build time. The file is a JSON array of objects:
+Returns the full list of jokes. Supports optional `?category=<string>` query parameter to filter by category.
+
+**Response — 200 OK**
 
 ```json
 [
-  { "quote": "...", "author": "..." },
-  ...
+  {
+    "id": 1,
+    "setup": "...",
+    "punchline": "...",
+    "category": "programming"
+  }
 ]
 ```
 
-**Selection algorithm:** deterministic by date.
-
-```python
-day_index = date.today().timetuple().tm_yday  # 1–366
-quote = quotes[(day_index - 1) % len(quotes)]
-```
-
-This requires no state, no DB writes, and no cache invalidation logic. The same quote always maps to the same day-of-year, regardless of restarts.
-
-**Minimum viable dataset:** 50–100 quotes covers the full year with rotation. Arve should seed the file with at least 50 entries.
+Returns an empty array if no jokes match the filter. Never returns 404 for an empty list.
 
 ---
 
-## Caching Approach
+## Error Handling Approach
 
-Because selection is deterministic, a cache is optional but included as a guard against repeated file reads under load.
+- **Missing or unreadable jokes.json** — the app raises a 500 with `"detail": "Joke source unavailable."` FastAPI's exception handler covers this.
+- **ID not found** — explicit 404 raised in the service layer, not allowed to propagate as a KeyError.
+- **Invalid ID type** — FastAPI path parameter validation handles this automatically (422).
+- **Unknown category filter** — returns an empty list (200), not a 404. Callers should not need to know which categories exist.
 
-- **Type:** module-level Python dict (`{ "2026-04-06": <quote_object> }`)
-- **Key:** ISO date string (`YYYY-MM-DD`)
-- **Invalidation:** no explicit invalidation needed — a new key is written each day; old keys are harmless and negligible in size
-- **Scope:** in-process; resets on restart (acceptable — restart cost is one file read)
-
-This is not Redis. This is not Memcached. It does not need to be.
+No global try/except wrapper. Errors are handled at the layer that can give a meaningful response.
 
 ---
 
@@ -116,43 +156,47 @@ This is not Redis. This is not Memcached. It does not need to be.
 
 ### ADR-1: Static JSON file, not a database
 
-**Decision:** Store quotes in a bundled `quotes.json`, not in Supabase or any database.
+**Decision:** Store jokes in a bundled `jokes.json`, not in Supabase or any database.
 
-**Rationale:** Quotes are read-only, curated content. There is no write path, no user ownership, no need for queries. A database would add cost, latency, a migration surface, and a failure mode. A JSON file has none of these.
+**Rationale:** Jokes are read-only, curated content. There is no write path, no user ownership, and no query complexity beyond ID lookup and category filter. A database would add cost, latency, a migration surface, and a failure mode. A JSON file has none of these.
 
-**Trade-off:** Adding quotes requires a redeploy. Acceptable at this scale.
+**Trade-off:** Adding jokes requires a redeploy. Acceptable at this scale.
 
 **Reversibility:** Low risk — migrating to a DB later is straightforward if a write path (e.g. user submissions) is ever added.
 
 ---
 
-### ADR-2: Deterministic day-of-year selection, not random
+### ADR-2: Random selection with `random.choice`, not deterministic
 
-**Decision:** Select today's quote by `(day_of_year - 1) % len(quotes)`, not by random seed or DB row.
+**Decision:** Use `random.choice(jokes)` for `GET /joke`. Do not seed the RNG by date.
 
-**Rationale:** All users see the same quote on the same day with no coordination. No shared state. No race conditions. Trivially testable by mocking `date.today()`.
+**Rationale:** The project spec calls for a random joke. Unlike a daily quote, each request should have a chance of returning any joke. Determinism by date would defeat the purpose. `random.choice` is stdlib, requires no state, and is trivially testable by mocking.
 
-**Trade-off:** Quotes rotate yearly, not randomly. Year-over-year the same date maps to the same quote. Acceptable — users are unlikely to notice.
+**Trade-off:** The same joke may be returned twice in a row. Acceptable — the dataset is large enough that this is rare in practice.
 
----
-
-### ADR-3: In-process cache, not external cache
-
-**Decision:** Use a module-level Python dict. Do not introduce Redis or a sidecar cache.
-
-**Rationale:** Traffic volume at launch does not justify Redis. A dict costs nothing and handles thousands of RPS on a single Railway instance. If load increases, a horizontal scale-out is possible without changing the cache design (each process independently computes the same result).
-
-**Reversibility:** Trivial to swap in Redis later by replacing the dict lookup with a Redis GET/SET.
+**Reversibility:** Trivial to change selection strategy (weighted random, least-recently-seen) later.
 
 ---
 
-### ADR-4: UTC date for daily boundary
+### ADR-3: In-process dict index for ID lookup, not linear scan
 
-**Decision:** Use `datetime.utcnow().date()` (or `datetime.now(timezone.utc).date()`) to determine "today."
+**Decision:** At startup, build a `dict[int, Joke]` index from the JSON array. Serve `GET /joke/{id}` via dict lookup.
 
-**Rationale:** The API has no concept of user timezone. A consistent global boundary avoids off-by-one issues across timezones and is easy to reason about in logs.
+**Rationale:** Linear scan is O(n) per request. A dict built once at startup is O(1) for all subsequent lookups. 50–500 jokes is small enough that this dict fits in memory trivially.
 
-**Trade-off:** Users in UTC+14 (e.g. Kiribati) see a new quote 14 hours before UTC-12 users. Acceptable for a motivational quote.
+**Reversibility:** No external dependency; replacing with DB lookup later is a one-line change in the service.
+
+---
+
+### ADR-4: No pagination on `GET /jokes`
+
+**Decision:** Return all jokes in a single response. Do not add `limit`/`offset` or cursor pagination.
+
+**Rationale:** A dataset of 50–500 jokes is small. The full list JSON is under 50 KB. Adding pagination adds complexity with no benefit at this scale.
+
+**Trade-off:** If the dataset grows to thousands of jokes, pagination becomes necessary. At that point the static-file approach (ADR-1) would also need revisiting.
+
+**Reversibility:** Adding pagination is non-breaking if done via optional query params with sensible defaults.
 
 ---
 
@@ -160,18 +204,18 @@ This is not Redis. This is not Memcached. It does not need to be.
 
 | Component | File | Description |
 |-----------|------|-------------|
-| App entrypoint | `main.py` | FastAPI app instance, lifespan hook to load quotes |
-| Router | `routers/quote.py` | `GET /quote/daily` handler |
-| Quote service | `services/quote_service.py` | Load JSON, select by date, cache |
-| Quote data | `data/quotes.json` | Static array of `{ quote, author }` objects |
-| Tests | `tests/test_quote.py` | Unit tests for selection logic; integration test for endpoint |
+| App entrypoint | `main.py` | FastAPI app instance, lifespan hook to load jokes and build ID index |
+| Router | `routers/joke.py` | `GET /joke`, `GET /joke/{id}`, `GET /jokes` handlers |
+| Joke service | `services/joke_service.py` | Load JSON, build index, random selection, ID lookup, category filter |
+| Joke data | `data/jokes.json` | Static array of `{ id, setup, punchline, category }` objects |
+| Tests | `tests/test_joke.py` | Unit tests for selection + lookup logic; integration tests for all three endpoints |
 
 ---
 
 ## Out of Scope
 
-- Authentication / API keys (not needed for a public quote API)
-- Admin interface for managing quotes (redeploy is the write path)
-- Rate limiting (Railway provides basic DDoS protection; add if abuse occurs)
-- Versioning (`/v1/`) (add when a breaking change is needed)
-- Frontend (this is a headless API)
+- Authentication / API keys (public joke API)
+- Admin interface for managing jokes (redeploy is the write path)
+- Rate limiting (add if abuse occurs; Railway provides basic DDoS protection)
+- Frontend (headless API)
+- Versioning (`/v1/`) — add when a breaking change is needed

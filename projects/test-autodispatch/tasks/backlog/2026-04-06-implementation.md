@@ -7,4 +7,4 @@
 
 ## Description
 
-Implement the REST API based on bjorn's architecture output. Scaffold the project, implement GET /quote/daily returning a JSON response with fields: quote, author, date. Implement the quote selection logic (deterministic daily selection from a static list of at least 20 quotes). Include input validation, error handling, and a /health endpoint. Write unit and integration tests covering the quote endpoint, daily determinism, and edge cases. All code must be production-ready and runnable via the Docker setup from dag.
+Implement the joke REST API based on bjorn's architecture output. Scaffold the project, implement all endpoints (GET /joke for random joke, GET /joke/{id} for specific joke, GET /jokes for full list), populate a static jokes dataset with at least 20 jokes, add input validation and proper HTTP error responses (404, 422). Code must be runnable with the docker-compose from dag's output.

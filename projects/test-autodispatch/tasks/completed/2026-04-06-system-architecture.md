@@ -6,4 +6,4 @@
 
 ## Description
 
-Design the architecture for a simple REST API that returns a daily motivational quote. Define the tech stack (language, framework, data storage approach), endpoint design (GET /quote/daily), response schema (JSON with quote text, author, date), quote sourcing strategy (static file, embedded list, or lightweight DB), and caching approach for the daily quote. Produce a Mermaid diagram of the system components and a written architecture decision record covering all key choices.
+Design the system architecture for a simple REST API that returns a random joke. Define the tech stack (recommend FastAPI or Express), data model for jokes (id, setup, punchline, category fields), API endpoint design (GET /joke, GET /joke/{id}, GET /jokes), joke storage strategy (static JSON file vs embedded array), and error handling approach. Produce a Mermaid diagram of the request flow and an ADR for each major decision.
