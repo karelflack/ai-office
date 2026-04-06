@@ -7,3 +7,9 @@
 | [2026-04-06-Dockerfile](2026-04-06-Dockerfile) | Docker image for FastAPI service with HEALTHCHECK | dag | 2026-04-06 |
 | [2026-04-06-docker-compose.yml](2026-04-06-docker-compose.yml) | Local dev compose with health check and restart policy | dag | 2026-04-06 |
 | [2026-04-06-ci.yml](2026-04-06-ci.yml) | GitHub Actions CI: lint, test, docker build | dag | 2026-04-06 |
+| [2026-04-06-main.py](2026-04-06-main.py) | FastAPI app entrypoint — /jokes/random and /health routes | arve | 2026-04-06 |
+| [2026-04-06-models.py](2026-04-06-models.py) | Pydantic Joke response model | arve | 2026-04-06 |
+| [2026-04-06-jokes-module.py](2026-04-06-jokes-module.py) | Joke loader and random-selection logic (maps to app/jokes.py) | arve | 2026-04-06 |
+| [2026-04-06-jokes.json](2026-04-06-jokes.json) | Static joke dataset — 30 jokes across 6 categories | arve | 2026-04-06 |
+| [2026-04-06-test_jokes.py](2026-04-06-test_jokes.py) | pytest suite — 16 tests covering happy path, schema, health, 404/405 | arve | 2026-04-06 |
+| [2026-04-06-requirements.txt](2026-04-06-requirements.txt) | Python dependencies (fastapi, uvicorn, pydantic, httpx, pytest) | arve | 2026-04-06 |
