@@ -277,8 +277,31 @@
 
     /* ---- MAIN ---- */
     #main { display: flex; flex-direction: row; overflow-x: auto; }
+    #main.collapsed { display: none; }
     #canvas-wrap { position: relative; flex-shrink: 0; }
     #game-canvas { display: block; }
+
+    /* ---- CANVAS TOGGLE ---- */
+    #canvas-toggle-bar {
+      display: flex; align-items: center; gap: 8px;
+      padding: 0 1.5rem;
+      height: 36px;
+      background: rgba(255,255,255,0.78);
+      border-bottom: 2px solid var(--glass-border);
+      cursor: pointer;
+      user-select: none;
+      font-size: 12px; font-weight: 600; color: var(--text-primary);
+      transition: background 0.15s;
+    }
+    #canvas-toggle-bar:hover { background: rgba(255,255,255,1); }
+    #canvas-toggle-icon {
+      width: 20px; height: 20px; border-radius: 50%;
+      background: var(--accent); color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; flex-shrink: 0;
+      transition: transform 0.2s;
+    }
+    #canvas-toggle-icon.open { transform: rotate(180deg); }
 
     /* ---- SIDEBAR ---- */
     #sidebar {
@@ -786,7 +809,7 @@
     <button class="glass-btn" onclick="toggleAgents()">Agents</button>
     <button class="glass-btn" onclick="toggleOutput()">Output</button>
     <button class="glass-btn" onclick="toggleTasks()">Task Manager</button>
-    <button class="glass-btn" onclick="toggleTech()">Behind the Scenes</button>
+<button class="glass-btn" onclick="toggleTech()">Behind the Scenes</button>
   </div>
 </div>
 
@@ -808,6 +831,12 @@
       <button class="modal-btn-create" onclick="handleCreateProject()">Create</button>
     </div>
   </div>
+</div>
+
+<!-- CANVAS TOGGLE BAR -->
+<div id="canvas-toggle-bar" onclick="toggleCanvas()">
+  <span id="canvas-toggle-icon" class="open">&#9660;</span>
+  <span id="canvas-toggle-label">Office Workspace — click to hide</span>
 </div>
 
 <!-- MAIN: canvas + sidebar -->
@@ -1765,6 +1794,14 @@ function renderAgentsPanel() {
 // TECHNICAL PANEL
 // ============================================================
 let techVisible = false;
+let canvasVisible = true;
+function toggleCanvas() {
+  canvasVisible = !canvasVisible;
+  document.getElementById('main').classList.toggle('collapsed', !canvasVisible);
+  document.getElementById('canvas-toggle-icon').classList.toggle('open', canvasVisible);
+  document.getElementById('canvas-toggle-label').textContent = canvasVisible ? 'Office Workspace — click to hide' : 'Office Workspace — click to show';
+}
+
 function toggleTech() {
   techVisible = !techVisible;
   document.getElementById('tech-panel').classList.toggle('visible', techVisible);

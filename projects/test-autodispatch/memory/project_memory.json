@@ -1,0 +1,20 @@
+{
+  "project": "test-autodispatch",
+  "slug": "test-autodispatch",
+  "description": "",
+  "created": "2026-04-06",
+  "agent_notes": {
+    "else": "Completed competitor analysis (2026-04-06). Analyzed 6 competitors: Notion, Obsidian, Bear, Evernote, Apple Notes, Roam Research. Key finding: the $3-8/mo cross-platform tier is underserved. Identified 5 market gaps including onboarding vs. power, collaboration + privacy, and meaningful AI integration. Pricing recommendation summary passed to nora: freemium with ~$6-8/mo individual and ~$8-10/user/mo team tier. Output: projects/test-autodispatch/output/2026-04-06-competitor-analysis.md"
+  },
+  "kickoff_description": "Write a one-page competitor analysis and a pricing recommendation for a note-taking\n  app",
+  "kickoff_plan": [
+    {
+      "agent": "else",
+      "title": "Competitor Analysis"
+    },
+    {
+      "agent": "nora",
+      "title": "Pricing Recommendation"
+    }
+  ]
+}

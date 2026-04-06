@@ -25,6 +25,99 @@ BASE_DIR = Path(__file__).parent.resolve()
 _live_procs: dict = {}
 
 
+def _parse_stream_event(line: str):
+    try:
+        event = json.loads(line)
+    except Exception:
+        return line if line.strip() else None
+    t = event.get("type")
+    if t == "assistant":
+        for item in event.get("message", {}).get("content", []):
+            if item.get("type") == "text" and item.get("text", "").strip():
+                return item["text"].strip()
+            elif item.get("type") == "tool_use":
+                name = item.get("name", "")
+                inp = item.get("input", {})
+                if name == "Read":   return f"> Read: {inp.get('file_path', '')}"
+                if name == "Write":  return f"> Write: {inp.get('file_path', '')}"
+                if name == "Edit":   return f"> Edit: {inp.get('file_path', '')}"
+                if name == "Bash":   return f"> $ {inp.get('command', '')[:80]}"
+                if name == "Glob":   return f"> Glob: {inp.get('pattern', '')}"
+                if name == "Grep":   return f"> Grep: {inp.get('pattern', '')}"
+                return f"> {name}()"
+    elif t == "result":
+        cost = event.get("total_cost_usd", 0)
+        if event.get("subtype") == "success":
+            return f"✓ Done  (${cost:.4f})"
+        else:
+            return f"✗ Error: {event.get('result', '')}"
+    return None
+
+
+def _spawn_agent_task(slug: str, filename: str, agent: str) -> bool:
+    """Spawn a Claude subprocess for an active task. Returns False if already running."""
+    key = (slug, filename)
+    if key in _live_procs:
+        return False
+
+    prompt = (
+        f"You are the {agent} agent in the ai-office multi-agent framework.\n\n"
+        f"You are working on project: '{slug}'\n\n"
+        "Steps to follow:\n"
+        "1. Read CLAUDE.md for session protocol\n"
+        f"2. Read agents/{agent}.md for your full role definition\n"
+        f"3. Read projects/{slug}/memory/project_memory.json for project context\n"
+        f"4. Read the task file at projects/{slug}/tasks/active/{filename}\n"
+        "5. Complete the task as described\n"
+        f"6. Write all deliverables to projects/{slug}/output/ — name files clearly\n"
+        f"7. Update projects/{slug}/output/README.md with your new file\n"
+        f"8. Update projects/{slug}/memory/project_memory.json with your notes under agent_notes\n"
+        f"9. Move the task to projects/{slug}/tasks/completed/ and delete it from active/\n\n"
+        "Work autonomously. Use your tools. Produce real, useful output."
+    )
+
+    proc = subprocess.Popen(
+        ["claude", "--print", "--dangerously-skip-permissions",
+         "--verbose", "--output-format", "stream-json", prompt],
+        stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+        stdin=subprocess.DEVNULL, text=True, cwd=str(BASE_DIR),
+    )
+    _live_procs[key] = proc
+    mem.write_run(filename, [], False, project_slug=slug)
+
+    def _reader():
+        lines = []
+        try:
+            for line in proc.stdout:
+                line = line.rstrip("\n")
+                if not line:
+                    continue
+                try:
+                    formatted = _parse_stream_event(line)
+                    if formatted:
+                        lines.append(formatted)
+                        mem.write_run(filename, lines, False, project_slug=slug)
+                except Exception:
+                    pass
+        finally:
+            proc.wait()
+            mem.write_run(filename, lines, True, project_slug=slug)
+            _live_procs.pop(key, None)
+            # Auto-dispatch: when this task completes, activate and run dependents
+            newly_activated = task_mgr.resolve_handoffs(filename, project_slug=slug)
+            for dep_filename in newly_activated:
+                dep_path = BASE_DIR / "projects" / slug / "tasks" / "active" / dep_filename
+                dep_content = dep_path.read_text(encoding="utf-8") if dep_path.exists() else ""
+                m = re.search(r'^\*\*Agent:\*\*\s*(.+)$', dep_content, re.MULTILINE)
+                dep_agent = m.group(1).strip() if m else "orchestrator"
+                if dep_agent not in agent_registry.VALID_AGENTS:
+                    dep_agent = "orchestrator"
+                _spawn_agent_task(slug, dep_filename, dep_agent)
+
+    threading.Thread(target=_reader, daemon=True).start()
+    return True
+
+
 class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
 
     def translate_path(self, path):
@@ -284,6 +377,14 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
             self._error(404, str(e))
             return
         activated = task_mgr.resolve_handoffs(filename, project_slug=slug)
+        for dep_filename in activated:
+            dep_path = BASE_DIR / "projects" / slug / "tasks" / "active" / dep_filename
+            dep_content = dep_path.read_text(encoding="utf-8") if dep_path.exists() else ""
+            m = re.search(r'^\*\*Agent:\*\*\s*(.+)$', dep_content, re.MULTILINE)
+            dep_agent = m.group(1).strip() if m else "orchestrator"
+            if dep_agent not in agent_registry.VALID_AGENTS:
+                dep_agent = "orchestrator"
+            _spawn_agent_task(slug, dep_filename, dep_agent)
         self._json_response({"ok": True, "activated": activated})
 
     def _handle_post_project_task_delete(self, slug):
@@ -313,81 +414,13 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
         started = []
         for task_file in sorted(active_dir.glob("*.md")):
             filename = task_file.name
-            # Parse agent from task file
             content = task_file.read_text(encoding="utf-8")
             match = re.search(r'^\*\*Agent:\*\*\s*(.+)$', content, re.MULTILINE)
             agent = match.group(1).strip() if match else "orchestrator"
             if agent not in agent_registry.VALID_AGENTS:
                 agent = "orchestrator"
-
-            key = (slug, filename)
-            if key in _live_procs:
-                continue  # already running
-
-            prompt = (
-                f"You are the {agent} agent in the ai-office multi-agent framework.\n\n"
-                f"You are working on project: '{slug}'\n\n"
-                "Steps to follow:\n"
-                "1. Read CLAUDE.md for session protocol\n"
-                f"2. Read agents/{agent}.md for your full role definition\n"
-                f"3. Read projects/{slug}/memory/project_memory.json for project context\n"
-                f"4. Read the task file at projects/{slug}/tasks/active/{filename}\n"
-                "5. Complete the task as described\n"
-                f"6. Write all deliverables to projects/{slug}/output/ — name files clearly\n"
-                f"7. Update projects/{slug}/output/README.md with your new file\n"
-                f"8. Update projects/{slug}/memory/project_memory.json with your notes\n"
-                f"9. Move the task to projects/{slug}/tasks/completed/ and delete it from active/\n\n"
-                "Work autonomously. Produce real, useful output."
-            )
-
-            proc = subprocess.Popen(
-                ["claude", "--print", "--dangerously-skip-permissions",
-                 "--verbose", "--output-format", "stream-json", prompt],
-                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                stdin=subprocess.DEVNULL, text=True, cwd=str(BASE_DIR),
-            )
-            _live_procs[key] = proc
-            mem.write_run(filename, [], False, project_slug=slug)
-
-            def _make_reader(k, fname, p, proj_slug):
-                def _reader():
-                    lines = []
-                    try:
-                        for line in p.stdout:
-                            line = line.rstrip("\n")
-                            if not line:
-                                continue
-                            try:
-                                event = json.loads(line)
-                                t = event.get("type")
-                                formatted = None
-                                if t == "assistant":
-                                    for item in event.get("message", {}).get("content", []):
-                                        if item.get("type") == "text" and item.get("text", "").strip():
-                                            formatted = item["text"].strip()
-                                        elif item.get("type") == "tool_use":
-                                            n = item.get("name", ""); i = item.get("input", {})
-                                            if n == "Read": formatted = f"> Read: {i.get('file_path', '')}"
-                                            elif n == "Write": formatted = f"> Write: {i.get('file_path', '')}"
-                                            elif n == "Edit": formatted = f"> Edit: {i.get('file_path', '')}"
-                                            elif n == "Bash": formatted = f"> $ {i.get('command', '')[:80]}"
-                                            else: formatted = f"> {n}()"
-                                elif t == "result":
-                                    cost = event.get("total_cost_usd", 0)
-                                    formatted = f"✓ Done  (${cost:.4f})" if event.get("subtype") == "success" else f"✗ Error: {event.get('result', '')}"
-                                if formatted:
-                                    lines.append(formatted)
-                                    mem.write_run(fname, lines, False, project_slug=proj_slug)
-                            except Exception:
-                                pass
-                    finally:
-                        p.wait()
-                        mem.write_run(fname, lines, True, project_slug=proj_slug)
-                        _live_procs.pop(k, None)
-                return _reader
-
-            threading.Thread(target=_make_reader(key, filename, proc, slug), daemon=True).start()
-            started.append({"filename": filename, "agent": agent})
+            if _spawn_agent_task(slug, filename, agent):
+                started.append({"filename": filename, "agent": agent})
 
         self._json_response({"started": started})
 
@@ -554,91 +587,7 @@ Reply with ONLY a JSON array, no markdown, no explanation:
             self._error(400, f"Task not found in active/: {filename}")
             return
 
-        prompt = (
-            f"You are the {agent} agent in the ai-office multi-agent framework.\n\n"
-            f"You are working on project: '{slug}'\n\n"
-            "Steps to follow:\n"
-            "1. Read CLAUDE.md for session protocol\n"
-            f"2. Read agents/{agent}.md for your full role definition\n"
-            f"3. Read projects/{slug}/memory/project_memory.json for project context\n"
-            f"4. Read the task file at projects/{slug}/tasks/active/{filename}\n"
-            "5. Complete the task as described\n"
-            f"6. Write all deliverables to projects/{slug}/output/ — name files clearly\n"
-            f"7. Update projects/{slug}/output/README.md with your new file\n"
-            f"8. Update projects/{slug}/memory/project_memory.json with your notes under agent_notes\n"
-            f"9. Move the task to projects/{slug}/tasks/completed/ and delete it from active/\n\n"
-            "Work autonomously. Use your tools. Produce real, useful output."
-        )
-
-        proc = subprocess.Popen(
-            ["claude", "--print", "--dangerously-skip-permissions",
-             "--verbose", "--output-format", "stream-json", prompt],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            stdin=subprocess.DEVNULL,
-            text=True,
-            cwd=str(BASE_DIR),
-        )
-
-        key = (slug, filename)
-        _live_procs[key] = proc
-        mem.write_run(filename, [], False, project_slug=slug)
-
-        def _parse_stream_event(line):
-            try:
-                event = json.loads(line)
-            except Exception:
-                return line if line.strip() else None
-            t = event.get("type")
-            if t == "assistant":
-                for item in event.get("message", {}).get("content", []):
-                    if item.get("type") == "text" and item.get("text", "").strip():
-                        return item["text"].strip()
-                    elif item.get("type") == "tool_use":
-                        name = item.get("name", "")
-                        inp = item.get("input", {})
-                        if name == "Read":
-                            return f"> Read: {inp.get('file_path', '')}"
-                        elif name == "Write":
-                            return f"> Write: {inp.get('file_path', '')}"
-                        elif name == "Edit":
-                            return f"> Edit: {inp.get('file_path', '')}"
-                        elif name == "Bash":
-                            return f"> $ {inp.get('command', '')[:80]}"
-                        elif name == "Glob":
-                            return f"> Glob: {inp.get('pattern', '')}"
-                        elif name == "Grep":
-                            return f"> Grep: {inp.get('pattern', '')}"
-                        else:
-                            return f"> {name}()"
-            elif t == "result":
-                cost = event.get("total_cost_usd", 0)
-                if event.get("subtype") == "success":
-                    return f"✓ Done  (${cost:.4f})"
-                else:
-                    return f"✗ Error: {event.get('result', '')}"
-            return None
-
-        def _reader(k, fname, p, proj_slug):
-            lines = []
-            try:
-                for line in p.stdout:
-                    line = line.rstrip("\n")
-                    if not line:
-                        continue
-                    try:
-                        formatted = _parse_stream_event(line)
-                        if formatted:
-                            lines.append(formatted)
-                            mem.write_run(fname, lines, False, project_slug=proj_slug)
-                    except Exception:
-                        pass
-            finally:
-                p.wait()
-                mem.write_run(fname, lines, True, project_slug=proj_slug)
-                _live_procs.pop(k, None)
-
-        threading.Thread(target=_reader, args=(key, filename, proc, slug), daemon=True).start()
+        _spawn_agent_task(slug, filename, agent)
         self._json_response({"ok": True, "task_id": filename})
 
     # ------------------------------------------------------------------
