@@ -1,0 +1,182 @@
+[
+  {
+    "id": 1,
+    "setup": "Why don't scientists trust atoms?",
+    "punchline": "Because they make up everything.",
+    "category": "science"
+  },
+  {
+    "id": 2,
+    "setup": "Why did the scarecrow win an award?",
+    "punchline": "Because he was outstanding in his field.",
+    "category": "general"
+  },
+  {
+    "id": 3,
+    "setup": "Why do programmers prefer dark mode?",
+    "punchline": "Because light attracts bugs.",
+    "category": "programming"
+  },
+  {
+    "id": 4,
+    "setup": "What do you call a fish without eyes?",
+    "punchline": "A fsh.",
+    "category": "general"
+  },
+  {
+    "id": 5,
+    "setup": "Why did the developer go broke?",
+    "punchline": "Because they used up all their cache.",
+    "category": "programming"
+  },
+  {
+    "id": 6,
+    "setup": "What do you call a sleeping dinosaur?",
+    "punchline": "A dino-snore.",
+    "category": "general"
+  },
+  {
+    "id": 7,
+    "setup": "How many programmers does it take to change a light bulb?",
+    "punchline": "None. That's a hardware problem.",
+    "category": "programming"
+  },
+  {
+    "id": 8,
+    "setup": "Why can't you trust an atom?",
+    "punchline": "They make up everything — even the periodic table.",
+    "category": "science"
+  },
+  {
+    "id": 9,
+    "setup": "What do you call a belt made of watches?",
+    "punchline": "A waist of time.",
+    "category": "general"
+  },
+  {
+    "id": 10,
+    "setup": "Why did the function break up with the loop?",
+    "punchline": "It kept going around in circles.",
+    "category": "programming"
+  },
+  {
+    "id": 11,
+    "setup": "What did the ocean say to the beach?",
+    "punchline": "Nothing, it just waved.",
+    "category": "general"
+  },
+  {
+    "id": 12,
+    "setup": "Why do Java developers wear glasses?",
+    "punchline": "Because they don't C#.",
+    "category": "programming"
+  },
+  {
+    "id": 13,
+    "setup": "What did one wall say to the other wall?",
+    "punchline": "I'll meet you at the corner.",
+    "category": "general"
+  },
+  {
+    "id": 14,
+    "setup": "Why is a computer so smart?",
+    "punchline": "It listens to its motherboard.",
+    "category": "programming"
+  },
+  {
+    "id": 15,
+    "setup": "What do you call cheese that isn't yours?",
+    "punchline": "Nacho cheese.",
+    "category": "food"
+  },
+  {
+    "id": 16,
+    "setup": "What's a neutron's favorite restaurant?",
+    "punchline": "One with no charge.",
+    "category": "science"
+  },
+  {
+    "id": 17,
+    "setup": "Why did the cookie go to the doctor?",
+    "punchline": "Because it was feeling crummy.",
+    "category": "food"
+  },
+  {
+    "id": 18,
+    "setup": "What do you call a lazy kangaroo?",
+    "punchline": "A pouch potato.",
+    "category": "general"
+  },
+  {
+    "id": 19,
+    "setup": "Why did the physics teacher break up with the biology teacher?",
+    "punchline": "There was no chemistry.",
+    "category": "science"
+  },
+  {
+    "id": 20,
+    "setup": "What do you call it when a snowman throws a tantrum?",
+    "punchline": "A meltdown.",
+    "category": "general"
+  },
+  {
+    "id": 21,
+    "setup": "Why did the programmer quit their job?",
+    "punchline": "Because they didn't get arrays.",
+    "category": "programming"
+  },
+  {
+    "id": 22,
+    "setup": "Why did the tomato turn red?",
+    "punchline": "Because it saw the salad dressing.",
+    "category": "food"
+  },
+  {
+    "id": 23,
+    "setup": "What did the biologist wear to impress their date?",
+    "punchline": "Designer genes.",
+    "category": "science"
+  },
+  {
+    "id": 24,
+    "setup": "Why don't eggs tell jokes?",
+    "punchline": "They'd crack each other up.",
+    "category": "food"
+  },
+  {
+    "id": 25,
+    "setup": "What is a computer's favorite snack?",
+    "punchline": "Microchips.",
+    "category": "programming"
+  },
+  {
+    "id": 26,
+    "setup": "Why did the coffee file a police report?",
+    "punchline": "It got mugged.",
+    "category": "food"
+  },
+  {
+    "id": 27,
+    "setup": "What did the DNA say to the other DNA?",
+    "punchline": "Do these genes make me look fat?",
+    "category": "science"
+  },
+  {
+    "id": 28,
+    "setup": "Why do programmers always mix up Halloween and Christmas?",
+    "punchline": "Because Oct 31 equals Dec 25.",
+    "category": "programming"
+  },
+  {
+    "id": 29,
+    "setup": "What do you call a fake noodle?",
+    "punchline": "An impasta.",
+    "category": "food"
+  },
+  {
+    "id": 30,
+    "setup": "Why did the math teacher bring a ladder to class?",
+    "punchline": "To show how to reach new heights.",
+    "category": "science"
+  }
+]
