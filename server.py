@@ -103,10 +103,8 @@ def _spawn_agent_task(slug: str, filename: str, agent: str) -> bool:
             proc.wait()
             mem.write_run(filename, lines, True, project_slug=slug)
             _live_procs.pop(key, None)
-            print(f"[auto-dispatch] task done: {filename} in {slug}", flush=True)
             # Auto-dispatch: move backlog dependents to active and run them
             newly_activated = task_mgr.resolve_handoffs(filename, project_slug=slug)
-            print(f"[auto-dispatch] newly_activated from backlog: {newly_activated}", flush=True)
             to_run = set(newly_activated)
             # Also pick up any tasks already in active/ that were waiting on this one
             active_dir = BASE_DIR / "projects" / slug / "tasks" / "active"
@@ -119,7 +117,6 @@ def _spawn_agent_task(slug: str, filename: str, agent: str) -> bool:
                             to_run.add(f.name)
                     except Exception:
                         pass
-            print(f"[auto-dispatch] to_run: {to_run}", flush=True)
             for dep_filename in to_run:
                 dep_path = active_dir / dep_filename
                 dep_content = dep_path.read_text(encoding="utf-8") if dep_path.exists() else ""
@@ -127,7 +124,6 @@ def _spawn_agent_task(slug: str, filename: str, agent: str) -> bool:
                 dep_agent = m.group(1).strip() if m else "orchestrator"
                 if dep_agent not in agent_registry.VALID_AGENTS:
                     dep_agent = "orchestrator"
-                print(f"[auto-dispatch] spawning {dep_agent} for {dep_filename}", flush=True)
                 _spawn_agent_task(slug, dep_filename, dep_agent)
 
     threading.Thread(target=_reader, daemon=True).start()

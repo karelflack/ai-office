@@ -1,0 +1,28 @@
+{
+  "project": "Auto Dispatch Test",
+  "slug": "auto-dispatch-test",
+  "description": "Full 3-phase chain test",
+  "created": "2026-04-06",
+  "agent_notes": {
+    "bjorn": "Architecture complete. FastAPI + Python, static JSON joke dataset (no DB), single endpoint GET /jokes/random + GET /health. Deliverable: projects/auto-dispatch-test/output/2026-04-06-system-architecture.md. Dag and Arve can proceed in parallel."
+  },
+  "kickoff_description": "Build a simple REST API that returns a random joke. Needs architecture, implementation, and API tests.",
+  "kickoff_plan": [
+    {
+      "agent": "bjorn",
+      "title": "System Architecture"
+    },
+    {
+      "agent": "dag",
+      "title": "Infrastructure and CI/CD"
+    },
+    {
+      "agent": "arve",
+      "title": "Implementation"
+    },
+    {
+      "agent": "odd",
+      "title": "API Tests"
+    }
+  ]
+}
