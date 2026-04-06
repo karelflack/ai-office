@@ -1,4 +1,4 @@
-# Infrastructure and CI/CD — Motivational Quote API
+# Infrastructure and CI/CD — Random Joke REST API
 
 **Agent:** dag
 **Date:** 2026-04-06
@@ -11,7 +11,7 @@
 ## Assumptions validated against bjorn's architecture
 
 - Runtime: **Python 3.11+ / FastAPI** ✓ (confirmed)
-- Single stateless service, quotes in bundled `data/quotes.json` — no DB ✓ (confirmed)
+- Single stateless service, jokes in bundled `data/jokes.json` — no DB ✓ (confirmed)
 - One process per container, no sidecar ✓ (confirmed)
 - Deployed to Railway ✓ (confirmed)
 - Container registry: GitHub Container Registry (ghcr.io) ✓ (unchanged)
@@ -69,7 +69,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: quote-api:local
+    image: joke-api:local
     ports:
       - "${PORT:-8000}:${PORT:-8000}"
     environment:
@@ -235,7 +235,7 @@ jobs:
       - name: Deploy
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-        run: railway up --service quote-api --detach
+        run: railway up --service joke-api --detach
 
       - name: Verify health after deploy
         run: |
@@ -307,7 +307,7 @@ Merge to main
 This setup is sufficient for a low-traffic single-instance MVP. Flag for revisit when:
 
 - Request volume exceeds ~500 req/s (single Railway instance limit) — at that point, add Railway horizontal scaling or move behind a load balancer
-- Quote data grows beyond a flat file — introduce a read replica or Redis cache layer at that point, not before
+- Joke data grows beyond a flat file — introduce a read replica or Redis cache layer at that point, not before
 
 ---
 
