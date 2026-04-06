@@ -6,43 +6,58 @@
 
 ## Upstream outputs read
 
-- projects/auto-dispatch-test/tasks/active/2026-04-06-system-architecture.md (bjorn) — task still active, no output file yet. Defaulting to Python/FastAPI as instructed.
+- projects/auto-dispatch-test/output/2026-04-06-system-architecture.md (bjorn)
 
 ## Decisions
 
-- Stack: Python 3.12 / FastAPI — default per task instructions (bjorn's architecture not yet available)
-- No database: jokes are stored as an in-memory list in the application (fits the simple scope)
-- Docker base image: `python:3.12-slim` — minimal footprint, official image
-- Health check endpoint: `GET /health` returns `{"status": "ok"}`
-- CI pipeline: GitHub Actions — lint (ruff), tests (pytest), Docker build on every push to main and on PRs
-- No push to registry in CI for now — image is built and verified, push can be added when a registry is chosen
-- Secrets: no secrets required for this service; if added later they must go in GitHub Actions secrets and Railway env vars, never in code
+- Stack: Python 3.11 / FastAPI — confirmed from bjorn's architecture
+- No database: jokes loaded from `data/jokes.json` at startup; in-process list
+- Docker base image: `python:3.11-slim` — minimal footprint, matches Python version from bjorn
+- Health check endpoint: `GET /health` returns `{"status": "ok"}` — defined by bjorn, wired into Docker HEALTHCHECK and compose
+- CI pipeline: GitHub Actions — lint (ruff), tests (pytest tests/), Docker build on every push and PR
+- No push to registry in CI for now — image is built and verified; push step can be added when a container registry is chosen (Railway can pull from GitHub Container Registry or build from source directly)
+- Secrets: none required for this service at v1. If added later: GitHub Actions secrets for CI, Railway environment variables for runtime — never hardcoded
 
 ## Scale note
 
-An in-memory joke list is fine for a demo service. If the joke dataset grows or needs to be updated without a redeploy, move it to a database (Supabase/Postgres on Railway is the natural next step given the product stack).
+Static in-process joke list is fine for a demo. If the joke dataset needs to be updated without a redeploy, the natural migration path is Supabase/Postgres on Railway (already in the team's stack). This would require a data migration and new endpoint logic — bjorn has flagged this as the known hard-to-reverse decision.
+
+## Directory layout (per bjorn's architecture)
+
+```
+joke-api/
+  app/
+    main.py           # FastAPI app, route definitions
+    models.py         # Pydantic response model for Joke
+    jokes.py          # Joke loading and random selection logic
+  data/
+    jokes.json        # Static joke dataset
+  tests/
+    test_jokes.py     # pytest tests
+  Dockerfile          # from 2026-04-06-Dockerfile
+  docker-compose.yml  # from 2026-04-06-docker-compose.yml
+  requirements.txt
+  .github/
+    workflows/
+      ci.yml          # from 2026-04-06-ci.yml
+```
 
 ## Deliverables
 
 | File | Description |
 |------|-------------|
-| `2026-04-06-Dockerfile` | Multi-stage Docker image for the FastAPI service |
-| `2026-04-06-docker-compose.yml` | Local dev compose file |
-| `2026-04-06-ci.yml` | GitHub Actions CI pipeline |
+| `2026-04-06-Dockerfile` | Docker image — python:3.11-slim, HEALTHCHECK wired to /health |
+| `2026-04-06-docker-compose.yml` | Local dev compose with health check and restart policy |
+| `2026-04-06-ci.yml` | GitHub Actions: lint → test → docker build (no push yet) |
 
-## Directory layout assumed
+## Notes for arve (implementation)
 
-```
-projects/auto-dispatch-test/
-  app/
-    main.py          # FastAPI app entrypoint
-    jokes.py         # Joke data and logic
-    tests/
-      test_api.py    # pytest tests (written by arve/odd)
-  Dockerfile
-  docker-compose.yml
-  requirements.txt
-  .github/
-    workflows/
-      ci.yml
-```
+- `requirements.txt` must include: `fastapi`, `uvicorn[standard]`, `httpx`, `pytest`, `ruff`
+- Tests must live in `tests/` (not `app/tests/`) — that is what the CI pipeline invokes
+- The Dockerfile copies `app/` and `data/` — arve must not move these directories
+
+## Notes for odd (API testing)
+
+- Service runs on port 8000 locally (`docker-compose up`)
+- Health check: `GET /health` — expect `{"status": "ok"}`
+- Primary endpoint: `GET /jokes/random` — see bjorn's response schema

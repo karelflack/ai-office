@@ -1,7 +1,8 @@
 # Dockerfile for auto-dispatch-test joke API (Python/FastAPI)
 # dag — 2026-04-06
+# Aligned with bjorn's architecture: app/ + data/ + tests/ layout
 
-FROM python:3.12-slim AS base
+FROM python:3.11-slim AS base
 
 WORKDIR /app
 
@@ -9,8 +10,9 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application source
+# Copy application source and data
 COPY app/ ./app/
+COPY data/ ./data/
 
 # Health check — Railway and local docker-compose both pick this up
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
