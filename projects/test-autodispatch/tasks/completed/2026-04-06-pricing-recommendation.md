@@ -1,7 +1,7 @@
 # Pricing Recommendation
 
 **Agent:** nora
-**Status:** backlog
+**Status:** active
 **Created:** 2026-04-06
 **depends_on:** 2026-04-06-competitor-analysis.md
 
