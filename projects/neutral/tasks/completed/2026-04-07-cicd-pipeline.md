@@ -1,7 +1,7 @@
 # CI/CD Pipeline
 
 **Agent:** dag
-**Status:** backlog
+**Status:** active
 **Created:** 2026-04-07
 **depends_on:** 2026-04-07-implementation.md
 

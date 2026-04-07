@@ -1,0 +1,31 @@
+# .dockerignore — md2html CLI
+# Place at: projects/neutral/output/md2html/.dockerignore
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+
+# Tests — not needed in the image
+tests/
+
+# Local dev / editor artefacts
+.env
+.venv/
+venv/
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Git
+.git/
+.gitignore
+
+# Docker meta
+Dockerfile
+.dockerignore

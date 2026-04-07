@@ -1,0 +1,86 @@
+# GitHub Actions CI/CD — md2html CLI
+# Place at: .github/workflows/md2html-ci.yml
+#
+# Triggers on every push to main and on pull requests targeting main.
+# Pipeline:
+#   1. test  — install deps, run full pytest suite (fast-fail on any error)
+#   2. build — build + smoke-test Docker image (only after tests pass)
+
+name: md2html CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "projects/neutral/output/md2html/**"
+      - ".github/workflows/md2html-ci.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "projects/neutral/output/md2html/**"
+      - ".github/workflows/md2html-ci.yml"
+
+defaults:
+  run:
+    working-directory: projects/neutral/output/md2html
+
+jobs:
+  # ── 1. Test ──────────────────────────────────────────────────────────────────
+  test:
+    name: Test (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: true          # stop all matrix legs on first failure
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install package and test dependencies
+        run: pip install -e ".[watch]" pytest
+
+      - name: Run tests
+        run: pytest --tb=short -q
+
+  # ── 2. Build Docker image ────────────────────────────────────────────────────
+  build:
+    name: Build Docker image
+    runs-on: ubuntu-latest
+    needs: test          # never build if tests fail
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Copy Dockerfile into the package directory so docker build context is
+      # self-contained. (Dockerfile lives in output/ as a dag deliverable.)
+      - name: Copy Dockerfile into build context
+        run: |
+          cp ../../2026-04-07-dockerfile Dockerfile
+          cp ../../2026-04-07-dockerignore .dockerignore
+        working-directory: projects/neutral/output/md2html
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: projects/neutral/output/md2html
+          push: false          # no registry configured yet — build only
+          tags: md2html:${{ github.sha }},md2html:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Smoke-test image
+        run: |
+          docker run --rm md2html:latest --help
+          # Quick conversion smoke test: create a temp markdown file and convert
+          echo "# hello" | docker run --rm -i --entrypoint bash md2html:latest \
+            -c "echo '# hello' > /tmp/t.md && md2html --input /tmp/t.md --output /tmp/t.html && grep '<h1>' /tmp/t.html"

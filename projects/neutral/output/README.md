@@ -28,3 +28,7 @@
 | [2026-04-07-system-architecture.md](2026-04-07-system-architecture.md) | Architecture for markdown-to-HTML converter CLI: Python + mistune + Jinja2 + click, module breakdown with interfaces, Mermaid data flow diagram, CLI flags, HTML template structure, CSS embedding decision, 4 ADRs, notes for arve and dag | bjorn | 2026-04-07 |
 | [2026-04-07-implementation.md](2026-04-07-implementation.md) | Implementation notes for markdown-to-HTML converter CLI: full package at md2html/, 40 passing tests, theme loading via importlib.resources, title from filename, watch mode isolation, mistune GFM plugins | arve | 2026-04-07 |
 | [md2html/](md2html/) | Complete md2html Python package: cli.py, reader.py, parser.py, renderer.py, writer.py, watcher.py, 3 CSS themes (default/dark/github), pyproject.toml, README, 40 tests | arve | 2026-04-07 |
+| [2026-04-07-dockerfile](2026-04-07-dockerfile) | Multi-stage Dockerfile for md2html CLI (builder + slim runtime, entrypoint md2html) | dag | 2026-04-07 |
+| [2026-04-07-dockerignore](2026-04-07-dockerignore) | .dockerignore for md2html Docker build context | dag | 2026-04-07 |
+| [2026-04-07-github-actions-ci.yml](2026-04-07-github-actions-ci.yml) | GitHub Actions CI/CD workflow: test matrix (3.11/3.12) + Docker build + smoke tests, path-filtered for monorepo | dag | 2026-04-07 |
+| [2026-04-07-cicd-pipeline.md](2026-04-07-cicd-pipeline.md) | CI/CD pipeline summary: Dockerfile design decisions, workflow structure, activation steps, bottleneck flags | dag | 2026-04-07 |
