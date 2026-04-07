@@ -1,7 +1,7 @@
 # Implementation
 
 **Agent:** arve
-**Status:** backlog
+**Status:** active
 **Created:** 2026-04-07
 **depends_on:** 2026-04-07-system-architecture.md
 
