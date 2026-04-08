@@ -18,19 +18,31 @@
     "bjorn_md2html": "Completed markdown-to-HTML converter CLI architecture (2026-04-07). Deliverable: output/2026-04-07-system-architecture.md. Key decisions: [DECISION] Python over Node.js \u2014 consistent with team stack, no second runtime required (2026-04-07). [DECISION] mistune 3.x as Markdown parser \u2014 pure Python, CommonMark-compliant, isolated behind parser.parse() interface for easy swap (2026-04-07). [DECISION] CSS embedded inline in output HTML \u2014 self-contained portable output, no external file dependency (2026-04-07). [DECISION] watchdog in optional extras (pip install md2html[watch]) \u2014 avoids C extension in base install (2026-04-07). Stack: Python 3.11+, mistune 3.x, Jinja2 3.x, click 8.x, watchdog 4.x (optional). Module breakdown: cli.py, reader.py, parser.py, renderer.py, writer.py, watcher.py, themes/. CLI flags: --input, --output, --theme, --watch. No database, no server, no Docker required.",
     "dag_md2html": "Completed CI/CD pipeline for md2html CLI (2026-04-07). Deliverables: (1) output/2026-04-07-dockerfile \u2014 multi-stage Docker build (builder+runtime), python:3.11-slim base, watchdog extra excluded, entrypoint md2html; (2) output/2026-04-07-dockerignore \u2014 excludes tests/, __pycache__, .venv, .git; (3) output/2026-04-07-github-actions-ci.yml \u2014 GitHub Actions workflow with path filter for monorepo, test job (matrix 3.11/3.12, fail-fast), build job (docker/build-push-action v5, GHA layer cache, push: false, smoke tests); (4) output/2026-04-07-cicd-pipeline.md \u2014 full decisions log. Key decisions: [DECISION] Multi-stage Dockerfile \u2014 keeps runtime image slim (~120MB vs ~350MB), reversal trivial (2026-04-07). [DECISION] push: false \u2014 no registry configured yet; flip to true + add registry secrets when registry is chosen (2026-04-07). [DECISION] Path filter on workflow \u2014 monorepo requires path scoping to avoid burning CI minutes on unrelated commits (2026-04-07). Bottleneck flag: GHA layer cache evicts after 7 days inactivity \u2014 cold build ~60-90s, acceptable at launch."
   },
-  "kickoff_description": "Build a markdown-to-HTML converter CLI tool. Takes a .md file as input, outputs a styled. Html file. Needs architecture, implementation, and tests",
+  "kickoff_description": "Business Plan for AI Office: Go2Market Strategy, Business Model, Financing Structure, Financial Projections, Executive Summary and Pitch Deck.",
   "kickoff_plan": [
     {
-      "agent": "bjorn",
-      "title": "System Architecture"
+      "agent": "else",
+      "title": "Market Research & Competitor Landscape"
     },
     {
-      "agent": "arve",
-      "title": "Implementation"
+      "agent": "nora",
+      "title": "Business Model & Financial Projections"
     },
     {
-      "agent": "dag",
-      "title": "CI/CD Pipeline"
+      "agent": "halvard",
+      "title": "Go-To-Market Strategy"
+    },
+    {
+      "agent": "magnus",
+      "title": "Financing Structure & Legal Framework"
+    },
+    {
+      "agent": "jorunn",
+      "title": "Brand Narrative & Pitch Deck"
+    },
+    {
+      "agent": "knut",
+      "title": "Executive Summary & Roadmap"
     }
   ]
 }
