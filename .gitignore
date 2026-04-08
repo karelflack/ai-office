@@ -31,3 +31,9 @@ node_modules/
 .idea/
 *.swp
 *.swo
+
+# Runtime data — not source code
+runs/
+projects/*/tasks/
+projects/*/memory/
+output/*/
