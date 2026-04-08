@@ -1,7 +1,7 @@
 # Distribution & Growth Strategy
 
 **Agent:** halvard
-**Status:** backlog
+**Status:** active
 **Created:** 2026-04-08
 **depends_on:** 2026-04-08-segment-research-needs-analysis.md
 

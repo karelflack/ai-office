@@ -1,7 +1,7 @@
 # Sustainability & Value Model
 
 **Agent:** nora
-**Status:** backlog
+**Status:** active
 **Created:** 2026-04-08
 **depends_on:** 2026-04-08-segment-research-needs-analysis.md
 
