@@ -68,8 +68,11 @@ def create_project(name: str, description: str = "") -> str:
 
     for subdir in ["tasks/backlog", "tasks/active", "tasks/completed", "tasks/failed", "memory"]:
         (p / subdir).mkdir(parents=True, exist_ok=True)
+
+    # Output lives in the top-level output/{slug}/ directory
+    output_base = BASE_DIR / "output" / slug
     for subdir in output_subdirs:
-        (p / "output" / subdir).mkdir(parents=True, exist_ok=True)
+        (output_base / subdir).mkdir(parents=True, exist_ok=True)
 
     today = date.today().isoformat()
 
@@ -89,7 +92,7 @@ def create_project(name: str, description: str = "") -> str:
         encoding="utf-8",
     )
 
-    (p / "output" / "README.md").write_text(
+    (output_base / "README.md").write_text(
         f"# {name} — Output\n\n"
         "| File | Category | Agent | Date |\n"
         "|------|----------|-------|------|\n",

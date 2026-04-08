@@ -81,7 +81,7 @@ def _spawn_agent_task(slug: str, filename: str, agent: str) -> bool:
         return False
 
     output_subdir = AGENT_OUTPUT_DIR.get(agent, "strategy")
-    output_path = f"projects/{slug}/output/{output_subdir}"
+    output_path = f"output/{slug}/{output_subdir}"
 
     prompt = (
         f"You are the {agent} agent in the ai-office multi-agent framework.\n\n"
@@ -93,7 +93,7 @@ def _spawn_agent_task(slug: str, filename: str, agent: str) -> bool:
         f"4. Read the task file at projects/{slug}/tasks/active/{filename}\n"
         "5. Complete the task as described\n"
         f"6. Write all deliverables to {output_path}/ — name files clearly (YYYY-MM-DD-description.ext)\n"
-        f"7. Update projects/{slug}/output/README.md — add a row: | path/to/file | what it contains | {agent} | today's date |\n"
+        f"7. Update output/{slug}/README.md — add a row: | path/to/file | what it contains | {agent} | today's date |\n"
         f"8. Update projects/{slug}/memory/project_memory.json with your notes under agent_notes\n"
         f"9. Move the task to projects/{slug}/tasks/completed/ and delete it from active/\n\n"
         "Work autonomously. Use your tools. Produce real, useful output."
@@ -616,7 +616,7 @@ Reply with ONLY a JSON array, no markdown, no explanation:
         self._json_response({"ok": True, "tasks": created})
 
     def _handle_get_project_output_list(self, slug):
-        output_dir = BASE_DIR / "projects" / slug / "output"
+        output_dir = BASE_DIR / "output" / slug
         if not output_dir.exists():
             self._json_response([])
             return
@@ -632,7 +632,7 @@ Reply with ONLY a JSON array, no markdown, no explanation:
         if ".." in filepath:
             self._error(400, "Invalid path")
             return
-        output_dir = (BASE_DIR / "projects" / slug / "output").resolve()
+        output_dir = (BASE_DIR / "output" / slug).resolve()
         target = (output_dir / filepath).resolve()
         try:
             target.relative_to(output_dir)
