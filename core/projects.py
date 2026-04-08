@@ -56,8 +56,20 @@ def create_project(name: str, description: str = "") -> str:
     if (p / "project.json").exists():
         raise ValueError(f"Project already exists: {slug}")
 
-    for subdir in ["tasks/backlog", "tasks/active", "tasks/completed", "memory", "output"]:
+    output_subdirs = [
+        "architecture",   # bjorn, dag
+        "compliance",     # magnus
+        "implementation", # arve
+        "tests",          # odd, per
+        "strategy",       # else, halvard, nora, frode
+        "brand",          # jorunn, ingrid, guro
+        "support",        # laila, knut
+    ]
+
+    for subdir in ["tasks/backlog", "tasks/active", "tasks/completed", "tasks/failed", "memory"]:
         (p / subdir).mkdir(parents=True, exist_ok=True)
+    for subdir in output_subdirs:
+        (p / "output" / subdir).mkdir(parents=True, exist_ok=True)
 
     today = date.today().isoformat()
 
@@ -79,8 +91,8 @@ def create_project(name: str, description: str = "") -> str:
 
     (p / "output" / "README.md").write_text(
         f"# {name} — Output\n\n"
-        "| File | Description | Agent | Date |\n"
-        "|------|-------------|-------|------|\n",
+        "| File | Category | Agent | Date |\n"
+        "|------|----------|-------|------|\n",
         encoding="utf-8",
     )
 

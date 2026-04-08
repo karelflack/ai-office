@@ -24,6 +24,26 @@ BASE_DIR = Path(__file__).parent.resolve()
 # Tracks live subprocess references keyed by (project_slug, filename).
 _live_procs: dict = {}
 
+# Maps agent → output subfolder
+AGENT_OUTPUT_DIR = {
+    "bjorn":    "architecture",
+    "dag":      "architecture",
+    "magnus":   "compliance",
+    "arve":     "implementation",
+    "odd":      "tests",
+    "per":      "tests",
+    "else":     "strategy",
+    "halvard":  "strategy",
+    "nora":     "strategy",
+    "frode":    "strategy",
+    "jorunn":   "brand",
+    "ingrid":   "brand",
+    "guro":     "brand",
+    "laila":    "support",
+    "knut":     "support",
+    "orchestrator": "strategy",
+}
+
 
 def _parse_stream_event(line: str):
     try:
@@ -60,6 +80,9 @@ def _spawn_agent_task(slug: str, filename: str, agent: str) -> bool:
     if key in _live_procs:
         return False
 
+    output_subdir = AGENT_OUTPUT_DIR.get(agent, "strategy")
+    output_path = f"projects/{slug}/output/{output_subdir}"
+
     prompt = (
         f"You are the {agent} agent in the ai-office multi-agent framework.\n\n"
         f"You are working on project: '{slug}'\n\n"
@@ -69,8 +92,8 @@ def _spawn_agent_task(slug: str, filename: str, agent: str) -> bool:
         f"3. Read projects/{slug}/memory/project_memory.json for project context\n"
         f"4. Read the task file at projects/{slug}/tasks/active/{filename}\n"
         "5. Complete the task as described\n"
-        f"6. Write all deliverables to projects/{slug}/output/ — name files clearly\n"
-        f"7. Update projects/{slug}/output/README.md with your new file\n"
+        f"6. Write all deliverables to {output_path}/ — name files clearly (YYYY-MM-DD-description.ext)\n"
+        f"7. Update projects/{slug}/output/README.md — add a row: | path/to/file | what it contains | {agent} | today's date |\n"
         f"8. Update projects/{slug}/memory/project_memory.json with your notes under agent_notes\n"
         f"9. Move the task to projects/{slug}/tasks/completed/ and delete it from active/\n\n"
         "Work autonomously. Use your tools. Produce real, useful output."
