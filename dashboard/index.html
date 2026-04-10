@@ -3,794 +3,502 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AI Office</title>
+  <title>Pathless</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg: #f2f0ec;
-      --surface: rgba(255,255,255,0.72);
-      --glass-border: rgba(0,0,0,0.07);
-      --text-primary: #1d1d1f;
-      --text-secondary: #6e6e73;
-      --text-tertiary: #aeaeb2;
-      --accent: #0071e3;
-      --accent-green: #30d158;
-      --accent-red: #ff453a;
-      --radius-sm: 8px;
-      --radius-md: 12px;
-      --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
-      --shadow-md: 0 4px 16px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
-      --font: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
-      --font-mono: 'SF Mono', 'Fira Code', ui-monospace, monospace;
+      --bg:        #07080f;
+      --surface:   #0d0f1a;
+      --surface-2: #141622;
+      --surface-3: #1a1d2e;
+      --border:    rgba(255,255,255,0.07);
+      --borderb:   rgba(255,255,255,0.12);
+      --tp:        #e8eaf6;
+      --ts:        #7b7f9e;
+      --tt:        #3d4060;
+      --blue:      #0ea5e9;
+      --cyan:      #22d3ee;
+      --green:     #10b981;
+      --red:       #f43f5e;
+      --radius:    8px;
+      --radius-lg: 14px;
+      --font:      -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+      --mono:      'SF Mono', 'Fira Code', ui-monospace, monospace;
     }
 
     body {
-      background-color: var(--bg);
-      background-image: radial-gradient(circle, rgba(0,0,0,0.05) 1px, transparent 1px);
-      background-size: 24px 24px;
-      color: var(--text-primary);
+      background: var(--bg);
+      background-image: radial-gradient(circle, rgba(14,165,233,0.04) 1px, transparent 1px);
+      background-size: 28px 28px;
+      color: var(--tp);
       font-family: var(--font);
       min-height: 100vh;
+      overflow: hidden;
     }
 
-    /* ---- HEADER ---- */
+    /* ─── HEADER ─────────────────────────────── */
     #header {
-      background: rgba(242,240,236,0.88);
-      backdrop-filter: blur(24px) saturate(180%);
-      -webkit-backdrop-filter: blur(24px) saturate(180%);
-      border-bottom: 1px solid var(--glass-border);
-      padding: 0 1.5rem;
       height: 52px;
+      background: rgba(7,8,15,0.94);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 1.5rem;
       display: flex;
       align-items: center;
       justify-content: space-between;
       position: sticky;
       top: 0;
       z-index: 100;
+      flex-shrink: 0;
     }
     #header-left { display: flex; align-items: center; gap: 10px; }
-    #header h1 {
-      font-family: var(--font);
-      font-size: 16px;
-      font-weight: 600;
-      color: var(--text-primary);
-      letter-spacing: -0.3px;
-    }
     #live-dot {
-      width: 7px; height: 7px;
-      border-radius: 50%;
-      background: var(--accent-green);
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--cyan);
+      box-shadow: 0 0 6px var(--cyan);
       animation: livePulse 2s ease-in-out infinite;
       flex-shrink: 0;
     }
     @keyframes livePulse {
-      0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(48,209,88,0.5); }
-      50% { opacity: 0.85; box-shadow: 0 0 0 5px rgba(48,209,88,0); }
+      0%,100% { opacity:1; box-shadow: 0 0 6px var(--cyan); }
+      50%     { opacity:.7; box-shadow: 0 0 14px var(--cyan); }
     }
-
-    .glass-btn {
-      background: rgba(255,255,255,0.78);
-      border: 1px solid rgba(0,0,0,0.09);
-      border-radius: var(--radius-sm);
-      color: var(--text-primary);
-      font-family: var(--font);
-      font-size: 13px;
-      font-weight: 500;
-      padding: 6px 14px;
-      cursor: pointer;
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      transition: background 0.15s, box-shadow 0.15s;
-      box-shadow: var(--shadow-sm);
+    #logo {
+      cursor: pointer; user-select: none;
+      display: flex; align-items: center;
+      flex-shrink: 0;
     }
-    .glass-btn:hover { background: rgba(255,255,255,0.96); box-shadow: var(--shadow-md); }
+    #logo img {
+      height: 28px;
+      width: auto;
+      display: block;
+      /* The logo has a black bg — mix-blend-mode lets it sit on the dark header */
+      filter: brightness(1.05);
+    }
+    #header-project-label { font-size: 13px; color: var(--tt); }
+    #header-right { display: flex; align-items: center; gap: 6px; }
+    .h-btn {
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: 6px; color: var(--ts);
+      font-family: var(--font); font-size: 12px; font-weight: 500;
+      padding: 5px 12px; cursor: pointer;
+      transition: background 0.13s, color 0.13s, border-color 0.13s;
+    }
+    .h-btn:hover { background: var(--surface-3); color: var(--tp); border-color: var(--borderb); }
+    .h-btn.active { background: var(--surface-3); color: var(--tp); border-color: var(--borderb); }
+    .h-btn.accent {
+      background: rgba(14,165,233,0.14); border-color: rgba(14,165,233,0.3); color: var(--blue);
+    }
+    .h-btn.accent:hover { background: rgba(14,165,233,0.24); }
 
-    #kickoff-header-btn {
-      background: #1a7a38;
-      border: none; border-radius: var(--radius-sm);
-      color: #fff; font-family: var(--font);
-      font-size: 13px; font-weight: 500;
-      padding: 6px 14px; cursor: pointer;
-      box-shadow: var(--shadow-sm);
+    /* ─── SCREENS ────────────────────────────── */
+    .screen { display: none; }
+    .screen.active { display: flex; }
+
+    /* ─── SCREEN: PROJECTS ───────────────────── */
+    #screen-projects {
+      height: calc(100vh - 52px);
+      flex-direction: column;
+      padding: 3rem 2.5rem;
+      overflow-y: auto;
+    }
+    #projects-header { margin-bottom: 2.5rem; }
+    #projects-header h2 { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 6px; }
+    #projects-header p { font-size: 14px; color: var(--ts); }
+    #projects-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1rem;
+      max-width: 1200px;
+    }
+    .project-card {
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 1.5rem;
+      cursor: pointer; transition: background 0.15s, border-color 0.15s, transform 0.12s;
+    }
+    .project-card:hover { background: var(--surface-3); border-color: var(--borderb); transform: translateY(-2px); }
+    .project-card-accent {
+      width: 10px; height: 10px; border-radius: 50%; margin-bottom: 1rem;
+    }
+    .project-card-name { font-size: 16px; font-weight: 600; color: var(--tp); margin-bottom: 6px; }
+    .project-card-desc { font-size: 12px; color: var(--ts); line-height: 1.5; margin-bottom: 10px; }
+    .project-card-date { font-size: 11px; color: var(--tt); margin-bottom: 1.25rem; }
+    .project-card-actions { display: flex; gap: 8px; }
+    .pc-btn {
+      flex: 1; background: var(--surface-3); border: 1px solid var(--border);
+      border-radius: 6px; color: var(--ts); font-family: var(--font);
+      font-size: 12px; font-weight: 500; padding: 6px 10px; cursor: pointer; text-align: center;
+      transition: background 0.13s, color 0.13s;
+    }
+    .pc-btn:hover { background: var(--borderb); color: var(--tp); }
+    .pc-btn.primary {
+      background: rgba(14,165,233,0.14); border-color: rgba(14,165,233,0.25); color: var(--blue);
+    }
+    .pc-btn.primary:hover { background: rgba(14,165,233,0.24); }
+    .project-card-new {
+      background: rgba(14,165,233,0.04); border: 1px dashed rgba(14,165,233,0.3);
+      border-radius: var(--radius-lg); padding: 1.5rem; cursor: pointer;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      min-height: 180px; gap: 12px;
+      transition: background 0.15s, border-color 0.15s;
+      color: var(--blue); font-size: 13px; font-weight: 500;
+    }
+    .project-card-new:hover { background: rgba(14,165,233,0.1); border-color: rgba(14,165,233,0.5); }
+    .project-card-new-icon { font-size: 30px; opacity: 0.6; }
+
+    /* ─── SCREEN: KICKOFF ────────────────────── */
+    #screen-kickoff {
+      height: calc(100vh - 52px);
+      flex-direction: column;
+      align-items: center;
+      padding: 3.5rem 2rem;
+      overflow-y: auto;
+    }
+    #kickoff-inner { width: 100%; max-width: 680px; }
+    #kickoff-inner h2 {
+      font-size: 30px; font-weight: 700; letter-spacing: -0.6px;
+      margin-bottom: 8px;
+      background: linear-gradient(135deg, var(--tp), var(--ts));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    #kickoff-inner > p { font-size: 14px; color: var(--ts); margin-bottom: 1.75rem; line-height: 1.6; }
+    #kickoff-input {
+      width: 100%; background: var(--surface-2); border: 1px solid var(--borderb);
+      border-radius: 10px; color: var(--tp); font-family: var(--font);
+      font-size: 14px; line-height: 1.65; padding: 14px 16px; resize: none; min-height: 110px;
+      margin-bottom: 1rem; transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    #kickoff-input:focus { outline: none; border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(34,211,238,0.12); }
+    #kickoff-input::placeholder { color: var(--tt); }
+    #kickoff-btn {
+      background: linear-gradient(135deg, var(--blue), var(--cyan)); border: none;
+      border-radius: 7px; color: #fff; font-family: var(--font); font-size: 14px; font-weight: 600;
+      padding: 10px 24px; cursor: pointer; display: inline-flex; align-items: center; gap: 7px;
+      transition: opacity 0.15s, transform 0.1s;
+      box-shadow: 0 0 24px rgba(14,165,233,0.35);
+    }
+    #kickoff-btn:hover { opacity: .9; }
+    #kickoff-btn:active { transform: scale(.98); }
+    #kickoff-btn:disabled { opacity: .4; cursor: not-allowed; }
+    #kickoff-status { font-size: 13px; color: var(--ts); margin-top: 1rem; min-height: 20px; }
+    #kickoff-error  { font-size: 13px; color: var(--red); margin-top: 0.875rem; }
+    #kickoff-result { display: none; margin-top: 2.5rem; }
+    #kickoff-result h3 {
+      font-size: 11px; font-weight: 600; letter-spacing: 0.8px;
+      text-transform: uppercase; color: var(--tt); margin-bottom: 1rem;
+    }
+    #kickoff-task-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 1.5rem; }
+    .kickoff-task-card {
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: 10px; padding: 1rem 1.25rem; display: flex; gap: 12px;
+      animation: fadeUp 0.3s ease forwards; opacity: 0;
+    }
+    @keyframes fadeUp {
+      from { opacity:0; transform: translateY(8px); }
+      to   { opacity:1; transform: translateY(0); }
+    }
+    .kickoff-task-num {
+      width: 22px; height: 22px; border-radius: 50%; background: var(--surface-3);
+      color: var(--ts); font-size: 11px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px;
+    }
+    .kickoff-task-body { flex: 1; min-width: 0; }
+    .kickoff-task-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+    .kickoff-task-title { font-size: 13px; font-weight: 600; color: var(--tp); }
+    .kickoff-task-agent { font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 999px; flex-shrink: 0; }
+    .kickoff-task-desc { font-size: 12px; color: var(--ts); line-height: 1.5; }
+    #kickoff-actions { display: flex; gap: 8px; align-items: center; }
+    #kickoff-run-btn {
+      background: linear-gradient(135deg, var(--green), #34d399); border: none;
+      border-radius: 7px; color: #fff; font-family: var(--font); font-size: 14px; font-weight: 600;
+      padding: 10px 24px; cursor: pointer; display: inline-flex; align-items: center; gap: 7px;
       transition: opacity 0.15s;
+      box-shadow: 0 0 24px rgba(16,185,129,0.35);
     }
-    #kickoff-header-btn:hover { opacity: 0.88; }
+    #kickoff-run-btn:hover { opacity: .9; }
+    #kickoff-again {
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: 7px; color: var(--ts); font-family: var(--font); font-size: 13px;
+      padding: 10px 16px; cursor: pointer; transition: background 0.13s;
+    }
+    #kickoff-again:hover { background: var(--surface-3); }
 
-    /* ---- TASK PANEL ---- */
-    #task-panel {
-      display: none;
-      background: rgba(255,255,255,0.72);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border-bottom: 1px solid var(--glass-border);
-      padding: 1.5rem 2rem;
+    /* ─── SCREEN: RUN ────────────────────────── */
+    #screen-run { height: calc(100vh - 52px); overflow: hidden; }
+    #run-canvas-pane {
+      width: 60%; flex-shrink: 0; display: flex; flex-direction: column;
+      border-right: 1px solid var(--border); overflow: hidden; background: var(--bg);
     }
-    #task-panel.visible { display: block; }
-    #task-panel h2 { font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 1.25rem; }
+    #game-canvas { width: 100%; aspect-ratio: 1056/672; display: block; flex-shrink: 0; }
+    #activity-strip {
+      flex: 1; overflow-y: auto; padding: 8px 12px; min-height: 0;
+      border-top: 1px solid var(--border);
+    }
+    #activity-strip::-webkit-scrollbar { width: 3px; }
+    #activity-strip::-webkit-scrollbar-thumb { background: var(--surface-3); border-radius: 2px; }
+    #activity-strip-header {
+      font-size: 10px; font-weight: 600; letter-spacing: 0.5px;
+      text-transform: uppercase; color: var(--tt);
+      padding: 0 0 6px; margin-bottom: 4px;
+      border-bottom: 1px solid var(--border);
+    }
+    .log-entry {
+      padding: 5px 8px; margin-bottom: 4px;
+      background: var(--surface-2); border-radius: 6px; border: 1px solid var(--border);
+    }
+    .log-ts { color: var(--tt); font-size: 10px; }
+    .log-agent-line { display: flex; align-items: center; gap: 5px; margin-top: 2px; }
+    .log-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+    .log-from { font-weight: 600; font-size: 11px; }
+    .log-arrow { color: var(--tt); }
+    .log-to { color: var(--ts); font-size: 11px; }
+    .log-text { color: var(--tt); font-size: 10px; padding-left: 11px; font-style: italic; }
 
-    #task-form {
-      background: rgba(255,255,255,0.85);
-      border: 1px solid var(--glass-border);
-      border-radius: var(--radius-md);
-      padding: 1rem 1.25rem;
-      margin-bottom: 1.5rem;
-      box-shadow: var(--shadow-sm);
+    #run-right-pane {
+      flex: 1; display: flex; flex-direction: column; overflow: hidden; background: var(--surface);
     }
-    #task-form-title {
+    #run-tasks-header {
+      padding: 10px 14px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+    }
+    #run-tasks-title {
       font-size: 11px; font-weight: 600; letter-spacing: 0.5px;
-      text-transform: uppercase; color: var(--text-secondary); margin-bottom: 0.75rem;
+      text-transform: uppercase; color: var(--tt);
     }
     #run-all-btn {
-      background: #1a7a38; border: none; border-radius: var(--radius-sm);
-      color: #fff; font-family: var(--font); font-size: 12px; font-weight: 500;
-      padding: 5px 12px; cursor: pointer; transition: opacity 0.15s;
-      display: none;
+      background: rgba(16,185,129,0.14); border: 1px solid rgba(16,185,129,0.3);
+      border-radius: 5px; color: var(--green); font-family: var(--font);
+      font-size: 11px; font-weight: 600; padding: 4px 10px; cursor: pointer;
+      transition: background 0.13s; display: none;
     }
-    #run-all-btn:hover { opacity: 0.85; }
+    #run-all-btn:hover { background: rgba(16,185,129,0.24); }
     #run-all-btn.visible { display: inline-block; }
-    .task-form-row { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem; flex-wrap: wrap; }
-    .task-form-label { font-size: 12px; color: var(--text-secondary); width: 42px; flex-shrink: 0; }
-    .task-input {
-      background: rgba(255,255,255,0.9);
-      border: 1px solid rgba(0,0,0,0.1);
-      border-radius: var(--radius-sm);
-      color: var(--text-primary);
-      font-family: var(--font);
-      font-size: 13px;
-      padding: 6px 10px;
-      flex: 1; min-width: 160px;
-      transition: border-color 0.15s, box-shadow 0.15s;
+    #task-quick-add {
+      padding: 8px 12px; border-bottom: 1px solid var(--border);
+      display: flex; gap: 6px; flex-shrink: 0; background: var(--surface);
     }
-    .task-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,113,227,0.15); }
-    .task-select {
-      background: rgba(255,255,255,0.9);
-      border: 1px solid rgba(0,0,0,0.1);
-      border-radius: var(--radius-sm);
-      color: var(--text-primary);
-      font-family: var(--font);
-      font-size: 13px;
-      padding: 6px 10px;
-      cursor: pointer;
+    #tf-title {
+      flex: 1; background: var(--surface-3); border: 1px solid var(--border);
+      border-radius: 5px; color: var(--tp); font-family: var(--font); font-size: 12px;
+      padding: 5px 10px; transition: border-color 0.13s;
     }
-    .task-select:focus { outline: none; border-color: var(--accent); }
-    .task-btn {
-      background: var(--accent); border: none; border-radius: var(--radius-sm);
-      color: #fff; font-family: var(--font); font-size: 13px; font-weight: 500;
-      padding: 6px 14px; cursor: pointer; transition: opacity 0.15s; white-space: nowrap;
+    #tf-title:focus { outline: none; border-color: var(--blue); }
+    #tf-title::placeholder { color: var(--tt); }
+    #task-add-btn {
+      background: var(--surface-3); border: 1px solid var(--border);
+      border-radius: 5px; color: var(--ts); font-family: var(--font);
+      font-size: 12px; padding: 5px 10px; cursor: pointer; white-space: nowrap;
+      transition: background 0.13s;
     }
-    .task-btn:hover { opacity: 0.85; }
-    .task-btn-done {
-      background: rgba(0,0,0,0.05); border: 1px solid rgba(0,0,0,0.08);
-      border-radius: var(--radius-sm); color: var(--text-secondary);
-      font-family: var(--font); font-size: 11px; padding: 3px 8px;
-      cursor: pointer; transition: background 0.15s;
+    #task-add-btn:hover { background: var(--borderb); color: var(--tp); }
+    #task-form-error { font-size: 11px; color: var(--red); padding: 3px 14px; flex-shrink: 0; }
+    #task-error { font-size: 11px; color: var(--red); padding: 3px 14px; flex-shrink: 0; }
+    #task-columns-wrap {
+      flex: 1; overflow-y: auto; padding: 10px 12px; min-height: 0;
     }
-    .task-btn-done:hover { background: rgba(0,0,0,0.09); }
-    .task-btn-assign {
-      background: rgba(0,113,227,0.1); border: 1px solid rgba(0,113,227,0.2);
-      border-radius: var(--radius-sm); color: var(--accent);
-      font-family: var(--font); font-size: 11px; padding: 3px 8px;
-      cursor: pointer; transition: background 0.15s;
-    }
-    .task-btn-assign:hover { background: rgba(0,113,227,0.18); }
-    .run-btn {
-      background: rgba(48,209,88,0.12); border: 1px solid rgba(48,209,88,0.3);
-      border-radius: var(--radius-sm); color: #1a7a38;
-      font-family: var(--font); font-size: 11px; font-weight: 500;
-      padding: 3px 10px; cursor: pointer; transition: background 0.15s;
-    }
-    .run-btn:hover { background: rgba(48,209,88,0.22); }
-
-    /* ---- WORK WINDOWS ---- */
-    #work-windows {
-      display: flex; flex-wrap: wrap; gap: 0.75rem;
-      margin-top: 1rem;
-    }
-    #work-windows:empty { display: none; }
-    .work-window {
-      flex: 1 1 340px; min-width: 300px; max-width: 520px;
-      background: rgba(255,255,255,0.88);
-      border: 1px solid var(--glass-border);
-      border-radius: var(--radius-md);
-      box-shadow: var(--shadow-sm);
-      font-family: var(--font-mono);
-      font-size: 0.75rem;
-      overflow: hidden;
-      transition: box-shadow 0.2s;
-    }
-    .work-window.running { box-shadow: 0 0 0 2px rgba(0,113,227,0.25), var(--shadow-md); }
-    .work-window.done    { box-shadow: 0 0 0 2px rgba(48,209,88,0.3), var(--shadow-sm); }
-    .work-window-header {
-      display: flex; align-items: center; gap: 8px;
-      padding: 8px 12px;
-      border-bottom: 1px solid var(--glass-border);
-      font-family: var(--font); font-size: 12px; font-weight: 600;
-    }
-    .work-window-accent {
-      width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
-    }
-    .work-window-title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .work-window-close {
-      background: none; border: none; color: var(--text-tertiary);
-      cursor: pointer; font-size: 14px; line-height: 1; padding: 2px 4px;
-      border-radius: 4px; transition: color 0.15s, background 0.15s;
-    }
-    .work-window-close:hover { color: var(--accent-red); background: rgba(255,59,48,0.08); }
-    .work-window-output {
-      height: 180px; overflow-y: auto;
-      padding: 0.75rem; color: var(--text-primary);
-      white-space: pre-wrap; word-break: break-all; line-height: 1.6;
-    }
-    .work-window-output::-webkit-scrollbar { width: 4px; }
-    .work-window-output::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 2px; }
-    .work-window-status {
-      padding: 5px 12px; border-top: 1px solid var(--glass-border);
-      color: var(--text-tertiary); font-size: 11px; font-family: var(--font);
-    }
-
-    #task-columns { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
-    .task-card.failed {
-      border-color: rgba(255,69,58,0.35);
-      background: rgba(255,69,58,0.06);
-    }
-    .task-card.failed .task-card-name { color: var(--accent-red); }
-    .task-col-header.failed { color: var(--accent-red); }
-    .task-fail-reason {
-      font-size: 10px; color: var(--accent-red); margin-bottom: 6px;
-      opacity: 0.8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-    }
+    #task-columns-wrap::-webkit-scrollbar { width: 3px; }
+    #task-columns-wrap::-webkit-scrollbar-thumb { background: var(--surface-3); }
+    #task-columns { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; }
     .task-col-header {
-      font-size: 11px; font-weight: 600; letter-spacing: 0.3px;
-      text-transform: uppercase; color: var(--text-secondary);
-      margin-bottom: 0.5rem; padding-bottom: 6px; border-bottom: 1px solid var(--glass-border);
+      font-size: 10px; font-weight: 600; letter-spacing: 0.5px;
+      text-transform: uppercase; color: var(--tt);
+      margin-bottom: 6px; padding-bottom: 5px; border-bottom: 1px solid var(--border);
     }
+    .task-col-header.tc-active    { color: var(--blue); }
+    .task-col-header.tc-completed { color: var(--green); }
+    .task-col-header.tc-failed    { color: var(--red); }
     .task-card {
-      background: rgba(255,255,255,0.88); border: 1px solid var(--glass-border);
-      border-radius: var(--radius-sm); padding: 0.625rem 0.75rem; margin-bottom: 0.5rem;
-      box-shadow: var(--shadow-sm); transition: box-shadow 0.15s, transform 0.1s;
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: 6px; padding: 8px 9px; margin-bottom: 5px;
+      transition: border-color 0.13s;
     }
-    .task-card:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
+    .task-card:hover { border-color: var(--borderb); }
+    .task-card.failed { border-color: rgba(244,63,94,0.3); background: rgba(244,63,94,0.06); }
+    .task-card.blocked { opacity: 0.45; }
+    .task-card.failed .task-card-name { color: var(--red); }
     .task-card-name {
-      color: var(--text-primary); font-size: 13px; font-weight: 500; margin-bottom: 4px;
+      font-size: 11px; font-weight: 500; color: var(--tp); margin-bottom: 4px;
       overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
-    .task-card-agent { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-secondary); margin-bottom: 6px; }
-    .task-agent-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
-    .task-card-actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; flex: 1; }
+    .task-card-agent { display: flex; align-items: center; gap: 4px; font-size: 10px; color: var(--tt); margin-bottom: 5px; }
+    .task-agent-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+    .task-depends-badge { font-size: 9px; color: var(--tt); margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .task-fail-reason { font-size: 9px; color: var(--red); margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; opacity: 0.85; }
+    .task-card-actions { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
     .task-delete-btn {
       margin-left: auto; flex-shrink: 0;
-      background: none; border: none;
-      color: var(--text-tertiary); font-size: 16px; line-height: 1;
-      cursor: pointer; padding: 2px 5px; border-radius: 4px;
-      transition: color 0.15s, background 0.15s;
-      opacity: 0;
+      background: none; border: none; color: var(--tt); font-size: 13px; line-height: 1;
+      cursor: pointer; padding: 1px 4px; border-radius: 3px; opacity: 0;
+      transition: color 0.13s;
     }
     .task-card:hover .task-delete-btn { opacity: 1; }
-    .task-delete-btn:hover { color: var(--accent-red); background: rgba(255,59,48,0.08); }
-    .task-col-empty { font-size: 12px; color: var(--text-tertiary); font-style: italic; }
-    .task-card.blocked { opacity: 0.55; }
-    .task-card.blocked .task-card-name { color: var(--text-secondary); }
-    .task-depends-badge {
-      font-size: 10px; color: var(--text-tertiary);
-      background: rgba(0,0,0,0.04); border: 1px solid var(--glass-border);
-      border-radius: 4px; padding: 2px 6px; margin-bottom: 6px;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    .task-delete-btn:hover { color: var(--red); }
+    .tbtn {
+      background: var(--surface-3); border: 1px solid var(--border);
+      border-radius: 4px; color: var(--ts); font-family: var(--font);
+      font-size: 10px; padding: 2px 7px; cursor: pointer; transition: background 0.13s;
     }
+    .tbtn:hover { background: var(--borderb); color: var(--tp); }
+    .tbtn.run-t {
+      background: rgba(14,165,233,0.1); border-color: rgba(14,165,233,0.2); color: var(--blue);
+    }
+    .tbtn.run-t:hover { background: rgba(14,165,233,0.2); }
+    .tbtn.retry-t {
+      background: rgba(244,63,94,0.1); border-color: rgba(244,63,94,0.2); color: var(--red);
+    }
+    .tbtn.retry-t:hover { background: rgba(244,63,94,0.2); }
+    .task-col-empty { font-size: 11px; color: var(--tt); font-style: italic; }
     @keyframes task-unlock {
-      0%   { box-shadow: 0 0 0 3px rgba(48,209,88,0.6); }
-      100% { box-shadow: var(--shadow-sm); }
+      0%   { border-color: rgba(16,185,129,0.7); box-shadow: 0 0 8px rgba(16,185,129,0.4); }
+      100% { border-color: var(--border); box-shadow: none; }
     }
     .task-card.unlocked { animation: task-unlock 1.2s ease-out forwards; }
-    #task-error { font-size: 12px; color: var(--accent-red); margin-top: 0.5rem; }
-    #task-form-error { font-size: 11px; color: var(--accent-red); margin-top: 4px; }
 
-    /* ---- MAIN ---- */
-    #main { display: flex; flex-direction: row; overflow-x: auto; }
-    #main.collapsed { display: none; }
-    #canvas-wrap { position: relative; flex-shrink: 0; }
-    #game-canvas { display: block; }
+    /* Work windows */
+    #work-windows {
+      flex-shrink: 0; max-height: 220px; overflow-y: auto;
+      border-top: 1px solid var(--border); padding: 6px 10px;
+      display: flex; flex-direction: column; gap: 5px;
+    }
+    #work-windows:empty { display: none; }
+    #work-windows::-webkit-scrollbar { width: 3px; }
+    #work-windows::-webkit-scrollbar-thumb { background: var(--surface-3); }
+    .work-window {
+      background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; overflow: hidden;
+    }
+    .work-window.running { border-color: rgba(14,165,233,0.3); }
+    .work-window.done    { border-color: rgba(16,185,129,0.3); }
+    .work-window-header {
+      display: flex; align-items: center; gap: 7px; padding: 5px 10px;
+      border-bottom: 1px solid var(--border); font-size: 11px; font-weight: 600;
+      color: var(--ts); background: var(--surface-3);
+    }
+    .work-window-accent { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .work-window-title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .work-window-close {
+      background: none; border: none; color: var(--tt); cursor: pointer;
+      font-size: 13px; padding: 1px 3px; border-radius: 3px; transition: color 0.13s;
+    }
+    .work-window-close:hover { color: var(--red); }
+    .work-window-output {
+      height: 68px; overflow-y: auto; padding: 6px 10px;
+      font-family: var(--mono); font-size: 10px; color: var(--ts);
+      white-space: pre-wrap; word-break: break-all; line-height: 1.5;
+    }
+    .work-window-output::-webkit-scrollbar { width: 3px; }
+    .work-window-output::-webkit-scrollbar-thumb { background: var(--surface-3); }
+    .work-window-status {
+      padding: 3px 10px; font-size: 10px; font-family: var(--font);
+      color: var(--tt); border-top: 1px solid var(--border);
+    }
 
-    /* ---- CANVAS TOGGLE ---- */
-    #canvas-toggle-bar {
-      display: flex; align-items: center; gap: 8px;
-      padding: 0 1.5rem;
-      height: 36px;
-      background: rgba(255,255,255,0.78);
-      border-bottom: 2px solid var(--glass-border);
-      cursor: pointer;
-      user-select: none;
-      font-size: 12px; font-weight: 600; color: var(--text-primary);
-      transition: background 0.15s;
+    /* ─── SCREEN: OUTPUT ─────────────────────── */
+    #screen-output { height: calc(100vh - 52px); overflow: hidden; }
+    #output-sidebar {
+      width: 260px; flex-shrink: 0; border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; overflow: hidden; background: var(--surface);
     }
-    #canvas-toggle-bar:hover { background: rgba(255,255,255,1); }
-    #canvas-toggle-icon {
-      width: 20px; height: 20px; border-radius: 50%;
-      background: var(--accent); color: #fff;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 10px; flex-shrink: 0;
-      transition: transform 0.2s;
+    #output-sidebar-header {
+      padding: 12px 14px; border-bottom: 1px solid var(--border);
+      font-size: 11px; font-weight: 600; letter-spacing: 0.5px;
+      text-transform: uppercase; color: var(--tt); flex-shrink: 0;
+      display: flex; align-items: center; justify-content: space-between;
     }
-    #canvas-toggle-icon.open { transform: rotate(180deg); }
+    #output-file-list { flex: 1; overflow-y: auto; }
+    #output-file-list::-webkit-scrollbar { width: 3px; }
+    #output-file-list::-webkit-scrollbar-thumb { background: var(--surface-3); }
+    #output-file-list-empty { padding: 14px; font-size: 12px; color: var(--tt); font-style: italic; }
+    .output-category-header {
+      padding: 10px 14px 4px; font-size: 10px; font-weight: 700;
+      letter-spacing: 0.5px; text-transform: uppercase; color: var(--tt);
+    }
+    .output-file-item {
+      padding: 8px 14px; cursor: pointer;
+      display: flex; align-items: center; gap: 7px;
+      border-bottom: 1px solid rgba(255,255,255,0.03); transition: background 0.1s;
+    }
+    .output-file-item:hover { background: var(--surface-2); }
+    .output-file-item.selected { background: rgba(14,165,233,0.1); }
+    .output-ext-badge {
+      font-size: 8px; font-weight: 700; text-transform: uppercase;
+      padding: 2px 5px; border-radius: 3px; background: var(--surface-3);
+      color: var(--tt); flex-shrink: 0;
+    }
+    .output-file-name { font-size: 11px; color: var(--tp); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+    .output-file-size { font-size: 10px; color: var(--tt); flex-shrink: 0; }
+    #output-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    #output-viewer {
+      flex: 1; overflow-y: auto; padding: 2rem 2.5rem;
+      font-size: 13px; line-height: 1.7; color: var(--ts);
+    }
+    #output-viewer::-webkit-scrollbar { width: 4px; }
+    #output-viewer::-webkit-scrollbar-thumb { background: var(--surface-3); }
+    #output-viewer-placeholder { color: var(--tt); font-size: 13px; font-style: italic; }
+    #output-viewer h1 { font-size: 22px; font-weight: 700; color: var(--tp); margin: 0 0 16px; }
+    #output-viewer h2 { font-size: 16px; font-weight: 600; color: var(--tp); margin: 20px 0 10px; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    #output-viewer h3 { font-size: 14px; font-weight: 600; color: var(--tp); margin: 16px 0 6px; }
+    #output-viewer p { margin: 0 0 10px; }
+    #output-viewer strong { color: var(--tp); font-weight: 600; }
+    #output-viewer em { font-style: italic; }
+    #output-viewer ul, #output-viewer ol { padding-left: 1.4em; margin: 0 0 10px; }
+    #output-viewer li { margin-bottom: 4px; }
+    #output-viewer code { font-family: var(--mono); font-size: 12px; background: var(--surface-3); border-radius: 3px; padding: 1px 5px; color: var(--cyan); }
+    #output-viewer pre { background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; padding: 14px 16px; overflow-x: auto; margin: 0 0 12px; }
+    #output-viewer pre code { background: none; padding: 0; font-size: 12px; line-height: 1.6; color: var(--ts); }
+    #output-viewer hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+    #output-viewer blockquote { border-left: 3px solid var(--blue); margin: 0 0 10px; padding: 4px 0 4px 14px; }
+    #output-viewer table { width: 100%; border-collapse: collapse; margin: 0 0 12px; font-size: 12px; }
+    #output-viewer th { background: var(--surface-3); font-weight: 600; color: var(--tp); padding: 7px 10px; border: 1px solid var(--border); text-align: left; }
+    #output-viewer td { padding: 7px 10px; border: 1px solid var(--border); }
+    .output-code-raw { font-family: var(--mono); font-size: 12px; line-height: 1.6; color: var(--ts); white-space: pre-wrap; word-break: break-all; }
 
-    /* ---- SIDEBAR ---- */
-    #sidebar {
-      width: 280px; flex-shrink: 0;
-      height: 672px;
-      position: relative;
-      background: rgba(255,255,255,0.62);
-      backdrop-filter: blur(20px) saturate(160%);
-      -webkit-backdrop-filter: blur(20px) saturate(160%);
-      border-left: 1px solid var(--glass-border);
-    }
-    #sidebar-header {
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 36px;
-      background: rgba(255,255,255,0.5); border-bottom: 1px solid var(--glass-border);
-      padding: 0 14px;
-      display: flex; align-items: center;
-      font-size: 11px; font-weight: 600;
-      letter-spacing: 0.3px; text-transform: uppercase;
-      color: var(--text-secondary);
-    }
-    #activity-log {
-      position: absolute;
-      top: 36px; bottom: 0;
-      left: 0; right: 0;
-      overflow-y: auto;
-      padding: 8px 10px;
-    }
-    #activity-log::-webkit-scrollbar { width: 3px; }
-    #activity-log::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 2px; }
-    .log-entry {
-      font-size: 11px; line-height: 1.5;
-      padding: 6px 8px;
-      margin-bottom: 5px;
-      background: rgba(255,255,255,0.72);
-      border-radius: var(--radius-sm);
-      border: 1px solid rgba(0,0,0,0.04);
-    }
-    .log-ts { color: var(--text-tertiary); font-size: 10px; }
-    .log-agent-line { display: flex; align-items: center; gap: 5px; margin-top: 2px; }
-    .log-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-    .log-from { font-weight: 600; font-size: 11px; }
-    .log-arrow { color: var(--text-tertiary); }
-    .log-to { color: var(--text-secondary); }
-    .log-text { color: var(--text-secondary); font-size: 10px; padding-left: 12px; font-style: italic; }
-
-    #agent-status-panel {
-      position: absolute;
-      bottom: 0; left: 0; right: 0;
-      height: 220px;
-      overflow-y: auto;
-      border-top: 1px solid var(--glass-border);
-      padding: 8px 10px;
-      background: rgba(255,255,255,0.62);
-    }
-    #agent-status-panel h3 {
-      font-size: 10px; font-weight: 600; letter-spacing: 0.3px;
-      text-transform: uppercase; color: var(--text-secondary); margin-bottom: 6px;
-    }
-    .status-agent-row { display: flex; align-items: center; gap: 7px; font-size: 11px; padding: 2px 0; }
-    .status-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-    .status-agent-name { flex: 1; color: var(--text-primary); }
-    .status-state { font-size: 10px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.5px; }
-    .status-state.working { color: #1a7a38; font-weight: 600; }
-    .status-state.talking { color: #b45309; }
-    .status-state.walking { color: var(--accent); }
-    .status-state.idle { color: var(--text-tertiary); }
-
-    /* ---- PROJECT SWITCHER ---- */
-    #project-switcher { position: relative; }
-    #project-btn {
-      background: rgba(255,255,255,0.78);
-      border: 1px solid rgba(0,0,0,0.09);
-      border-radius: var(--radius-sm);
-      color: var(--text-primary);
-      font-family: var(--font);
-      font-size: 13px;
-      font-weight: 500;
-      padding: 5px 12px 5px 10px;
-      cursor: pointer;
-      display: flex; align-items: center; gap: 6px;
-      box-shadow: var(--shadow-sm);
-      transition: background 0.15s, box-shadow 0.15s;
-    }
-    #project-btn:hover { background: rgba(255,255,255,0.96); box-shadow: var(--shadow-md); }
-    #project-btn-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
-    #project-btn-label { max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    #project-btn-caret { font-size: 9px; color: var(--text-tertiary); margin-left: 2px; }
-    #project-menu {
-      display: none;
-      position: absolute;
-      top: calc(100% + 6px);
-      left: 0;
-      min-width: 200px;
-      background: rgba(255,255,255,0.96);
-      backdrop-filter: blur(24px) saturate(180%);
-      -webkit-backdrop-filter: blur(24px) saturate(180%);
-      border: 1px solid rgba(0,0,0,0.1);
-      border-radius: var(--radius-md);
-      box-shadow: var(--shadow-md);
-      z-index: 200;
-      overflow: hidden;
-    }
-    #project-menu.open { display: block; }
-    .project-menu-item {
-      padding: 9px 14px;
-      font-size: 13px;
-      cursor: pointer;
-      display: flex; align-items: center; gap: 8px;
-      transition: background 0.1s;
-      color: var(--text-primary);
-    }
-    .project-menu-item:hover { background: rgba(0,0,0,0.04); }
-    .project-menu-item.active { font-weight: 600; }
-    .project-menu-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-    .project-menu-divider { height: 1px; background: var(--glass-border); margin: 4px 0; }
-    .project-menu-new {
-      padding: 9px 14px;
-      font-size: 13px;
-      cursor: pointer;
-      color: var(--accent);
-      display: flex; align-items: center; gap: 6px;
-      transition: background 0.1s;
-    }
-    .project-menu-new:hover { background: rgba(0,113,227,0.06); }
-
-    /* ---- NEW PROJECT MODAL ---- */
+    /* ─── MODAL ──────────────────────────────── */
     #modal-overlay {
-      display: none;
-      position: fixed; inset: 0;
-      background: rgba(0,0,0,0.18);
-      backdrop-filter: blur(4px);
-      -webkit-backdrop-filter: blur(4px);
-      z-index: 500;
-      align-items: center;
-      justify-content: center;
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.65); backdrop-filter: blur(6px);
+      z-index: 500; align-items: center; justify-content: center;
     }
     #modal-overlay.open { display: flex; }
     #modal-card {
-      background: rgba(255,255,255,0.96);
-      border: 1px solid rgba(0,0,0,0.1);
-      border-radius: 16px;
-      padding: 2rem 2rem 1.5rem;
-      width: 360px;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.18);
+      background: var(--surface-2); border: 1px solid var(--borderb);
+      border-radius: 16px; padding: 2rem; width: 360px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05);
     }
-    #modal-card h3 { font-size: 16px; font-weight: 600; margin-bottom: 1.25rem; }
+    #modal-card h3 { font-size: 16px; font-weight: 600; color: var(--tp); margin-bottom: 1.25rem; }
     .modal-field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 0.875rem; }
-    .modal-field label { font-size: 11px; font-weight: 600; color: var(--text-secondary); letter-spacing: 0.3px; text-transform: uppercase; }
+    .modal-field label { font-size: 11px; font-weight: 600; color: var(--ts); letter-spacing: 0.3px; text-transform: uppercase; }
     .modal-field input, .modal-field textarea {
-      background: rgba(255,255,255,0.9);
-      border: 1px solid rgba(0,0,0,0.1);
-      border-radius: var(--radius-sm);
-      color: var(--text-primary);
-      font-family: var(--font);
-      font-size: 14px;
-      padding: 8px 12px;
-      width: 100%;
+      background: var(--surface-3); border: 1px solid var(--border);
+      border-radius: 6px; color: var(--tp); font-family: var(--font);
+      font-size: 14px; padding: 8px 12px; width: 100%;
       transition: border-color 0.15s, box-shadow 0.15s;
     }
     .modal-field textarea { resize: vertical; min-height: 70px; }
-    .modal-field input:focus, .modal-field textarea:focus {
-      outline: none;
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(0,113,227,0.15);
-    }
+    .modal-field input:focus, .modal-field textarea:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px rgba(14,165,233,0.15); }
+    .modal-field input::placeholder, .modal-field textarea::placeholder { color: var(--tt); }
     .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 1.25rem; }
     .modal-btn-cancel {
-      background: rgba(0,0,0,0.05); border: 1px solid rgba(0,0,0,0.08);
-      border-radius: var(--radius-sm); color: var(--text-secondary);
-      font-family: var(--font); font-size: 13px; font-weight: 500;
-      padding: 7px 16px; cursor: pointer; transition: background 0.15s;
+      background: var(--surface-3); border: 1px solid var(--border);
+      border-radius: 6px; color: var(--ts); font-family: var(--font);
+      font-size: 13px; padding: 7px 16px; cursor: pointer; transition: background 0.13s;
     }
-    .modal-btn-cancel:hover { background: rgba(0,0,0,0.09); }
+    .modal-btn-cancel:hover { background: var(--borderb); }
     .modal-btn-create {
-      background: var(--accent); border: none;
-      border-radius: var(--radius-sm); color: #fff;
-      font-family: var(--font); font-size: 13px; font-weight: 500;
-      padding: 7px 16px; cursor: pointer; transition: opacity 0.15s;
+      background: linear-gradient(135deg, var(--blue), var(--cyan)); border: none;
+      border-radius: 6px; color: #fff; font-family: var(--font);
+      font-size: 13px; font-weight: 600; padding: 7px 16px; cursor: pointer; transition: opacity 0.13s;
     }
-    .modal-btn-create:hover { opacity: 0.85; }
-    #modal-error { font-size: 12px; color: var(--accent-red); margin-top: 6px; min-height: 16px; }
+    .modal-btn-create:hover { opacity: .9; }
+    #modal-error { font-size: 12px; color: var(--red); margin-top: 6px; min-height: 16px; }
 
-    /* ---- KICKOFF PANEL ---- */
-    #kickoff-panel {
-      display: none;
-      background: rgba(255,255,255,0.72);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border-bottom: 1px solid var(--glass-border);
-      padding: 1.75rem 2rem;
-    }
-    #kickoff-panel.visible { display: block; }
-    #kickoff-inner { max-width: 680px; }
-    #kickoff-panel h2 { font-size: 15px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px; }
-    #kickoff-panel p { font-size: 13px; color: var(--text-secondary); margin-bottom: 1.25rem; }
-    #kickoff-input {
-      width: 100%;
-      background: rgba(255,255,255,0.92);
-      border: 1px solid rgba(0,0,0,0.1);
-      border-radius: var(--radius-md);
-      color: var(--text-primary);
-      font-family: var(--font);
-      font-size: 14px;
-      line-height: 1.6;
-      padding: 12px 14px;
-      resize: none;
-      min-height: 88px;
-      transition: border-color 0.15s, box-shadow 0.15s;
-      display: block;
-      margin-bottom: 0.875rem;
-    }
-    #kickoff-input:focus {
-      outline: none;
-      border-color: var(--accent-green);
-      box-shadow: 0 0 0 3px rgba(48,209,88,0.15);
-    }
-    #kickoff-btn {
-      background: #1a7a38;
-      border: none; border-radius: var(--radius-sm);
-      color: #fff; font-family: var(--font);
-      font-size: 14px; font-weight: 500;
-      padding: 9px 20px; cursor: pointer;
-      display: inline-flex; align-items: center; gap: 7px;
-      transition: opacity 0.15s, transform 0.1s;
-    }
-    #kickoff-btn:hover { opacity: 0.88; }
-    #kickoff-btn:active { transform: scale(0.98); }
-    #kickoff-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    #kickoff-status { font-size: 13px; color: var(--text-secondary); margin-top: 0.875rem; min-height: 20px; }
-    #kickoff-error { font-size: 13px; color: var(--accent-red); margin-top: 0.875rem; }
-
-    /* Plan result */
-    #kickoff-result { display: none; margin-top: 1.5rem; }
-    #kickoff-result h3 { font-size: 12px; font-weight: 600; letter-spacing: 0.4px; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 0.875rem; }
-    #kickoff-task-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 1.25rem; }
-    .kickoff-task-card {
-      background: rgba(255,255,255,0.9);
-      border: 1px solid var(--glass-border);
-      border-radius: var(--radius-md);
-      padding: 0.875rem 1rem;
-      display: flex; gap: 12px;
-      box-shadow: var(--shadow-sm);
-      animation: kickoffFadeIn 0.3s ease forwards;
-      opacity: 0;
-    }
-    @keyframes kickoffFadeIn {
-      from { opacity: 0; transform: translateY(6px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-    .kickoff-task-num {
-      width: 22px; height: 22px; border-radius: 50%;
-      background: rgba(0,0,0,0.06); color: var(--text-secondary);
-      font-size: 11px; font-weight: 700;
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0; margin-top: 1px;
-    }
-    .kickoff-task-body { flex: 1; min-width: 0; }
-    .kickoff-task-header { display: flex; align-items: center; gap: 8px; margin-bottom: 3px; }
-    .kickoff-task-title { font-size: 13px; font-weight: 600; color: var(--text-primary); }
-    .kickoff-task-agent {
-      font-size: 11px; font-weight: 500; padding: 1px 7px;
-      border-radius: 999px; flex-shrink: 0;
-    }
-    .kickoff-task-desc { font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
-    #kickoff-actions { display: flex; gap: 8px; align-items: center; }
-    #kickoff-open-tasks {
-      background: var(--accent); border: none; border-radius: var(--radius-sm);
-      color: #fff; font-family: var(--font); font-size: 13px; font-weight: 500;
-      padding: 7px 16px; cursor: pointer; transition: opacity 0.15s;
-    }
-    #kickoff-open-tasks:hover { opacity: 0.85; }
-    #kickoff-again {
-      background: rgba(0,0,0,0.05); border: 1px solid rgba(0,0,0,0.08);
-      border-radius: var(--radius-sm); color: var(--text-secondary);
-      font-family: var(--font); font-size: 13px;
-      padding: 7px 14px; cursor: pointer; transition: background 0.15s;
-    }
-    #kickoff-again:hover { background: rgba(0,0,0,0.09); }
-
-    /* ---- OUTPUT PANEL ---- */
-    #output-panel {
-      display: none;
-      background: rgba(255,255,255,0.72);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border-bottom: 1px solid var(--glass-border);
-      padding: 1.5rem 2rem;
-    }
-    #output-panel.visible { display: block; }
-    #output-panel h2 { font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 1.25rem; }
-    #output-layout {
-      display: grid;
-      grid-template-columns: 240px 1fr;
-      gap: 1rem;
-    }
-    #output-file-list {
-      background: rgba(255,255,255,0.88);
-      border: 1px solid var(--glass-border);
-      border-radius: var(--radius-md);
-      overflow-y: auto;
-      max-height: 520px;
-      box-shadow: var(--shadow-sm);
-    }
-    #output-file-list-empty {
-      padding: 14px 12px;
-      font-size: 12px;
-      color: var(--text-tertiary);
-      font-style: italic;
-    }
-    .output-file-item {
-      padding: 9px 12px;
-      cursor: pointer;
-      display: flex; align-items: center; gap: 8px;
-      border-bottom: 1px solid rgba(0,0,0,0.04);
-      transition: background 0.1s;
-    }
-    .output-file-item:last-child { border-bottom: none; }
-    .output-file-item:hover { background: rgba(0,0,0,0.03); }
-    .output-file-item.selected { background: rgba(0,113,227,0.08); }
-    .output-ext-badge {
-      font-size: 9px; font-weight: 700; text-transform: uppercase;
-      padding: 2px 5px; border-radius: 4px;
-      background: rgba(0,0,0,0.06); color: var(--text-secondary);
-      flex-shrink: 0; letter-spacing: 0.3px;
-    }
-    .output-file-name {
-      font-size: 12px; color: var(--text-primary);
-      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;
-    }
-    .output-file-size { font-size: 10px; color: var(--text-tertiary); flex-shrink: 0; }
-    #output-viewer {
-      background: rgba(255,255,255,0.88);
-      border: 1px solid var(--glass-border);
-      border-radius: var(--radius-md);
-      overflow-y: auto;
-      max-height: 520px;
-      padding: 1.5rem 1.75rem;
-      box-shadow: var(--shadow-sm);
-      font-size: 13px;
-      line-height: 1.65;
-      color: var(--text-secondary);
-    }
-    #output-viewer-placeholder {
-      color: var(--text-tertiary);
-      font-size: 12px;
-      font-style: italic;
-    }
-    /* Markdown rendering */
-    #output-viewer h1 { font-size: 22px; font-weight: 700; color: var(--text-primary); margin: 0 0 14px; letter-spacing: -0.3px; }
-    #output-viewer h2 { font-size: 16px; font-weight: 600; color: var(--text-primary); margin: 20px 0 8px; border-bottom: 1px solid var(--glass-border); padding-bottom: 6px; }
-    #output-viewer h3 { font-size: 14px; font-weight: 600; color: var(--text-primary); margin: 14px 0 6px; }
-    #output-viewer p { margin: 0 0 10px; }
-    #output-viewer strong { color: var(--text-primary); font-weight: 600; }
-    #output-viewer em { font-style: italic; }
-    #output-viewer ul, #output-viewer ol { padding-left: 1.4em; margin: 0 0 10px; }
-    #output-viewer li { margin-bottom: 3px; }
-    #output-viewer code {
-      font-family: var(--font-mono); font-size: 12px;
-      background: rgba(0,0,0,0.06); border-radius: 4px;
-      padding: 1px 5px; color: var(--text-primary);
-    }
-    #output-viewer pre {
-      background: rgba(0,0,0,0.04); border: 1px solid var(--glass-border);
-      border-radius: var(--radius-sm); padding: 14px 16px;
-      overflow-x: auto; margin: 0 0 12px;
-    }
-    #output-viewer pre code { background: none; padding: 0; font-size: 12px; line-height: 1.55; }
-    #output-viewer hr { border: none; border-top: 1px solid var(--glass-border); margin: 16px 0; }
-    #output-viewer blockquote {
-      border-left: 3px solid var(--accent); margin: 0 0 10px;
-      padding: 2px 0 2px 14px; color: var(--text-secondary);
-    }
-    #output-viewer table { width: 100%; border-collapse: collapse; margin: 0 0 12px; font-size: 12px; }
-    #output-viewer th { background: rgba(0,0,0,0.04); font-weight: 600; color: var(--text-primary); padding: 7px 10px; border: 1px solid var(--glass-border); text-align: left; }
-    #output-viewer td { padding: 7px 10px; border: 1px solid var(--glass-border); }
-    .output-code-raw { font-family: var(--font-mono); font-size: 12px; line-height: 1.6; color: var(--text-primary); white-space: pre-wrap; word-break: break-all; }
-
-    /* ---- AGENTS PANEL ---- */
-    #agents-panel {
-      display: none;
-      background: rgba(255,255,255,0.72);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border-bottom: 1px solid var(--glass-border);
-      padding: 1.5rem 2rem;
-    }
-    #agents-panel.visible { display: block; }
-    #agents-panel h2 { font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 1.25rem; }
-    #agents-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: 0.625rem;
-    }
-    .agent-card {
-      background: rgba(255,255,255,0.88);
-      border: 1px solid var(--glass-border);
-      border-radius: var(--radius-sm);
-      padding: 0.625rem 0.75rem;
-      display: flex; align-items: center; gap: 10px;
-      box-shadow: var(--shadow-sm);
-    }
-    .agent-card-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-    .agent-card-info { min-width: 0; }
-    .agent-card-name { font-size: 13px; font-weight: 600; color: var(--text-primary); }
-    .agent-card-role { font-size: 11px; color: var(--text-secondary); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-    /* ---- TOGGLE BAR ---- */
-    #toggle-bar {
-      background: rgba(255,255,255,0.6);
-      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-      border-top: 1px solid var(--glass-border);
-      border-left: none; border-right: none; border-bottom: none;
-      padding: 10px 20px; display: flex; align-items: center; gap: 10px;
-      cursor: pointer; user-select: none; width: 100%;
-      color: var(--text-secondary); font-family: var(--font);
-      font-size: 12px; font-weight: 500; text-align: left;
-      transition: background 0.15s;
-    }
-    #toggle-bar:hover { background: rgba(255,255,255,0.88); }
-    #toggle-arrow { transition: transform 0.2s; font-size: 10px; color: var(--text-tertiary); }
-    #toggle-arrow.open { transform: rotate(180deg); }
-
-    /* ---- TECHNICAL PANEL ---- */
-    #tech-panel {
-      display: none;
-      background: rgba(255,255,255,0.62);
-      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-      border-top: 1px solid var(--glass-border);
-      padding: 1.5rem 2rem;
-    }
-    #tech-panel.visible { display: block; }
-    #tech-panel h2 { font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 1.25rem; }
-    .tech-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
-    .tech-card {
-      background: rgba(255,255,255,0.88);
-      border: 1px solid var(--glass-border);
-      border-radius: var(--radius-md);
-      padding: 1rem 1.25rem;
-      box-shadow: var(--shadow-sm);
-    }
-    .tech-card h3 { font-size: 10px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 0.75rem; }
-    .tech-badge { display: inline-block; font-size: 11px; font-weight: 500; padding: 2px 10px; border-radius: 999px; background: rgba(0,113,227,0.1); color: var(--accent); border: 1px solid rgba(0,113,227,0.2); margin-bottom: 8px; }
-    .tech-phase { font-size: 15px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px; }
-    .tech-summary { font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
-    .tech-date { font-size: 10px; color: var(--text-tertiary); margin-top: 8px; }
-    .tech-tag { display: inline-block; font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 999px; background: rgba(0,0,0,0.05); color: var(--text-secondary); border: 1px solid var(--glass-border); margin: 2px; }
-    .tech-update-list { list-style: none; }
-    .tech-update-list li { padding: 5px 0; border-bottom: 1px solid rgba(0,0,0,0.04); font-size: 12px; display: flex; gap: 0.75rem; }
-    .tech-update-list li:last-child { border-bottom: none; }
-    .tech-date-col { color: var(--text-tertiary); font-size: 10px; white-space: nowrap; padding-top: 2px; }
-    .tech-note-col { color: var(--text-secondary); }
-    .tech-agent-row { display: flex; gap: 0.75rem; padding: 5px 0; border-bottom: 1px solid rgba(0,0,0,0.04); font-size: 12px; }
-    .tech-agent-row:last-child { border-bottom: none; }
-    .tech-agent-name { font-weight: 600; min-width: 100px; color: var(--text-primary); text-transform: capitalize; }
-    .tech-agent-note { color: var(--text-secondary); }
-    #tech-load-btn {
-      background: rgba(255,255,255,0.88); border: 1px solid rgba(0,0,0,0.1);
-      border-radius: var(--radius-sm); color: var(--text-primary);
-      font-family: var(--font); font-size: 13px; font-weight: 500;
-      padding: 7px 16px; cursor: pointer; box-shadow: var(--shadow-sm); transition: box-shadow 0.15s;
-    }
-    #tech-load-btn:hover { box-shadow: var(--shadow-md); }
-    #tech-error { color: var(--accent-red); font-size: 12px; margin-top: 6px; }
-    #tech-dashboard { display: none; }
-    #tech-dashboard.visible { display: block; }
-
-    /* ---- TOOLTIP ---- */
+    /* ─── TOOLTIP ────────────────────────────── */
     #agent-tooltip {
-      position: fixed;
-      background: rgba(255,255,255,0.94);
-      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-      border: 1px solid rgba(0,0,0,0.1);
-      border-radius: var(--radius-sm);
-      color: var(--text-primary);
-      font-family: var(--font); font-size: 12px; font-weight: 500;
-      padding: 5px 12px; pointer-events: none; display: none;
-      z-index: 999; white-space: nowrap; box-shadow: var(--shadow-md);
+      position: fixed; background: var(--surface-3); border: 1px solid var(--borderb);
+      border-radius: 6px; color: var(--tp); font-family: var(--font); font-size: 12px;
+      font-weight: 500; padding: 5px 12px; pointer-events: none; display: none; z-index: 999;
+      white-space: nowrap; box-shadow: 0 4px 20px rgba(0,0,0,0.5);
     }
   </style>
 </head>
@@ -799,111 +507,24 @@
 <!-- HEADER -->
 <div id="header">
   <div id="header-left">
+    <div id="logo" onclick="navigate('projects')"><img src="/dashboard/logo.png" alt="Pathless AI" /></div>
     <div id="live-dot"></div>
-    <h1>AI Office</h1>
-    <div id="project-switcher">
-      <button id="project-btn" onclick="toggleProjectMenu(event)">
-        <span id="project-btn-dot"></span>
-        <span id="project-btn-label">Neutral</span>
-        <span id="project-btn-caret">&#9660;</span>
-      </button>
-      <div id="project-menu">
-        <div id="project-menu-list"></div>
-        <div class="project-menu-divider"></div>
-        <div class="project-menu-new" onclick="openNewProjectModal()">&#43; New Project</div>
-      </div>
-    </div>
+    <span id="header-project-label"></span>
   </div>
-  <div style="display:flex;gap:8px;align-items:center;">
-    <button id="kickoff-header-btn" onclick="toggleKickoff()">&#9654; Kickoff</button>
-    <button class="glass-btn" onclick="toggleAgents()">Agents</button>
-    <button class="glass-btn" onclick="toggleOutput()">Output</button>
-    <button class="glass-btn" onclick="toggleTasks()">Task Manager</button>
-<button class="glass-btn" onclick="toggleTech()">Behind the Scenes</button>
-  </div>
+  <div id="header-right"></div>
 </div>
 
-<!-- NEW PROJECT MODAL -->
-<div id="modal-overlay" onclick="handleModalOverlayClick(event)">
-  <div id="modal-card">
-    <h3>New Project</h3>
-    <div class="modal-field">
-      <label>Name</label>
-      <input id="modal-name" type="text" placeholder="e.g. My SaaS App" autofocus />
-    </div>
-    <div class="modal-field">
-      <label>Description <span style="font-weight:400;text-transform:none;">(optional)</span></label>
-      <textarea id="modal-desc" placeholder="What is this project?"></textarea>
-    </div>
-    <div id="modal-error"></div>
-    <div class="modal-actions">
-      <button class="modal-btn-cancel" onclick="closeNewProjectModal()">Cancel</button>
-      <button class="modal-btn-create" onclick="handleCreateProject()">Create</button>
-    </div>
+<!-- SCREEN: PROJECTS -->
+<div id="screen-projects" class="screen">
+  <div id="projects-header">
+    <h2>Projects</h2>
+    <p>Select a project or create a new one to get started.</p>
   </div>
+  <div id="projects-grid"></div>
 </div>
 
-<!-- CANVAS TOGGLE BAR -->
-<div id="canvas-toggle-bar" onclick="toggleCanvas()">
-  <span id="canvas-toggle-icon" class="open">&#9660;</span>
-  <span id="canvas-toggle-label">Office Workspace — click to hide</span>
-</div>
-
-<!-- MAIN: canvas + sidebar -->
-<div id="main">
-  <div id="canvas-wrap">
-    <canvas id="game-canvas" width="1056" height="672"></canvas>
-  </div>
-  <div id="sidebar">
-    <div id="sidebar-header">Activity</div>
-    <div id="activity-log"></div>
-  </div>
-</div>
-
-<!-- TOGGLE BAR -->
-<button id="toggle-bar" onclick="toggleTech()">
-  <span id="toggle-arrow">&#9660;</span>
-  <span>Behind the Scenes &mdash; Technical Dashboard</span>
-</button>
-
-<!-- TASK MANAGER PANEL -->
-<div id="task-panel">
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
-    <h2 style="margin:0;">Task Manager</h2>
-    <button id="run-all-btn" onclick="handleRunAll()">&#9654; Run All Active</button>
-  </div>
-  <div id="task-form">
-    <div id="task-form-title">New Task — delivered to Orchestrator</div>
-    <div class="task-form-row">
-      <input id="tf-title" class="task-input" type="text" placeholder="Describe the task..." />
-      <button class="task-btn" onclick="handleCreateTask()">+ Add</button>
-    </div>
-    <div id="task-form-error"></div>
-  </div>
-  <div id="task-error"></div>
-  <div id="task-columns">
-    <div>
-      <div class="task-col-header">Backlog</div>
-      <div id="task-col-backlog"></div>
-    </div>
-    <div>
-      <div class="task-col-header">Active</div>
-      <div id="task-col-active"></div>
-    </div>
-    <div>
-      <div class="task-col-header">Completed</div>
-      <div id="task-col-completed"></div>
-    </div>
-    <div>
-      <div class="task-col-header failed">Failed</div>
-      <div id="task-col-failed"></div>
-    </div>
-  </div>
-  <div id="work-windows"></div>
-</div>
-
-<!-- KICKOFF PANEL -->
-<div id="kickoff-panel">
+<!-- SCREEN: KICKOFF -->
+<div id="screen-kickoff" class="screen">
   <div id="kickoff-inner">
     <h2>What do you want to build?</h2>
     <p>Describe your project and the orchestrator will generate a task plan and assign the right agents.</p>
@@ -912,63 +533,92 @@
     <div id="kickoff-error"></div>
     <div id="kickoff-status"></div>
     <div id="kickoff-result">
-      <h3>Plan created</h3>
+      <h3>Plan Created</h3>
       <div id="kickoff-task-list"></div>
       <div id="kickoff-actions">
-        <button id="kickoff-open-tasks" onclick="openTaskManagerFromKickoff()">Open Task Manager &#8594;</button>
-        <button id="kickoff-again" onclick="resetKickoff()">Plan another</button>
+        <button id="kickoff-run-btn" onclick="kickoffRunAll()">&#9654;&nbsp; Run All Agents</button>
+        <button id="kickoff-again" onclick="resetKickoff()">Plan again</button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- OUTPUT PANEL -->
-<div id="output-panel">
-  <h2>Output</h2>
-  <div id="output-layout">
+<!-- SCREEN: RUN -->
+<div id="screen-run" class="screen">
+  <div id="run-canvas-pane">
+    <canvas id="game-canvas" width="1056" height="672"></canvas>
+    <div id="activity-strip">
+      <div id="activity-strip-header">Activity</div>
+    </div>
+  </div>
+  <div id="run-right-pane">
+    <div id="run-tasks-header">
+      <span id="run-tasks-title">Task Manager</span>
+    </div>
+    <div id="task-quick-add">
+      <input id="tf-title" type="text" placeholder="New task..." />
+      <button id="task-add-btn" onclick="handleCreateTask()">+ Add</button>
+    </div>
+    <div id="task-form-error"></div>
+    <div id="task-error"></div>
+    <div id="task-columns-wrap">
+      <div id="task-columns">
+        <div>
+          <div class="task-col-header">Backlog</div>
+          <div id="task-col-backlog"></div>
+        </div>
+        <div>
+          <div class="task-col-header tc-active">Active</div>
+          <div id="task-col-active"></div>
+        </div>
+        <div>
+          <div class="task-col-header tc-completed">Done</div>
+          <div id="task-col-completed"></div>
+        </div>
+        <div>
+          <div class="task-col-header tc-failed">Failed</div>
+          <div id="task-col-failed"></div>
+        </div>
+      </div>
+    </div>
+    <div id="work-windows"></div>
+  </div>
+</div>
+
+<!-- SCREEN: OUTPUT -->
+<div id="screen-output" class="screen">
+  <div id="output-sidebar">
+    <div id="output-sidebar-header">
+      <span>Output</span>
+      <button class="h-btn" onclick="loadOutput()" style="font-size:10px;padding:3px 8px;">↺</button>
+    </div>
     <div id="output-file-list">
       <div id="output-file-list-empty">No output files yet.</div>
     </div>
+  </div>
+  <div id="output-main">
     <div id="output-viewer">
       <div id="output-viewer-placeholder">Select a file to view its contents.</div>
     </div>
   </div>
 </div>
 
-<!-- AGENTS PANEL -->
-<div id="agents-panel">
-  <h2>Agents</h2>
-  <div id="agents-grid"></div>
-</div>
-
-<!-- TECHNICAL PANEL -->
-<div id="tech-panel">
-  <h2>Technical Dashboard</h2>
-  <div style="margin-bottom:1rem;">
-    <button id="tech-load-btn" onclick="loadMemory()">Load Project Memory</button>
-    <div id="tech-error"></div>
-  </div>
-  <div id="tech-dashboard">
-    <div class="tech-grid">
-      <div class="tech-card">
-        <h3>Project Status</h3>
-        <div class="tech-badge" id="t-badge">—</div>
-        <div class="tech-phase" id="t-phase">—</div>
-        <div class="tech-summary" id="t-summary">—</div>
-        <div class="tech-date">Last updated: <span id="t-date">—</span></div>
-      </div>
-      <div class="tech-card">
-        <h3>Active Decisions</h3>
-        <div id="t-decisions">—</div>
-      </div>
-      <div class="tech-card">
-        <h3>Recent Updates</h3>
-        <ul class="tech-update-list" id="t-updates"></ul>
-      </div>
-      <div class="tech-card">
-        <h3>Agent Notes</h3>
-        <div id="t-agent-notes"></div>
-      </div>
+<!-- MODAL: NEW PROJECT -->
+<div id="modal-overlay" onclick="handleModalOverlayClick(event)">
+  <div id="modal-card">
+    <h3>New Project</h3>
+    <div class="modal-field">
+      <label>Name</label>
+      <input id="modal-name" type="text" placeholder="e.g. My SaaS App" />
+    </div>
+    <div class="modal-field">
+      <label>Description <span style="font-weight:400;text-transform:none;">(optional)</span></label>
+      <textarea id="modal-desc" placeholder="What is this project?"></textarea>
+    </div>
+    <div id="modal-error"></div>
+    <div class="modal-actions">
+      <button class="modal-btn-cancel" onclick="closeNewProjectModal()">Cancel</button>
+      <button class="modal-btn-create" onclick="handleCreateProject()">Create Project</button>
     </div>
   </div>
 </div>
@@ -976,21 +626,19 @@
 <div id="agent-tooltip"></div>
 
 <script>
-// ---- AUTH GATE ----
+// ── AUTH ──────────────────────────────────────────────────
 if (!sessionStorage.getItem('authenticated')) {
   window.location.replace('/dashboard/login.html');
 }
 
-// ============================================================
-// CONSTANTS
-// ============================================================
+// ── CONSTANTS ─────────────────────────────────────────────
 const CANVAS_W = 1056;
 const CANVAS_H = 672;
-const PIXEL = 3;
-const TILE = 16;
-const GRID_W = 22;
-const GRID_H = 14;
-const FPS = 30;
+const PIXEL    = 3;
+const TILE     = 16;
+const GRID_W   = 22;
+const GRID_H   = 14;
+const FPS      = 30;
 const FRAME_MS = 1000 / FPS;
 
 const AGENT_COLORS = {
@@ -1031,95 +679,76 @@ const DESKS = {
   per:          { tx: 18, ty: 11 },
 };
 
-
-// ============================================================
-// HELPERS
-// ============================================================
+// ── HELPERS ───────────────────────────────────────────────
 function hexToRgb(hex) {
-  const r = parseInt(hex.slice(1,3), 16);
-  const g = parseInt(hex.slice(3,5), 16);
-  const b = parseInt(hex.slice(5,7), 16);
-  return { r, g, b };
+  return { r: parseInt(hex.slice(1,3),16), g: parseInt(hex.slice(3,5),16), b: parseInt(hex.slice(5,7),16) };
 }
-function gx(x) { return Math.floor(x) * PIXEL; }
-function gy(y) { return Math.floor(y) * PIXEL; }
+function gx(x)  { return Math.floor(x) * PIXEL; }
+function gy(y)  { return Math.floor(y) * PIXEL; }
 function tileX(tx) { return tx * TILE; }
 function tileY(ty) { return ty * TILE; }
 function randi(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
-function randf(min, max) { return Math.random() * (max - min) + min; }
-function pickRandom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+function escHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function padZero(n) { return String(n).padStart(2,'0'); }
+function getTimestamp() {
+  const now = new Date();
+  return `${padZero(now.getHours())}:${padZero(now.getMinutes())}:${padZero(now.getSeconds())}`;
+}
+function formatBytes(n) {
+  if (n < 1024) return `${n}B`;
+  if (n < 1048576) return `${(n/1024).toFixed(1)}KB`;
+  return `${(n/1048576).toFixed(1)}MB`;
+}
+function taskLabel(filename) {
+  let name = filename.replace(/^\d{4}-\d{2}-\d{2}-/,'').replace(/\.md$/,'').replace(/-/g,' ');
+  return name.charAt(0).toUpperCase() + name.slice(1);
+}
 
-// ============================================================
-// AGENT INITIALIZATION
-// ============================================================
+// ── AGENT INIT ────────────────────────────────────────────
 function makeAgents() {
   return Object.keys(AGENT_COLORS).map(id => {
     const desk = DESKS[id];
     const startX = tileX(desk.tx) + TILE / 2;
-    const rawY = tileY(desk.ty) + TILE + 4;
+    const rawY   = tileY(desk.ty) + TILE + 4;
     const startY = Math.min(rawY, tileY(8) + TILE - 6);
     return {
       id, x: startX, y: startY, targetX: startX, targetY: startY,
-      state: 'idle', stateTimer: randi(180, 360),
+      state: 'idle', stateTimer: randi(180,360),
       bubble: null, walkFrame: 0, walkTick: 0, facing: 'down',
       cursorTick: 0, cursorVisible: false,
-      pendingState: null, pendingMsg: null, pendingTarget: null,
+      pendingState: null,
     };
   });
 }
 let agents = makeAgents();
 
-// ============================================================
-// GAME LOGIC
-// ============================================================
+// ── GAME LOGIC ────────────────────────────────────────────
 function deskStandPos(agentId) {
   const desk = DESKS[agentId];
   const rawY = tileY(desk.ty) + TILE + TILE / 2;
-  return {
-    x: tileX(desk.tx) + TILE / 2,
-    y: Math.min(rawY, tileY(12) + TILE - 6),
-  };
+  return { x: tileX(desk.tx) + TILE/2, y: Math.min(rawY, tileY(12)+TILE-6) };
 }
-function meetingTableCenter() {
-  return { x: tileX(10) + TILE / 2, y: tileY(7) };
-}
-function randomFloorPos() {
-  let tx, ty;
-  do {
-    tx = randi(1, 20); ty = randi(1, 12);
-  } while (
-    (tx >= 9 && tx <= 12 && ty >= 6 && ty <= 8) ||
-    Object.values(DESKS).some(d => d.tx === tx && d.ty === ty)
-  );
-  return { x: tileX(tx) + TILE / 2, y: tileY(ty) + TILE / 2 };
-}
-function dist(ax, ay, bx, by) {
-  const dx = ax - bx, dy = ay - by;
-  return Math.sqrt(dx*dx + dy*dy);
-}
+function dist(ax,ay,bx,by) { const dx=ax-bx,dy=ay-by; return Math.sqrt(dx*dx+dy*dy); }
 
 function tickAgents() {
   for (const agent of agents) {
     if (agent.state === 'walking') {
-      const dx = agent.targetX - agent.x;
-      const dy = agent.targetY - agent.y;
-      const d = Math.sqrt(dx*dx + dy*dy);
-      const speed = 0.7;
+      const dx = agent.targetX - agent.x, dy = agent.targetY - agent.y;
+      const d  = Math.sqrt(dx*dx + dy*dy), speed = 0.7;
       if (d < speed + 0.1) {
         agent.x = agent.targetX; agent.y = agent.targetY;
         agent.walkFrame = 0; agent.walkTick = 0;
-        if (agent.pendingState === 'working') {
-          agent.state = 'working'; agent.stateTimer = 9999;
-        } else {
-          agent.state = 'idle'; agent.stateTimer = randi(30, 90);
-        }
+        agent.state = agent.pendingState === 'working' ? 'working' : 'idle';
+        agent.stateTimer = agent.state === 'working' ? 9999 : randi(30,90);
         agent.pendingState = null;
       } else {
-        agent.x += (dx / d) * speed; agent.y += (dy / d) * speed;
-        if (Math.abs(dx) > Math.abs(dy)) agent.facing = dx > 0 ? 'right' : 'left';
-        else agent.facing = dy > 0 ? 'down' : 'up';
+        agent.x += (dx/d)*speed; agent.y += (dy/d)*speed;
+        if (Math.abs(dx) > Math.abs(dy)) agent.facing = dx>0 ? 'right' : 'left';
+        else agent.facing = dy>0 ? 'down' : 'up';
         agent.walkTick++;
-        if (agent.walkTick >= 12) { agent.walkTick = 0; agent.walkFrame = agent.walkFrame === 0 ? 1 : 0; }
+        if (agent.walkTick >= 12) { agent.walkTick = 0; agent.walkFrame = agent.walkFrame===0?1:0; }
       }
     } else {
       if (runningAgents.has(agent.id)) {
@@ -1127,252 +756,230 @@ function tickAgents() {
       } else {
         agent.stateTimer--;
         if (agent.stateTimer <= 0) {
-          if (agent.state === 'working') {
-            agent.state = 'idle'; agent.bubble = null; agent.stateTimer = randi(120, 240);
-          } else if (agent.state === 'idle') { decideNextAction(agent); }
+          if (agent.state === 'working') { agent.state='idle'; agent.bubble=null; agent.stateTimer=randi(120,240); }
+          else if (agent.state === 'idle') { decideNextAction(agent); }
         }
         if (agent.state === 'working') {
           agent.cursorTick++;
-          if (agent.cursorTick >= 18) { agent.cursorTick = 0; agent.cursorVisible = !agent.cursorVisible; }
-        } else { agent.cursorVisible = false; agent.cursorTick = 0; }
+          if (agent.cursorTick >= 18) { agent.cursorTick=0; agent.cursorVisible=!agent.cursorVisible; }
+        } else { agent.cursorVisible=false; agent.cursorTick=0; }
       }
     }
-    if (agent.bubble) {
-      agent.bubble.timer--;
-      if (agent.bubble.timer <= 0) agent.bubble = null;
-    }
+    if (agent.bubble) { agent.bubble.timer--; if (agent.bubble.timer<=0) agent.bubble=null; }
   }
 }
 
 function decideNextAction(agent) {
-  {
-    // Stay at desk — agents only move when given a real task
-    const pos = deskStandPos(agent.id);
-    agent.x = pos.x; agent.y = pos.y;
-    agent.state = 'idle';
-    agent.stateTimer = randi(300, 600);
-  }
+  const pos = deskStandPos(agent.id);
+  agent.x = pos.x; agent.y = pos.y;
+  agent.state = 'idle'; agent.stateTimer = randi(300,600);
 }
 
 function startWalking(agent, tx, ty, nextState) {
-  const minX = tileX(1) + 4, maxX = tileX(20) + TILE - 4;
-  const minY = tileY(1) + 4, maxY = tileY(12) + TILE - 4;
+  const minX = tileX(1)+4, maxX = tileX(20)+TILE-4;
+  const minY = tileY(1)+4, maxY = tileY(12)+TILE-4;
   agent.targetX = Math.max(minX, Math.min(maxX, tx));
   agent.targetY = Math.max(minY, Math.min(maxY, ty));
   agent.state = 'walking'; agent.pendingState = nextState; agent.bubble = null;
 }
 
-// ============================================================
-// DRAWING — Light / Glass aesthetic
-// ============================================================
+// ── DRAWING — Dark theme ──────────────────────────────────
 const canvas = document.getElementById('game-canvas');
-const ctx = canvas.getContext('2d');
+const ctx    = canvas.getContext('2d');
 
-// Floor palette
-const FLOOR_A     = '#f5f1ea';
-const FLOOR_B     = '#ede8df';
-const WALL_COLOR  = '#e0d9cf';
-const WINDOW_GLASS = '#dbeafe';
-const DESK_WHITE  = '#ffffff';
-const TABLE_BG    = '#f0ece4';
-const TABLE_EDGE  = 'rgba(0,0,0,0.09)';
-const CHAIR_COLOR = '#e8e2d8';
-const PLANT_GREEN = '#6b9e82';
-const PLANT_POT   = '#b8845a';
+const FLOOR_A      = '#0d0f1a';
+const FLOOR_B      = '#0a0c16';
+const WALL_COLOR   = '#141623';
+const DESK_DARK    = '#181b2c';
+const TABLE_BG     = '#111320';
+const TABLE_EDGE   = 'rgba(255,255,255,0.05)';
+const CHAIR_COLOR  = '#1c1f32';
+const PLANT_GREEN  = '#10b981';
+const PLANT_POT    = '#6b4226';
 
 function drawRect(gxPos, gyPos, gw, gh, color) {
   ctx.fillStyle = color;
-  ctx.fillRect(gx(gxPos), gy(gyPos), gw * PIXEL, gh * PIXEL);
+  ctx.fillRect(gx(gxPos), gy(gyPos), gw*PIXEL, gh*PIXEL);
 }
 
 function drawFloor() {
-  for (let ty = 1; ty <= 12; ty++) {
-    for (let tx = 1; tx <= 20; tx++) {
-      const color = (tx + ty) % 2 === 0 ? FLOOR_A : FLOOR_B;
-      drawRect(tileX(tx), tileY(ty), TILE, TILE, color);
+  for (let ty=1; ty<=12; ty++) {
+    for (let tx=1; tx<=20; tx++) {
+      drawRect(tileX(tx), tileY(ty), TILE, TILE, (tx+ty)%2===0 ? FLOOR_A : FLOOR_B);
     }
   }
 }
 
 function drawWalls() {
-  for (let tx = 0; tx < GRID_W; tx++) {
+  for (let tx=0; tx<GRID_W; tx++) {
     drawRect(tileX(tx), tileY(0), TILE, TILE, WALL_COLOR);
-    // subtle baseboard shadow
-    ctx.fillStyle = 'rgba(0,0,0,0.04)';
-    ctx.fillRect(gx(tileX(tx)), gy(tileY(0) + TILE - 1), TILE * PIXEL, PIXEL);
+    ctx.fillStyle = 'rgba(14,165,233,0.04)';
+    ctx.fillRect(gx(tileX(tx)), gy(tileY(0)+TILE-1), TILE*PIXEL, PIXEL);
   }
-  for (let tx = 0; tx < GRID_W; tx++) drawRect(tileX(tx), tileY(13), TILE, TILE, WALL_COLOR);
-  for (let ty = 0; ty < GRID_H; ty++) drawRect(tileX(0), tileY(ty), TILE, TILE, WALL_COLOR);
-  for (let ty = 0; ty < GRID_H; ty++) drawRect(tileX(21), tileY(ty), TILE, TILE, WALL_COLOR);
+  for (let tx=0; tx<GRID_W; tx++) drawRect(tileX(tx), tileY(13), TILE, TILE, WALL_COLOR);
+  for (let ty=0; ty<GRID_H; ty++) drawRect(tileX(0),  tileY(ty), TILE, TILE, WALL_COLOR);
+  for (let ty=0; ty<GRID_H; ty++) drawRect(tileX(21), tileY(ty), TILE, TILE, WALL_COLOR);
 }
 
 function drawWallDetails() {
-  const windowPositions = [3, 7, 11, 15, 19];
+  const windowPositions = [3,7,11,15,19];
   for (const wx of windowPositions) {
     // Frame
-    ctx.fillStyle = '#ccc6bc';
-    ctx.fillRect(gx(tileX(wx) + 2), gy(tileY(0) + 2), 12 * PIXEL, 12 * PIXEL);
-    // Glass
-    ctx.fillStyle = WINDOW_GLASS;
-    ctx.fillRect(gx(tileX(wx) + 3), gy(tileY(0) + 3), 10 * PIXEL, 10 * PIXEL);
-    // Reflection
-    ctx.fillStyle = 'rgba(255,255,255,0.65)';
-    ctx.fillRect(gx(tileX(wx) + 3), gy(tileY(0) + 3), 4 * PIXEL, 2 * PIXEL);
-    // Cross bars
-    ctx.fillStyle = 'rgba(180,175,168,0.7)';
-    ctx.fillRect(gx(tileX(wx) + 3), gy(tileY(0) + 8), 10 * PIXEL, PIXEL);
-    ctx.fillRect(gx(tileX(wx) + 8), gy(tileY(0) + 3), PIXEL, 10 * PIXEL);
+    ctx.fillStyle = '#1a1d2e';
+    ctx.fillRect(gx(tileX(wx)+2), gy(tileY(0)+2), 12*PIXEL, 12*PIXEL);
+    // Glass — cyan tint
+    ctx.fillStyle = 'rgba(34,211,238,0.07)';
+    ctx.fillRect(gx(tileX(wx)+3), gy(tileY(0)+3), 10*PIXEL, 10*PIXEL);
+    // Glow
+    ctx.fillStyle = 'rgba(34,211,238,0.12)';
+    ctx.fillRect(gx(tileX(wx)+3), gy(tileY(0)+3), 4*PIXEL, 2*PIXEL);
+    // Crossbars
+    ctx.fillStyle = 'rgba(34,211,238,0.06)';
+    ctx.fillRect(gx(tileX(wx)+3), gy(tileY(0)+8), 10*PIXEL, PIXEL);
+    ctx.fillRect(gx(tileX(wx)+8), gy(tileY(0)+3), PIXEL, 10*PIXEL);
   }
 }
 
 function drawDesk(tx, ty, agentId) {
-  const deskX = gx(tileX(tx) - 1);
-  const deskY = gy(tileY(ty) + 2);
-  const deskW = (TILE + 2) * PIXEL;
-  const deskH = (TILE - 5) * PIXEL;
+  const deskX = gx(tileX(tx)-1);
+  const deskY = gy(tileY(ty)+2);
+  const deskW = (TILE+2)*PIXEL;
+  const deskH = (TILE-5)*PIXEL;
 
-  // Drop shadow
-  ctx.fillStyle = 'rgba(0,0,0,0.07)';
-  ctx.fillRect(deskX + 2, deskY + 3, deskW, deskH);
+  // Shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.25)';
+  ctx.fillRect(deskX+2, deskY+3, deskW, deskH);
 
-  // White surface
-  ctx.fillStyle = DESK_WHITE;
+  // Surface
+  ctx.fillStyle = DESK_DARK;
   ctx.fillRect(deskX, deskY, deskW, deskH);
 
-  // Agent color accent bar (top)
+  // Agent color accent bar
   const col = AGENT_COLORS[agentId];
   if (col) {
     ctx.fillStyle = col.primary;
-    ctx.fillRect(deskX, deskY, deskW, 3 * PIXEL);
+    ctx.fillRect(deskX, deskY, deskW, 3*PIXEL);
+    // Glow under accent
+    const {r,g,b} = hexToRgb(col.primary);
+    ctx.fillStyle = `rgba(${r},${g},${b},0.12)`;
+    ctx.fillRect(deskX, deskY+3*PIXEL, deskW, 4*PIXEL);
   }
 
   // Desk border
-  ctx.strokeStyle = 'rgba(0,0,0,0.08)';
+  ctx.strokeStyle = 'rgba(255,255,255,0.06)';
   ctx.lineWidth = 1;
-  ctx.strokeRect(deskX + 0.5, deskY + 0.5, deskW - 1, deskH - 1);
+  ctx.strokeRect(deskX+0.5, deskY+0.5, deskW-1, deskH-1);
 
   // Monitor bezel
-  ctx.fillStyle = '#ede8e0';
-  ctx.fillRect(gx(tileX(tx) + 3), gy(tileY(ty) + 4), 8 * PIXEL, 5 * PIXEL);
+  ctx.fillStyle = '#0d0f1a';
+  ctx.fillRect(gx(tileX(tx)+3), gy(tileY(ty)+4), 8*PIXEL, 5*PIXEL);
 
   // Screen glow
   if (col) {
-    const { r, g, b } = hexToRgb(col.primary);
-    ctx.fillStyle = `rgba(${r},${g},${b},0.22)`;
-    ctx.fillRect(gx(tileX(tx) + 4), gy(tileY(ty) + 5), 6 * PIXEL, 3 * PIXEL);
+    const {r,g,b} = hexToRgb(col.primary);
+    ctx.fillStyle = `rgba(${r},${g},${b},0.35)`;
+    ctx.fillRect(gx(tileX(tx)+4), gy(tileY(ty)+5), 6*PIXEL, 3*PIXEL);
   }
 }
 
 function drawMeetingTable() {
-  const tX = gx(tileX(9) + 2);
-  const tY = gy(tileY(6) + 2);
-  const tW = (TILE * 4 - 4) * PIXEL;
-  const tH = (TILE * 3 - 4) * PIXEL;
+  const tX = gx(tileX(9)+2);
+  const tY = gy(tileY(6)+2);
+  const tW = (TILE*4-4)*PIXEL;
+  const tH = (TILE*3-4)*PIXEL;
 
-  // Shadow
-  ctx.fillStyle = 'rgba(0,0,0,0.06)';
-  ctx.fillRect(tX + 3, tY + 4, tW, tH);
-
-  // Surface
+  ctx.fillStyle = 'rgba(0,0,0,0.3)';
+  ctx.fillRect(tX+3, tY+4, tW, tH);
   ctx.fillStyle = TABLE_BG;
   ctx.fillRect(tX, tY, tW, tH);
-
-  // Border
   ctx.strokeStyle = TABLE_EDGE;
   ctx.lineWidth = 1.5;
-  ctx.strokeRect(tX + 0.75, tY + 0.75, tW - 1.5, tH - 1.5);
+  ctx.strokeRect(tX+0.75, tY+0.75, tW-1.5, tH-1.5);
 
-  // Chairs
   const chairPositions = [
-    { x: tileX(9) + 4,  y: tileY(6) - 3 }, { x: tileX(10) + 4, y: tileY(6) - 3 },
-    { x: tileX(11) + 4, y: tileY(6) - 3 }, { x: tileX(12) + 4, y: tileY(6) - 3 },
-    { x: tileX(9) + 4,  y: tileY(8) + TILE }, { x: tileX(10) + 4, y: tileY(8) + TILE },
-    { x: tileX(11) + 4, y: tileY(8) + TILE }, { x: tileX(12) + 4, y: tileY(8) + TILE },
+    {x:tileX(9)+4, y:tileY(6)-3}, {x:tileX(10)+4, y:tileY(6)-3},
+    {x:tileX(11)+4, y:tileY(6)-3}, {x:tileX(12)+4, y:tileY(6)-3},
+    {x:tileX(9)+4, y:tileY(8)+TILE}, {x:tileX(10)+4, y:tileY(8)+TILE},
+    {x:tileX(11)+4, y:tileY(8)+TILE}, {x:tileX(12)+4, y:tileY(8)+TILE},
   ];
   for (const c of chairPositions) {
     ctx.fillStyle = CHAIR_COLOR;
-    ctx.fillRect(gx(c.x), gy(c.y), 8 * PIXEL, 4 * PIXEL);
-    ctx.strokeStyle = 'rgba(0,0,0,0.06)';
+    ctx.fillRect(gx(c.x), gy(c.y), 8*PIXEL, 4*PIXEL);
+    ctx.strokeStyle = 'rgba(255,255,255,0.04)';
     ctx.lineWidth = 0.5;
-    ctx.strokeRect(gx(c.x) + 0.25, gy(c.y) + 0.25, 8 * PIXEL - 0.5, 4 * PIXEL - 0.5);
+    ctx.strokeRect(gx(c.x)+0.25, gy(c.y)+0.25, 8*PIXEL-0.5, 4*PIXEL-0.5);
   }
 }
 
 function drawPlant(tx, ty) {
-  const cx = gx(tileX(tx) + 8);
-  const cy = gy(tileY(ty) + 9);
-  const R  = 5 * PIXEL;
+  const cx = gx(tileX(tx)+8);
+  const cy = gy(tileY(ty)+9);
+  const R  = 5*PIXEL;
 
-  // Shadow
-  ctx.fillStyle = 'rgba(0,0,0,0.07)';
+  ctx.fillStyle = 'rgba(0,0,0,0.3)';
   ctx.beginPath();
-  ctx.ellipse(cx + 2, cy + 2, R, R * 0.7, 0, 0, Math.PI * 2);
+  ctx.ellipse(cx+2, cy+2, R, R*0.7, 0, 0, Math.PI*2);
   ctx.fill();
 
-  // Body
   ctx.fillStyle = PLANT_GREEN;
   ctx.beginPath();
-  ctx.arc(cx, cy, R, 0, Math.PI * 2);
+  ctx.arc(cx, cy, R, 0, Math.PI*2);
   ctx.fill();
 
-  // Highlight
-  ctx.fillStyle = 'rgba(255,255,255,0.22)';
+  ctx.fillStyle = 'rgba(255,255,255,0.12)';
   ctx.beginPath();
-  ctx.arc(cx - R * 0.3, cy - R * 0.35, R * 0.38, 0, Math.PI * 2);
+  ctx.arc(cx-R*0.3, cy-R*0.35, R*0.38, 0, Math.PI*2);
   ctx.fill();
 
-  // Pot
   ctx.fillStyle = PLANT_POT;
-  ctx.fillRect(cx - 3 * PIXEL, cy + R - PIXEL, 6 * PIXEL, 3 * PIXEL);
+  ctx.fillRect(cx-3*PIXEL, cy+R-PIXEL, 6*PIXEL, 3*PIXEL);
 }
 
 function drawFurniture() {
-  for (const [agentId, desk] of Object.entries(DESKS)) drawDesk(desk.tx, desk.ty, agentId);
+  for (const [id, desk] of Object.entries(DESKS)) drawDesk(desk.tx, desk.ty, id);
   drawMeetingTable();
-  drawPlant(1, 1); drawPlant(20, 1); drawPlant(1, 12); drawPlant(20, 12);
+  drawPlant(1,1); drawPlant(20,1); drawPlant(1,12); drawPlant(20,12);
 }
 
-// Agent: circle avatar with initials
-function drawAgentSprite(cx, cy, agentId, walkFrame) {
+function drawAgentSprite(cx, cy, agentId) {
   const col = AGENT_COLORS[agentId];
   if (!col) return;
+  const cxPx    = gx(cx);
+  const cyPx    = gy(cy);
+  const R       = 11;
+  const avatarCY = cyPx - R*2;
 
-  const cxPx = gx(cx);
-  const cyPx = gy(cy);
-  const R = 11;                      // avatar radius in canvas px
-  const avatarCY = cyPx - R * 2;    // circle center (above "feet")
-
-  // Pulsing outer ring when running
+  // Pulsing ring when running
   if (runningAgents.has(agentId)) {
-    const pulse = 0.35 + 0.28 * Math.sin(Date.now() / 280);
+    const pulse = 0.3 + 0.28*Math.sin(Date.now()/280);
     ctx.save();
     ctx.globalAlpha = pulse;
     ctx.strokeStyle = col.primary;
     ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.arc(cxPx, avatarCY, R + 7, 0, Math.PI * 2);
+    ctx.arc(cxPx, avatarCY, R+7, 0, Math.PI*2);
     ctx.stroke();
     ctx.restore();
   }
 
   // Drop shadow
-  ctx.fillStyle = 'rgba(0,0,0,0.10)';
+  ctx.fillStyle = 'rgba(0,0,0,0.35)';
   ctx.beginPath();
-  ctx.ellipse(cxPx + 1, avatarCY + 2, R, R * 0.65, 0, 0, Math.PI * 2);
+  ctx.ellipse(cxPx+1, avatarCY+2, R, R*0.6, 0, 0, Math.PI*2);
   ctx.fill();
 
-  // Avatar fill
-  const { r, g, b } = hexToRgb(col.primary);
-  ctx.fillStyle = `rgba(${r},${g},${b},0.14)`;
+  // Avatar fill (dark + tinted)
+  const {r,g,b} = hexToRgb(col.primary);
+  ctx.fillStyle = `rgba(${r},${g},${b},0.18)`;
   ctx.beginPath();
-  ctx.arc(cxPx, avatarCY, R, 0, Math.PI * 2);
+  ctx.arc(cxPx, avatarCY, R, 0, Math.PI*2);
   ctx.fill();
 
   // Border ring
   ctx.strokeStyle = col.primary;
   ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.arc(cxPx, avatarCY, R, 0, Math.PI * 2);
+  ctx.arc(cxPx, avatarCY, R, 0, Math.PI*2);
   ctx.stroke();
 
   // Initials
@@ -1380,14 +987,14 @@ function drawAgentSprite(cx, cy, agentId, walkFrame) {
   ctx.font = `bold 9px -apple-system, BlinkMacSystemFont, sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(col.name.slice(0, 2).toUpperCase(), cxPx, avatarCY);
+  ctx.fillText(col.name.slice(0,2).toUpperCase(), cxPx, avatarCY);
 
-  // Name label below
-  ctx.fillStyle = 'rgba(29,29,31,0.62)';
+  // Name label
+  ctx.fillStyle = 'rgba(232,234,246,0.55)';
   ctx.font = `9px -apple-system, BlinkMacSystemFont, sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
-  ctx.fillText(col.name, cxPx, cyPx - 1);
+  ctx.fillText(col.name, cxPx, cyPx-1);
 }
 
 function drawBubble(cx, cy, text) {
@@ -1396,7 +1003,7 @@ function drawBubble(cx, cy, text) {
   const lines = [];
   let current = '';
   for (const word of words) {
-    const candidate = current ? current + ' ' + word : word;
+    const candidate = current ? current+' '+word : word;
     if (candidate.length > maxChars) { if (current) lines.push(current); current = word; }
     else current = candidate;
   }
@@ -1406,68 +1013,53 @@ function drawBubble(cx, cy, text) {
   ctx.font = `500 ${FONT_SIZE}px -apple-system, BlinkMacSystemFont, sans-serif`;
   ctx.textBaseline = 'top';
   let maxW = 0;
-  for (const line of lines) { const w = ctx.measureText(line).width; if (w > maxW) maxW = w; }
+  for (const line of lines) { const w = ctx.measureText(line).width; if (w>maxW) maxW=w; }
 
-  const PAD_X = 8, PAD_Y = 5, LINE_H = FONT_SIZE + 3;
-  const bw = maxW + PAD_X * 2;
-  const bh = lines.length * LINE_H + PAD_Y * 2;
-
-  const bubbleBottomY = gy(cy - 12) - 8;
-  const bubbleTopY = bubbleBottomY - bh;
-  const bubbleLeftX = gx(cx) - Math.floor(bw / 2);
-  const clampedX = Math.max(2, Math.min(CANVAS_W - bw - 2, bubbleLeftX));
-  const clampedY = Math.max(2, bubbleTopY);
+  const PAD_X=8, PAD_Y=5, LINE_H=FONT_SIZE+3;
+  const bw = maxW+PAD_X*2, bh = lines.length*LINE_H+PAD_Y*2;
+  const bubbleBottomY = gy(cy-12)-8;
+  const bubbleTopY    = bubbleBottomY-bh;
+  const bubbleLeftX   = gx(cx)-Math.floor(bw/2);
+  const clampedX      = Math.max(2, Math.min(CANVAS_W-bw-2, bubbleLeftX));
+  const clampedY      = Math.max(2, bubbleTopY);
 
   // Shadow
-  ctx.fillStyle = 'rgba(0,0,0,0.07)';
-  ctx.fillRect(clampedX + 2, clampedY + 3, bw, bh);
-
+  ctx.fillStyle = 'rgba(0,0,0,0.4)';
+  ctx.fillRect(clampedX+2, clampedY+3, bw, bh);
   // Background
-  ctx.fillStyle = 'rgba(255,255,255,0.96)';
+  ctx.fillStyle = 'rgba(13,15,26,0.96)';
   ctx.fillRect(clampedX, clampedY, bw, bh);
-
   // Border
-  ctx.strokeStyle = 'rgba(0,0,0,0.09)';
+  ctx.strokeStyle = 'rgba(255,255,255,0.12)';
   ctx.lineWidth = 1;
-  ctx.strokeRect(clampedX + 0.5, clampedY + 0.5, bw - 1, bh - 1);
-
+  ctx.strokeRect(clampedX+0.5, clampedY+0.5, bw-1, bh-1);
   // Tail
   const tailCX = gx(cx);
-  ctx.fillStyle = 'rgba(255,255,255,0.96)';
+  ctx.fillStyle = 'rgba(13,15,26,0.96)';
   ctx.beginPath();
-  ctx.moveTo(Math.max(clampedX + 4, tailCX - 4), bubbleBottomY);
-  ctx.lineTo(Math.min(clampedX + bw - 4, tailCX + 4), bubbleBottomY);
-  ctx.lineTo(tailCX, bubbleBottomY + 6);
+  ctx.moveTo(Math.max(clampedX+4, tailCX-4), bubbleBottomY);
+  ctx.lineTo(Math.min(clampedX+bw-4, tailCX+4), bubbleBottomY);
+  ctx.lineTo(tailCX, bubbleBottomY+6);
   ctx.closePath(); ctx.fill();
-  ctx.strokeStyle = 'rgba(0,0,0,0.09)';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(Math.max(clampedX + 4, tailCX - 4), bubbleBottomY);
-  ctx.lineTo(tailCX, bubbleBottomY + 6);
-  ctx.lineTo(Math.min(clampedX + bw - 4, tailCX + 4), bubbleBottomY);
-  ctx.stroke();
-
   // Text
-  ctx.fillStyle = '#1d1d1f';
+  ctx.fillStyle = '#e8eaf6';
   ctx.font = `500 ${FONT_SIZE}px -apple-system, BlinkMacSystemFont, sans-serif`;
   ctx.textBaseline = 'top'; ctx.textAlign = 'left';
-  for (let i = 0; i < lines.length; i++) ctx.fillText(lines[i], clampedX + PAD_X, clampedY + PAD_Y + i * LINE_H);
+  for (let i=0; i<lines.length; i++) ctx.fillText(lines[i], clampedX+PAD_X, clampedY+PAD_Y+i*LINE_H);
 }
 
 function drawAgents() {
-  const sorted = [...agents].sort((a, b) => a.y - b.y);
+  const sorted = [...agents].sort((a,b) => a.y-b.y);
   for (const agent of sorted) {
     const cx = Math.round(agent.x), cy = Math.round(agent.y);
-    drawAgentSprite(cx, cy, agent.id, agent.walkFrame);
+    drawAgentSprite(cx, cy, agent.id);
     if (agent.bubble) drawBubble(cx, cy, agent.bubble.text);
   }
 }
 
 function draw() {
-  // Warm off-white canvas background
-  ctx.fillStyle = '#f6f2eb';
+  ctx.fillStyle = '#070a12';
   ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
-
   drawWalls();
   drawWallDetails();
   drawFloor();
@@ -1475,73 +1067,32 @@ function draw() {
   drawAgents();
 }
 
-// ============================================================
-// ACTIVITY LOG
-// ============================================================
-const activityLog = document.getElementById('activity-log');
-const MAX_LOG = 50;
-let logEntries = [];
-
-function padZero(n) { return String(n).padStart(2, '0'); }
-function getTimestamp() {
-  const now = new Date();
-  return `${padZero(now.getHours())}:${padZero(now.getMinutes())}:${padZero(now.getSeconds())}`;
-}
-function addLog(fromId, toId, text) {
-  const fromColor = AGENT_COLORS[fromId]?.primary || '#888';
-  const fromName  = AGENT_COLORS[fromId]?.name || fromId;
-  const toName    = toId ? AGENT_COLORS[toId]?.name || toId : null;
-  const entry = { fromId, fromColor, fromName, toId, toName, text, ts: getTimestamp() };
-  logEntries.unshift(entry);
-  if (logEntries.length > MAX_LOG) logEntries.pop();
-  renderLog();
-}
-function renderLog() {
-  activityLog.innerHTML = logEntries.map(e => `
-    <div class="log-entry">
-      <span class="log-ts">${e.ts}</span>
-      <div class="log-agent-line">
-        <span class="log-dot" style="background:${e.fromColor}"></span>
-        <span class="log-from" style="color:${e.fromColor}">${e.fromName}</span>
-        ${e.toName && e.toName !== e.fromName ? `<span class="log-arrow">→</span><span class="log-to">${e.toName}</span>` : ''}
-      </div>
-      <div class="log-text">"${escHtml(e.text)}"</div>
-    </div>
-  `).join('');
-}
-
-// ============================================================
-// HOVER TOOLTIP
-// ============================================================
+// ── HOVER TOOLTIP ─────────────────────────────────────────
 const agentTooltip = document.getElementById('agent-tooltip');
 canvas.addEventListener('mousemove', (e) => {
   const rect = canvas.getBoundingClientRect();
   const scaleX = CANVAS_W / rect.width, scaleY = CANVAS_H / rect.height;
-  const mx = (e.clientX - rect.left) * scaleX;
-  const my = (e.clientY - rect.top) * scaleY;
+  const mx = (e.clientX-rect.left)*scaleX, my = (e.clientY-rect.top)*scaleY;
   let hit = null;
   for (const agent of agents) {
-    const cxPx = gx(Math.round(agent.x));
-    const avatarCY = gy(Math.round(agent.y)) - 11 * 2;
-    if (mx >= cxPx - 14 && mx <= cxPx + 14 && my >= avatarCY - 14 && my <= avatarCY + 14) { hit = agent; break; }
+    const cxPx = gx(Math.round(agent.x)), avatarCY = gy(Math.round(agent.y))-11*2;
+    if (mx>=cxPx-14 && mx<=cxPx+14 && my>=avatarCY-14 && my<=avatarCY+14) { hit=agent; break; }
   }
   if (hit) {
     const col = AGENT_COLORS[hit.id];
     agentTooltip.textContent = col ? `${col.name} — ${col.role}` : hit.id;
     agentTooltip.style.display = 'block';
-    agentTooltip.style.left = (e.clientX + 14) + 'px';
-    agentTooltip.style.top  = (e.clientY - 10) + 'px';
+    agentTooltip.style.left = (e.clientX+14)+'px';
+    agentTooltip.style.top  = (e.clientY-10)+'px';
     canvas.style.cursor = 'pointer';
   } else {
     agentTooltip.style.display = 'none';
     canvas.style.cursor = 'default';
   }
 });
-canvas.addEventListener('mouseleave', () => { agentTooltip.style.display = 'none'; canvas.style.cursor = 'default'; });
+canvas.addEventListener('mouseleave', () => { agentTooltip.style.display='none'; canvas.style.cursor='default'; });
 
-// ============================================================
-// GAME LOOP
-// ============================================================
+// ── GAME LOOP ─────────────────────────────────────────────
 let lastFrameTime = 0;
 function gameLoop(timestamp) {
   const elapsed = timestamp - lastFrameTime;
@@ -1552,40 +1103,205 @@ function gameLoop(timestamp) {
   requestAnimationFrame(gameLoop);
 }
 
-// ============================================================
-// KICKOFF
-// ============================================================
-let kickoffVisible = false;
+// ── ACTIVITY LOG ──────────────────────────────────────────
+const MAX_LOG = 40;
+let logEntries = [];
 
-function toggleKickoff() {
-  kickoffVisible = !kickoffVisible;
-  document.getElementById('kickoff-panel').classList.toggle('visible', kickoffVisible);
-  if (kickoffVisible) setTimeout(() => document.getElementById('kickoff-input').focus(), 50);
+function addLog(fromId, toId, text) {
+  const fromColor = AGENT_COLORS[fromId]?.primary || '#888';
+  const fromName  = AGENT_COLORS[fromId]?.name || fromId;
+  const toName    = toId ? AGENT_COLORS[toId]?.name || toId : null;
+  logEntries.unshift({ fromId, fromColor, fromName, toId, toName, text, ts: getTimestamp() });
+  if (logEntries.length > MAX_LOG) logEntries.pop();
+  renderLog();
 }
 
+function renderLog() {
+  const strip = document.getElementById('activity-strip');
+  if (!strip) return;
+  const header = strip.querySelector('#activity-strip-header');
+  const entries = logEntries.map(e => `
+    <div class="log-entry">
+      <span class="log-ts">${e.ts}</span>
+      <div class="log-agent-line">
+        <span class="log-dot" style="background:${e.fromColor}"></span>
+        <span class="log-from" style="color:${e.fromColor}">${e.fromName}</span>
+        ${e.toName && e.toName!==e.fromName ? `<span class="log-arrow">→</span><span class="log-to">${e.toName}</span>` : ''}
+      </div>
+      <div class="log-text">"${escHtml(e.text)}"</div>
+    </div>
+  `).join('');
+  strip.innerHTML = '';
+  if (header) strip.appendChild(header);
+  else {
+    const h = document.createElement('div');
+    h.id = 'activity-strip-header';
+    h.textContent = 'Activity';
+    strip.appendChild(h);
+  }
+  strip.insertAdjacentHTML('beforeend', entries);
+}
+
+// ── NAVIGATION ────────────────────────────────────────────
+let currentScreen = null;
+
+function navigate(screen) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const el = document.getElementById(`screen-${screen}`);
+  if (el) el.classList.add('active');
+  currentScreen = screen;
+  updateHeader();
+  if (screen === 'projects') loadProjects();
+  if (screen === 'run')      loadTasks();
+  if (screen === 'output')   loadOutput();
+}
+
+function updateHeader() {
+  const label = document.getElementById('header-project-label');
+  const nav   = document.getElementById('header-right');
+  if (!currentScreen || currentScreen === 'projects') {
+    label.textContent = '';
+    nav.innerHTML = '';
+    return;
+  }
+  const proj = projectList.find(p => p.slug === currentProject);
+  label.textContent = proj ? ` / ${proj.name}` : '';
+  if (currentScreen === 'kickoff') {
+    nav.innerHTML = `<button class="h-btn" onclick="navigate('projects')">← Back</button>`;
+  } else if (currentScreen === 'run' || currentScreen === 'output') {
+    nav.innerHTML = `
+      <button class="h-btn accent" onclick="navigate('kickoff')">Kickoff</button>
+      <button class="h-btn ${currentScreen==='run'?'active':''}" onclick="navigate('run')">Workspace</button>
+      <button class="h-btn ${currentScreen==='output'?'active':''}" onclick="navigate('output')">Output</button>
+      <button class="h-btn" onclick="navigate('projects')">← Projects</button>`;
+  }
+}
+
+// ── PROJECTS SCREEN ───────────────────────────────────────
+let currentProject = 'neutral';
+let projectList    = [];
+
+const PROJECT_COLORS = [
+  '#8b5cf6','#3b82f6','#10b981','#f59e0b','#ef4444',
+  '#0ea5e9','#f97316','#14b8a6','#a855f7','#d97706',
+];
+function projectColor(slug) {
+  let h = 0;
+  for (let i=0; i<slug.length; i++) h = (h*31 + slug.charCodeAt(i)) & 0xffffffff;
+  return PROJECT_COLORS[Math.abs(h) % PROJECT_COLORS.length];
+}
+
+async function loadProjects() {
+  try {
+    const r = await fetch('/api/projects');
+    if (!r.ok) return;
+    projectList = await r.json();
+    if (currentScreen === 'projects') renderProjectsScreen();
+  } catch (e) {}
+}
+
+function renderProjectsScreen() {
+  const grid = document.getElementById('projects-grid');
+  let html = '';
+  if (projectList.length === 0) {
+    html = `<div style="grid-column:1/-1;padding:3rem 0;color:var(--tt);text-align:center;">
+      <div style="font-size:42px;margin-bottom:1rem;opacity:.4;">⚡</div>
+      <div style="font-size:15px;color:var(--ts);margin-bottom:6px;">No projects yet</div>
+      <div style="font-size:13px;">Create your first project to get started.</div>
+    </div>`;
+  } else {
+    html = projectList.map(p => {
+      const color = projectColor(p.slug);
+      return `<div class="project-card">
+        <div class="project-card-accent" style="background:${color};box-shadow:0 0 10px ${color}55;"></div>
+        <div class="project-card-name">${escHtml(p.name)}</div>
+        <div class="project-card-desc">${escHtml(p.description || 'No description.')}</div>
+        <div class="project-card-date">Created ${escHtml(p.created || '')}</div>
+        <div class="project-card-actions">
+          <button class="pc-btn" onclick="goToKickoff('${escHtml(p.slug)}')">Kickoff</button>
+          <button class="pc-btn primary" onclick="openProject('${escHtml(p.slug)}')">Open →</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+  html += `<div class="project-card-new" onclick="openNewProjectModal()">
+    <div class="project-card-new-icon">+</div>
+    <span>New Project</span>
+  </div>`;
+  grid.innerHTML = html;
+}
+
+function openProject(slug) {
+  currentProject = slug;
+  Object.keys(taskContentCache).forEach(k => delete taskContentCache[k]);
+  selectedOutputFile = null;
+  navigate('run');
+}
+
+function goToKickoff(slug) {
+  currentProject = slug;
+  navigate('kickoff');
+}
+
+// ── NEW PROJECT MODAL ─────────────────────────────────────
+function openNewProjectModal() {
+  document.getElementById('modal-name').value = '';
+  document.getElementById('modal-desc').value = '';
+  document.getElementById('modal-error').textContent = '';
+  document.getElementById('modal-overlay').classList.add('open');
+  setTimeout(() => document.getElementById('modal-name').focus(), 50);
+}
+function closeNewProjectModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+}
+function handleModalOverlayClick(e) {
+  if (e.target === document.getElementById('modal-overlay')) closeNewProjectModal();
+}
+async function handleCreateProject() {
+  const name = document.getElementById('modal-name').value.trim();
+  const desc = document.getElementById('modal-desc').value.trim();
+  const errEl = document.getElementById('modal-error');
+  errEl.textContent = '';
+  if (!name) { errEl.textContent = 'Name is required.'; return; }
+  try {
+    const r = await fetch('/api/projects', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, description: desc }),
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
+    closeNewProjectModal();
+    currentProject = data.slug;
+    await loadProjects();
+    navigate('kickoff');
+  } catch (e) {
+    document.getElementById('modal-error').textContent = `Error: ${e.message}`;
+  }
+}
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeNewProjectModal();
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && currentScreen === 'kickoff') handleKickoff();
+});
+
+// ── KICKOFF ───────────────────────────────────────────────
 async function handleKickoff() {
   const description = document.getElementById('kickoff-input').value.trim();
   const errEl  = document.getElementById('kickoff-error');
   const statEl = document.getElementById('kickoff-status');
   errEl.textContent = '';
-
   if (!description) { errEl.textContent = 'Describe what you want to build first.'; return; }
 
   const btn = document.getElementById('kickoff-btn');
   btn.disabled = true;
   document.getElementById('kickoff-result').style.display = 'none';
 
-  // Animate status while waiting
-  const dots = ['', '.', '..', '...'];
+  const dots = ['','.','..',  '...'];
   let dotIdx = 0;
-  const interval = setInterval(() => {
-    statEl.textContent = `Orchestrator is planning${dots[dotIdx++ % 4]}`;
-  }, 450);
+  const interval = setInterval(() => { statEl.textContent = `Orchestrator is planning${dots[dotIdx++%4]}`; }, 450);
 
   try {
     const r = await fetch(`/api/projects/${currentProject}/kickoff`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ description }),
     });
     const data = await r.json();
@@ -1604,12 +1320,12 @@ async function handleKickoff() {
 
 function showKickoffResult(tasks) {
   const list = document.getElementById('kickoff-task-list');
-  list.innerHTML = tasks.map((t, i) => {
-    const col = AGENT_COLORS[t.agent];
+  list.innerHTML = tasks.map((t,i) => {
+    const col   = AGENT_COLORS[t.agent];
     const color = col ? col.primary : '#888';
     const name  = col ? col.name   : t.agent;
-    return `<div class="kickoff-task-card" style="animation-delay:${i * 80}ms">
-      <div class="kickoff-task-num">${i + 1}</div>
+    return `<div class="kickoff-task-card" style="animation-delay:${i*70}ms">
+      <div class="kickoff-task-num">${i+1}</div>
       <div class="kickoff-task-body">
         <div class="kickoff-task-header">
           <span class="kickoff-task-title">${escHtml(t.title)}</span>
@@ -1620,17 +1336,7 @@ function showKickoffResult(tasks) {
     </div>`;
   }).join('');
   document.getElementById('kickoff-result').style.display = 'block';
-  // Log to activity
   addLog('orchestrator', null, `Plan ready: ${tasks.length} tasks created`);
-  // Refresh task manager if open
-  if (tasksVisible) loadTasks();
-}
-
-function openTaskManagerFromKickoff() {
-  kickoffVisible = false;
-  document.getElementById('kickoff-panel').classList.remove('visible');
-  if (!tasksVisible) toggleTasks();
-  else loadTasks();
 }
 
 function resetKickoff() {
@@ -1641,25 +1347,15 @@ function resetKickoff() {
   document.getElementById('kickoff-input').focus();
 }
 
-// Ctrl+Enter submits kickoff
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-    if (kickoffVisible) handleKickoff();
-  }
-});
+async function kickoffRunAll() {
+  navigate('run');
+  await loadTasks(); // wait for task data before running
+  await handleRunAll();
+}
 
-// ============================================================
-// OUTPUT PANEL
-// ============================================================
-let outputVisible = false;
+// ── OUTPUT ────────────────────────────────────────────────
 let outputFiles = [];
 let selectedOutputFile = null;
-
-function toggleOutput() {
-  outputVisible = !outputVisible;
-  document.getElementById('output-panel').classList.toggle('visible', outputVisible);
-  if (outputVisible) loadOutput();
-}
 
 async function loadOutput() {
   try {
@@ -1673,93 +1369,83 @@ async function loadOutput() {
   }
 }
 
-function formatBytes(n) {
-  if (n < 1024) return `${n}B`;
-  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)}KB`;
-  return `${(n / 1024 / 1024).toFixed(1)}MB`;
-}
-
 function renderOutputFileList() {
   const list = document.getElementById('output-file-list');
   if (outputFiles.length === 0) {
     list.innerHTML = '<div id="output-file-list-empty">No output files yet.</div>';
     return;
   }
-  list.innerHTML = outputFiles.map(f => {
-    const parts = f.path.split('.');
-    const ext = parts.length > 1 ? parts.pop() : '—';
-    const name = f.path.replace(/^\d{4}-\d{2}-\d{2}-/, '');
-    const selected = f.path === selectedOutputFile ? ' selected' : '';
-    return `<div class="output-file-item${selected}" onclick="viewOutputFile('${escHtml(f.path)}')">
-      <span class="output-ext-badge">${escHtml(ext)}</span>
-      <span class="output-file-name" title="${escHtml(f.path)}">${escHtml(name)}</span>
-      <span class="output-file-size">${formatBytes(f.size)}</span>
-    </div>`;
-  }).join('');
+  // Group by category (first dir component)
+  const groups = {};
+  for (const f of outputFiles) {
+    const parts = f.path.split('/');
+    const cat = parts.length > 1 ? parts[0] : 'other';
+    if (!groups[cat]) groups[cat] = [];
+    groups[cat].push(f);
+  }
+  let html = '';
+  for (const [cat, files] of Object.entries(groups)) {
+    html += `<div class="output-category-header">${escHtml(cat)}</div>`;
+    for (const f of files) {
+      const ext = f.path.includes('.') ? f.path.split('.').pop() : '—';
+      const basename = f.path.split('/').pop();
+      const name = basename.replace(/^\d{4}-\d{2}-\d{2}-/,'').replace(/\.\w+$/,'').replace(/-/g,' ');
+      const sel = f.path === selectedOutputFile ? ' selected' : '';
+      html += `<div class="output-file-item${sel}" onclick="viewOutputFile('${escHtml(f.path)}')">
+        <span class="output-ext-badge">${escHtml(ext)}</span>
+        <span class="output-file-name" title="${escHtml(f.path)}">${escHtml(name)}</span>
+        <span class="output-file-size">${formatBytes(f.size)}</span>
+      </div>`;
+    }
+  }
+  list.innerHTML = html;
 }
 
 async function viewOutputFile(path) {
   selectedOutputFile = path;
   renderOutputFileList();
   const viewer = document.getElementById('output-viewer');
-  viewer.innerHTML = '<div style="color:var(--text-tertiary);font-size:12px;">Loading...</div>';
+  viewer.innerHTML = '<div style="color:var(--tt);font-size:12px;">Loading…</div>';
   try {
     const r = await fetch(`/api/projects/${currentProject}/output/${encodeURIComponent(path)}`);
     if (!r.ok) throw new Error();
     const text = await r.text();
-    const ext = path.split('.').pop().toLowerCase();
+    const ext  = path.split('.').pop().toLowerCase();
     viewer.innerHTML = ext === 'md' ? renderMarkdown(text) : `<div class="output-code-raw">${escHtml(text)}</div>`;
   } catch (e) {
-    viewer.innerHTML = '<div style="color:var(--accent-red);font-size:12px;">Could not load file.</div>';
+    viewer.innerHTML = '<div style="color:var(--red);font-size:12px;">Could not load file.</div>';
   }
 }
 
 function renderMarkdown(raw) {
-  // Protect code blocks first
   const blocks = [];
-  let s = raw.replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) => {
-    blocks.push({ lang, code: code.replace(/\n$/, '') });
-    return `\x00BLK${blocks.length - 1}\x00`;
+  let s = raw.replace(/```(\w*)\n?([\s\S]*?)```/g, (_,lang,code) => {
+    blocks.push({ lang, code: code.replace(/\n$/,'') });
+    return `\x00BLK${blocks.length-1}\x00`;
   });
-
-  // HTML-escape everything outside code blocks
   s = s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-
-  // Headings
   s = s.replace(/^# (.+)$/gm,   '<h1>$1</h1>');
   s = s.replace(/^## (.+)$/gm,  '<h2>$1</h2>');
   s = s.replace(/^### (.+)$/gm, '<h3>$1</h3>');
-
-  // Bold / italic / inline code
   s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
   s = s.replace(/\*(.+?)\*/g,     '<em>$1</em>');
   s = s.replace(/`([^`]+)`/g,     '<code>$1</code>');
-
-  // Blockquotes
-  s = s.replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>');
-
-  // HR
+  s = s.replace(/^&gt; (.+)$/gm,  '<blockquote>$1</blockquote>');
   s = s.replace(/^---$/gm, '<hr>');
-
-  // Tables — detect rows starting with |
   s = s.replace(/((?:^\|.+\|\n?)+)/gm, tableBlock => {
     const rows = tableBlock.trim().split('\n');
     let html = '<table>';
-    rows.forEach((row, i) => {
-      const cells = row.replace(/^\||\|$/g, '').split('|').map(c => c.trim());
-      if (cells.every(c => /^[-: ]+$/.test(c))) return; // separator row
-      const tag = i === 0 ? 'th' : 'td';
-      html += '<tr>' + cells.map(c => `<${tag}>${c}</${tag}>`).join('') + '</tr>';
+    rows.forEach((row,i) => {
+      const cells = row.replace(/^\||\|$/g,'').split('|').map(c=>c.trim());
+      if (cells.every(c=>/^[-: ]+$/.test(c))) return;
+      const tag = i===0?'th':'td';
+      html += '<tr>'+cells.map(c=>`<${tag}>${c}</${tag}>`).join('')+'</tr>';
     });
-    return html + '</table>';
+    return html+'</table>';
   });
-
-  // Lists
   s = s.replace(/^[\-\*] (.+)$/gm, '<li>$1</li>');
   s = s.replace(/^\d+\. (.+)$/gm,  '<li>$1</li>');
-  s = s.replace(/(<li>[\s\S]*?<\/li>(?:\n|$))+/g, m => `<ul>${m}</ul>`);
-
-  // Paragraphs — wrap double-newline-separated blocks that aren't block elements
+  s = s.replace(/(<li>[\s\S]*?<\/li>(?:\n|$))+/g, m=>`<ul>${m}</ul>`);
   const blockTags = /^<(h[1-6]|ul|ol|li|table|blockquote|hr|pre)/;
   s = s.split(/\n\n+/).map(para => {
     para = para.trim();
@@ -1767,215 +1453,35 @@ function renderMarkdown(raw) {
     if (blockTags.test(para)) return para;
     return `<p>${para.replace(/\n/g,'<br>')}</p>`;
   }).join('\n');
-
-  // Restore code blocks
-  s = s.replace(/\x00BLK(\d+)\x00/g, (_, i) => {
+  s = s.replace(/\x00BLK(\d+)\x00/g, (_,i) => {
     const { code } = blocks[parseInt(i)];
     const safe = code.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     return `<pre><code>${safe}</code></pre>`;
   });
-
   return s;
 }
 
-// Reload output list when a task completes
 function refreshOutputAfterRun() {
-  if (outputVisible) loadOutput();
+  if (currentScreen === 'output') loadOutput();
 }
 
-// ============================================================
-// AGENTS PANEL
-// ============================================================
-let agentsVisible = false;
-function toggleAgents() {
-  agentsVisible = !agentsVisible;
-  document.getElementById('agents-panel').classList.toggle('visible', agentsVisible);
-  if (agentsVisible) renderAgentsPanel();
-}
-function renderAgentsPanel() {
-  document.getElementById('agents-grid').innerHTML = Object.entries(AGENT_COLORS).map(([id, col]) => `
-    <div class="agent-card">
-      <span class="agent-card-dot" style="background:${col.primary}"></span>
-      <div class="agent-card-info">
-        <div class="agent-card-name">${escHtml(col.name)}</div>
-        <div class="agent-card-role">${escHtml(col.role)}</div>
-      </div>
-    </div>
-  `).join('');
-}
+// ── TASK MANAGER ──────────────────────────────────────────
+let taskData = { backlog:[], active:[], completed:[], failed:[] };
+const taskContentCache = {};
 
-// ============================================================
-// TECHNICAL PANEL
-// ============================================================
-let techVisible = false;
-let canvasVisible = true;
-function toggleCanvas() {
-  canvasVisible = !canvasVisible;
-  document.getElementById('main').classList.toggle('collapsed', !canvasVisible);
-  document.getElementById('canvas-toggle-icon').classList.toggle('open', canvasVisible);
-  document.getElementById('canvas-toggle-label').textContent = canvasVisible ? 'Office Workspace — click to hide' : 'Office Workspace — click to show';
-}
-
-function toggleTech() {
-  techVisible = !techVisible;
-  document.getElementById('tech-panel').classList.toggle('visible', techVisible);
-  document.getElementById('toggle-arrow').classList.toggle('open', techVisible);
-}
-async function loadMemory() {
-  const errEl = document.getElementById('tech-error');
-  errEl.textContent = '';
+async function loadTasks() {
+  const errEl = document.getElementById('task-error');
+  if (errEl) errEl.textContent = '';
   try {
-    const resp = await fetch(`/api/projects/${currentProject}/memory`);
+    const resp = await fetch(`/api/projects/${currentProject}/tasks`);
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-    renderTechDashboard(await resp.json());
-  } catch (e) { errEl.textContent = `Could not load project memory: ${e.message}`; }
-}
-function renderTechDashboard(data) {
-  document.getElementById('tech-dashboard').classList.add('visible');
-  const ps = data.project_status || {};
-  document.getElementById('t-badge').textContent   = ps.phase || '—';
-  document.getElementById('t-phase').textContent   = ps.phase || '—';
-  document.getElementById('t-summary').textContent = ps.summary || '—';
-  document.getElementById('t-date').textContent    = ps.last_updated || '—';
-  const decisions = data.active_decisions || [];
-  const decisionsEl = document.getElementById('t-decisions');
-  decisionsEl.innerHTML = decisions.length === 0
-    ? '<span style="color:var(--text-tertiary);font-size:12px;">No active decisions.</span>'
-    : decisions.map(d => `<span class="tech-tag">${escHtml(d)}</span>`).join('');
-  document.getElementById('t-updates').innerHTML = (data.recent_updates || []).slice().reverse().map(u =>
-    `<li><span class="tech-date-col">${escHtml(u.date||'?')}</span><span class="tech-note-col">${escHtml(u.note||'')}</span></li>`
-  ).join('');
-  document.getElementById('t-agent-notes').innerHTML = Object.entries(data.agent_notes || {}).map(([agent, note]) =>
-    `<div class="tech-agent-row"><span class="tech-agent-name">${escHtml(agent)}</span><span class="tech-agent-note">${escHtml(note)}</span></div>`
-  ).join('');
-}
-function escHtml(str) {
-  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
-// ============================================================
-// PROJECT SWITCHER
-// ============================================================
-let currentProject = 'neutral';
-let projectList = [];
-
-const PROJECT_COLORS = [
-  '#8b5cf6','#3b82f6','#10b981','#f59e0b','#ef4444',
-  '#0ea5e9','#f97316','#14b8a6','#a855f7','#d97706',
-];
-function projectColor(slug) {
-  let h = 0;
-  for (let i = 0; i < slug.length; i++) h = (h * 31 + slug.charCodeAt(i)) & 0xffffffff;
-  return PROJECT_COLORS[Math.abs(h) % PROJECT_COLORS.length];
-}
-
-async function loadProjects() {
-  try {
-    const r = await fetch('/api/projects');
-    if (!r.ok) return;
-    projectList = await r.json();
-    renderProjectMenu();
-    updateProjectButton();
-  } catch (e) {}
-}
-
-function renderProjectMenu() {
-  const list = document.getElementById('project-menu-list');
-  list.innerHTML = projectList.map(p => `
-    <div class="project-menu-item ${p.slug === currentProject ? 'active' : ''}"
-         onclick="switchProject('${escHtml(p.slug)}')">
-      <span class="project-menu-dot" style="background:${projectColor(p.slug)}"></span>
-      ${escHtml(p.name)}
-    </div>
-  `).join('');
-}
-
-function updateProjectButton() {
-  const proj = projectList.find(p => p.slug === currentProject);
-  document.getElementById('project-btn-label').textContent = proj ? proj.name : currentProject;
-  document.getElementById('project-btn-dot').style.background = projectColor(currentProject);
-}
-
-function toggleProjectMenu(e) {
-  e.stopPropagation();
-  document.getElementById('project-menu').classList.toggle('open');
-}
-
-document.addEventListener('click', () => {
-  document.getElementById('project-menu').classList.remove('open');
-});
-
-function switchProject(slug) {
-  currentProject = slug;
-  // Clear task cache when switching projects
-  Object.keys(taskContentCache).forEach(k => delete taskContentCache[k]);
-  document.getElementById('project-menu').classList.remove('open');
-  selectedOutputFile = null;
-  updateProjectButton();
-  renderProjectMenu();
-  if (tasksVisible) loadTasks();
-  if (outputVisible) loadOutput();
-}
-
-function openNewProjectModal() {
-  document.getElementById('project-menu').classList.remove('open');
-  document.getElementById('modal-name').value = '';
-  document.getElementById('modal-desc').value = '';
-  document.getElementById('modal-error').textContent = '';
-  document.getElementById('modal-overlay').classList.add('open');
-  setTimeout(() => document.getElementById('modal-name').focus(), 50);
-}
-
-function closeNewProjectModal() {
-  document.getElementById('modal-overlay').classList.remove('open');
-}
-
-function handleModalOverlayClick(e) {
-  if (e.target === document.getElementById('modal-overlay')) closeNewProjectModal();
-}
-
-async function handleCreateProject() {
-  const name = document.getElementById('modal-name').value.trim();
-  const desc = document.getElementById('modal-desc').value.trim();
-  const errEl = document.getElementById('modal-error');
-  errEl.textContent = '';
-  if (!name) { errEl.textContent = 'Name is required.'; return; }
-  try {
-    const r = await fetch('/api/projects', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, description: desc }),
-    });
-    const data = await r.json();
-    if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
-    closeNewProjectModal();
-    await loadProjects();
-    switchProject(data.slug);
+    taskData = await resp.json();
+    await renderTaskManager();
   } catch (e) {
-    errEl.textContent = `Error: ${e.message}`;
+    if (errEl) errEl.textContent = 'Start server.py to enable task management.';
   }
 }
 
-// Enter key in modal name field
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') closeNewProjectModal();
-});
-
-// ============================================================
-// TASK MANAGER
-// ============================================================
-let taskData = { backlog: [], active: [], completed: [], failed: [] };
-let tasksVisible = false;
-function toggleTasks() {
-  tasksVisible = !tasksVisible;
-  document.getElementById('task-panel').classList.toggle('visible', tasksVisible);
-  if (tasksVisible) loadTasks();
-}
-function taskLabel(filename) {
-  let name = filename.replace(/^\d{4}-\d{2}-\d{2}-/, '').replace(/\.md$/, '').replace(/-/g, ' ');
-  return name.charAt(0).toUpperCase() + name.slice(1);
-}
-const taskContentCache = {};
 async function fetchTaskContent(filename) {
   if (taskContentCache[filename]) return taskContentCache[filename];
   try {
@@ -1985,74 +1491,141 @@ async function fetchTaskContent(filename) {
     taskContentCache[filename] = text; return text;
   } catch (e) { return null; }
 }
+
 function parseAgentFromContent(content) {
   if (!content) return null;
   const match = content.match(/^\*\*Agent:\*\*\s*(.+)$/m);
   return match ? match[1].trim() : null;
 }
-async function loadTasks() {
-  const errEl = document.getElementById('task-error');
-  errEl.textContent = '';
-  try {
-    const resp = await fetch(`/api/projects/${currentProject}/tasks`);
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-    taskData = await resp.json();
-    await renderTaskManager();
-  } catch (e) { errEl.textContent = 'Start server.py to enable task management.'; }
+
+function parseDependsOnContent(content) {
+  if (!content) return null;
+  const m = content.match(/^\*\*depends_on:\*\*\s*(.+)$/m);
+  if (!m) return null;
+  const val = m[1].trim();
+  return (val && val.toLowerCase() !== 'none') ? val : null;
 }
-async function createTask(title, agent, description) {
-  const resp = await fetch(`/api/projects/${currentProject}/tasks`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ title, agent, description }),
-  });
-  if (!resp.ok) { const data = await resp.json().catch(() => ({})); throw new Error(data.error || `HTTP ${resp.status}`); }
-  return resp.json();
+
+async function renderTaskManager() {
+  const runAllBtn = document.getElementById('run-all-btn');
+  const hasRunnable = (taskData.active||[]).length > 0 || (taskData.backlog||[]).length > 0;
+  if (runAllBtn) runAllBtn.classList.toggle('visible', hasRunnable);
+
+  const allFiles = [
+    ...taskData.backlog.slice(0,30), ...taskData.active.slice(0,30),
+    ...taskData.completed.slice(0,20), ...taskData.failed.slice(0,20),
+  ];
+  await Promise.all(allFiles.map(f => fetchTaskContent(f)));
+
+  function isBlocked(filename, bucket) {
+    if (bucket !== 'backlog') return false;
+    const dep = parseDependsOnContent(taskContentCache[filename]);
+    if (!dep) return false;
+    return !(taskData.completed||[]).includes(dep);
+  }
+
+  function renderCard(filename, bucket) {
+    const label     = taskLabel(filename);
+    const content   = taskContentCache[filename];
+    const agent     = parseAgentFromContent(content) || 'orchestrator';
+    const agentInfo = AGENT_COLORS[agent];
+    const agentLabel= agentInfo ? agentInfo.name : agent;
+    const agentColor= agentInfo ? agentInfo.primary : '#888';
+    const dep       = parseDependsOnContent(content);
+    const blocked   = isBlocked(filename, bucket);
+    const depBadge  = dep ? `<div class="task-depends-badge">⏳ after: ${escHtml(taskLabel(dep))}</div>` : '';
+    const delBtn    = `<button class="task-delete-btn" onclick="handleDeleteTask('${escHtml(filename)}')" title="Delete">&#215;</button>`;
+
+    const failReason = bucket === 'failed' ? (() => {
+      if (!content) return '';
+      const m = content.match(/## Failure Reason\s*\n+(.+)/);
+      return m ? `<div class="task-fail-reason" title="${escHtml(m[1].trim())}">✗ ${escHtml(m[1].trim())}</div>` : '';
+    })() : '';
+
+    let actions = '';
+    if (bucket === 'backlog') {
+      actions = blocked
+        ? `<div class="task-card-actions"><span style="font-size:10px;color:var(--tt);">blocked</span>${delBtn}</div>`
+        : `<div class="task-card-actions">${delBtn}</div>`;
+    } else if (bucket === 'active') {
+      actions = `<div class="task-card-actions">${delBtn}</div>`;
+    } else if (bucket === 'completed') {
+      actions = `<div class="task-card-actions">${delBtn}</div>`;
+    } else if (bucket === 'failed') {
+      actions = `<div class="task-card-actions">
+        <button class="tbtn retry-t" onclick="handleRetry('${escHtml(filename)}','${escHtml(agent)}')">↺ Retry</button>
+        ${delBtn}
+      </div>`;
+    }
+
+    const cardClass = blocked ? 'task-card blocked' : bucket==='failed' ? 'task-card failed' : 'task-card';
+    return `<div class="${cardClass}" title="${escHtml(filename)}" data-filename="${escHtml(filename)}">
+      <div class="task-card-name">${escHtml(label)}</div>
+      <div class="task-card-agent"><span class="task-agent-dot" style="background:${agentColor}"></span><span style="color:${agentColor}">${escHtml(agentLabel)}</span></div>
+      ${depBadge}${failReason}${actions}
+    </div>`;
+  }
+
+  for (const bucket of ['backlog','active','completed','failed']) {
+    const el = document.getElementById(`task-col-${bucket}`);
+    if (!el) continue;
+    const files = taskData[bucket] || [];
+    el.innerHTML = files.length === 0
+      ? `<div class="task-col-empty">empty</div>`
+      : [...files].reverse().map(f => renderCard(f, bucket)).join('');
+  }
 }
-async function assignTask(filename, agent) {
-  const resp = await fetch(`/api/projects/${currentProject}/tasks/assign`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ filename, agent }),
-  });
-  if (!resp.ok) { const data = await resp.json().catch(() => ({})); throw new Error(data.error || `HTTP ${resp.status}`); }
-  delete taskContentCache[filename]; return resp.json();
-}
-async function doneTask(filename) {
-  const resp = await fetch(`/api/projects/${currentProject}/tasks/done`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ filename }),
-  });
-  if (!resp.ok) { const data = await resp.json().catch(() => ({})); throw new Error(data.error || `HTTP ${resp.status}`); }
-  delete taskContentCache[filename]; return resp.json();
-}
+
 async function handleCreateTask() {
   const errEl = document.getElementById('task-form-error');
-  errEl.textContent = '';
+  if (errEl) errEl.textContent = '';
   const title = document.getElementById('tf-title').value.trim();
-  if (!title) { errEl.textContent = 'Title is required.'; return; }
+  if (!title) { if (errEl) errEl.textContent = 'Title is required.'; return; }
   try {
-    await createTask(title, 'orchestrator', '');
+    await fetch(`/api/projects/${currentProject}/tasks`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, agent: 'orchestrator', description: '' }),
+    });
     document.getElementById('tf-title').value = '';
     await loadTasks();
-  } catch (e) { errEl.textContent = `Error: ${e.message}`; }
+  } catch (e) { if (errEl) errEl.textContent = `Error: ${e.message}`; }
 }
-async function handleAssign(filename, selectEl) {
-  try { await assignTask(filename, selectEl.value); await loadTasks(); }
-  catch (e) { document.getElementById('task-error').textContent = `Assign failed: ${e.message}`; }
-}
-async function handleActivate(filename) {
-  try {
-    const content = await fetchTaskContent(filename);
-    const agent = parseAgentFromContent(content) || 'orchestrator';
-    await assignTask(filename, agent);
-    await loadTasks();
-  } catch (e) { document.getElementById('task-error').textContent = `Activate failed: ${e.message}`; }
+
+async function handleRunTask(filename, agent) {
+  // If still in backlog, activate it first, then run
+  if ((taskData.backlog || []).includes(filename)) {
+    try {
+      await fetch(`/api/projects/${currentProject}/tasks/assign`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename, agent }),
+      });
+      delete taskContentCache[filename];
+    } catch (e) {
+      document.getElementById('task-error').textContent = `Run failed: ${e.message}`; return;
+    }
+  }
+  await runTask(filename, agent);
 }
 
 async function handleRunAll() {
   const btn = document.getElementById('run-all-btn');
-  btn.disabled = true;
-  btn.textContent = 'Starting...';
+  if (btn) { btn.disabled = true; btn.textContent = 'Starting…'; }
   try {
+    // Activate all non-blocked backlog tasks first
+    const nonBlocked = (taskData.backlog || []).filter(f => {
+      const dep = parseDependsOnContent(taskContentCache[f]);
+      if (!dep) return true;
+      return (taskData.completed || []).includes(dep);
+    });
+    for (const f of nonBlocked) {
+      const content = await fetchTaskContent(f);
+      const agent   = parseAgentFromContent(content) || 'orchestrator';
+      await fetch(`/api/projects/${currentProject}/tasks/assign`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename: f, agent }),
+      });
+      delete taskContentCache[f];
+    }
     const r = await fetch(`/api/projects/${currentProject}/run/all`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}',
     });
@@ -2070,12 +1643,12 @@ async function handleRunAll() {
       }
       _startPolling(agent, filename);
     });
-    btn.textContent = `▶ ${started.length} running`;
-    setTimeout(() => { btn.disabled = false; btn.textContent = '▶ Run All Active'; }, 3000);
+    if (btn) { btn.textContent = `▶ ${started.length} running`; }
+    setTimeout(() => { if (btn) { btn.disabled=false; btn.textContent='▶ Run All'; } }, 3000);
   } catch (e) {
-    btn.disabled = false;
-    btn.textContent = '▶ Run All Active';
-    document.getElementById('task-error').textContent = `Run all failed: ${e.message}`;
+    if (btn) { btn.disabled=false; btn.textContent='▶ Run All'; }
+    const errEl = document.getElementById('task-error');
+    if (errEl) errEl.textContent = `Run all failed: ${e.message}`;
   }
 }
 
@@ -2085,7 +1658,7 @@ async function handleDeleteTask(filename) {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ filename }),
     });
-    if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error(d.error || `HTTP ${r.status}`); }
+    if (!r.ok) { const d = await r.json().catch(()=>({})); throw new Error(d.error || `HTTP ${r.status}`); }
     delete taskContentCache[filename];
     await loadTasks();
   } catch (e) { document.getElementById('task-error').textContent = `Delete failed: ${e.message}`; }
@@ -2101,111 +1674,30 @@ async function handleRetry(filename, agent) {
     await loadTasks();
   } catch (e) { document.getElementById('task-error').textContent = `Retry failed: ${e.message}`; }
 }
+
 async function handleDone(filename) {
   try {
-    const result = await doneTask(filename);
+    const resp = await fetch(`/api/projects/${currentProject}/tasks/done`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filename }),
+    });
+    if (!resp.ok) { const d = await resp.json().catch(()=>({})); throw new Error(d.error || `HTTP ${resp.status}`); }
+    delete taskContentCache[filename];
+    const result = await resp.json().catch(() => ({}));
     await loadTasks();
-    // Flash any tasks that were just unlocked by this completion
     const activated = result.activated || [];
     if (activated.length > 0) {
       activated.forEach(f => {
         const card = document.querySelector(`[data-filename="${CSS.escape(f)}"]`);
         if (card) card.classList.add('unlocked');
       });
-      addLog('orchestrator', null, `Handoff: unlocked ${activated.map(f => taskLabel(f)).join(', ')}`);
+      addLog('orchestrator', null, `Handoff: unlocked ${activated.map(f=>taskLabel(f)).join(', ')}`);
     }
   } catch (e) { document.getElementById('task-error').textContent = `Done failed: ${e.message}`; }
 }
-function agentDotHtml(agentId) {
-  const color = AGENT_COLORS[agentId]?.primary || '#888';
-  return `<span class="task-agent-dot" style="background:${color}"></span>`;
-}
-function agentSelectHtml(forAssign, filename) {
-  const id = `assign-sel-${filename.replace(/\./g, '-')}`;
-  const options = Object.entries(AGENT_COLORS).map(([k, v]) => `<option value="${k}">${v.name}</option>`).join('');
-  return `<select class="task-select" id="${escHtml(id)}" style="font-size:11px;padding:3px 6px;">${options}</select>
-    <button class="task-btn-assign" onclick="handleAssign('${escHtml(filename)}', document.getElementById('${escHtml(id)}'))">Assign</button>`;
-}
-async function renderTaskManager() {
-  const runAllBtn = document.getElementById('run-all-btn');
-  runAllBtn.classList.toggle('visible', (taskData.active || []).length > 0);
-  const allFiles = [...taskData.backlog.slice(0,30), ...taskData.active.slice(0,30), ...taskData.completed.slice(0,20), ...taskData.failed.slice(0,20)];
-  await Promise.all(allFiles.map(f => fetchTaskContent(f)));
-  function parseDependsOn(content) {
-    if (!content) return null;
-    const m = content.match(/^\*\*depends_on:\*\*\s*(.+)$/m);
-    if (!m) return null;
-    const val = m[1].trim();
-    return (val && val.toLowerCase() !== 'none') ? val : null;
-  }
-  function isBlocked(filename, bucket) {
-    if (bucket !== 'backlog') return false;
-    const content = taskContentCache[filename];
-    const dep = parseDependsOn(content);
-    if (!dep) return false;
-    // Blocked if the dependency is not in completed
-    return !(taskData.completed || []).includes(dep);
-  }
-  function renderCard(filename, bucket) {
-    const label = taskLabel(filename);
-    const content = taskContentCache[filename];
-    const agent = parseAgentFromContent(content) || 'orchestrator';
-    const agentInfo = AGENT_COLORS[agent];
-    const agentLabel = agentInfo ? agentInfo.name : agent;
-    const agentColor = agentInfo ? agentInfo.primary : '#888';
-    const deleteBtn = `<button class="task-delete-btn" onclick="handleDeleteTask('${escHtml(filename)}')" title="Delete task">&#215;</button>`;
-    const dep = parseDependsOn(content);
-    const blocked = isBlocked(filename, bucket);
-    const depBadge = dep ? `<div class="task-depends-badge">⏳ after: ${escHtml(taskLabel(dep))}</div>` : '';
-    let actionsHtml = '';
-    if (bucket === 'backlog') {
-      actionsHtml = blocked
-        ? `<div class="task-card-actions"><span style="font-size:11px;color:var(--text-tertiary);">blocked</span>${deleteBtn}</div>`
-        : `<div class="task-card-actions">
-            <button class="task-btn-assign" onclick="handleActivate('${escHtml(filename)}')">&#8594; Activate</button>
-            ${deleteBtn}
-          </div>`;
-    } else if (bucket === 'active') {
-      actionsHtml = `<div class="task-card-actions">
-        <button class="task-btn-done" onclick="handleDone('${escHtml(filename)}')">&#10003; Done</button>
-        <button class="run-btn" onclick="runTask('${escHtml(filename)}', '${escHtml(agent)}')">&#9654; Run</button>
-        ${deleteBtn}
-      </div>`;
-    } else if (bucket === 'completed') {
-      actionsHtml = `<div class="task-card-actions">${deleteBtn}</div>`;
-    } else if (bucket === 'failed') {
-      actionsHtml = `<div class="task-card-actions">
-        <button class="task-btn-assign" onclick="handleRetry('${escHtml(filename)}', '${escHtml(agent)}')">↺ Retry</button>
-        ${deleteBtn}
-      </div>`;
-    }
-    const failReason = bucket === 'failed' ? (() => {
-      if (!content) return '';
-      const m = content.match(/## Failure Reason\s*\n+(.+)/);
-      return m ? `<div class="task-fail-reason" title="${escHtml(m[1].trim())}">✗ ${escHtml(m[1].trim())}</div>` : '';
-    })() : '';
-    const cardClass = blocked ? 'task-card blocked' : bucket === 'failed' ? 'task-card failed' : 'task-card';
-    return `<div class="${cardClass}" title="${escHtml(filename)}" data-filename="${escHtml(filename)}">
-      <div class="task-card-name">${escHtml(label)}</div>
-      <div class="task-card-agent">${agentDotHtml(agent)}<span style="color:${agentColor}">${escHtml(agentLabel)}</span></div>
-      ${depBadge}${failReason}
-      ${actionsHtml}
-    </div>`;
-  }
-  for (const bucket of ['backlog', 'active', 'completed', 'failed']) {
-    const el = document.getElementById(`task-col-${bucket}`);
-    const files = taskData[bucket] || [];
-    el.innerHTML = files.length === 0
-      ? `<div class="task-col-empty">empty</div>`
-      : [...files].reverse().map(f => renderCard(f, bucket)).join('');
-  }
-}
 
-// ============================================================
-// RUNNING AGENTS
-// ============================================================
+// ── RUNNING AGENTS ────────────────────────────────────────
 let runningAgents = new Set();
-// Per-agent poll intervals: { agent -> intervalId }
 const _agentPolls = {};
 
 function pollRunStatus() {
@@ -2214,7 +1706,7 @@ function pollRunStatus() {
       const r = await fetch(`/api/projects/${currentProject}/run/status`);
       if (!r.ok) return;
       const d = await r.json();
-      runningAgents = new Set((d.running || []).map(fname => {
+      runningAgents = new Set((d.running||[]).map(fname => {
         const content = taskContentCache[fname];
         return parseAgentFromContent(content) || null;
       }).filter(Boolean));
@@ -2222,18 +1714,16 @@ function pollRunStatus() {
   }, 3000);
 }
 
-// ---- Work windows ----
 function _openWorkWindow(agent, filename) {
   const winId = `ww-${agent}`;
   let win = document.getElementById(winId);
   if (win) {
-    // reuse — reset content
     win.querySelector('.work-window-output').innerHTML = '';
-    win.querySelector('.work-window-status').textContent = 'Starting...';
+    win.querySelector('.work-window-status').textContent = 'Starting…';
     win.querySelector('.work-window-status').style.color = '';
     win.className = 'work-window running';
     win.querySelector('.work-window-title').textContent =
-      `${agent.charAt(0).toUpperCase() + agent.slice(1)} — ${taskLabel(filename)}`;
+      `${agent.charAt(0).toUpperCase()+agent.slice(1)} — ${taskLabel(filename)}`;
     return win;
   }
   const color = AGENT_COLORS[agent]?.primary || '#888';
@@ -2243,13 +1733,12 @@ function _openWorkWindow(agent, filename) {
   win.innerHTML = `
     <div class="work-window-header">
       <span class="work-window-accent" style="background:${color}"></span>
-      <span class="work-window-title">${agent.charAt(0).toUpperCase() + agent.slice(1)} — ${taskLabel(filename)}</span>
-      <button class="work-window-close" onclick="closeWorkWindow('${agent}')">&#10005;</button>
+      <span class="work-window-title">${agent.charAt(0).toUpperCase()+agent.slice(1)} — ${taskLabel(filename)}</span>
+      <button class="work-window-close" onclick="closeWorkWindow('${agent}')">✕</button>
     </div>
     <div class="work-window-output" id="${winId}-output"></div>
-    <div class="work-window-status" id="${winId}-status">Starting...</div>`;
+    <div class="work-window-status" id="${winId}-status">Starting…</div>`;
   document.getElementById('work-windows').appendChild(win);
-  win.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   return win;
 }
 
@@ -2264,9 +1753,9 @@ function closeWorkWindow(agent) {
 function _appendLine(outputEl, line) {
   const div = document.createElement('div');
   div.textContent = line;
-  if (line.startsWith('✓') || line.includes('completed') || line.includes('Done')) div.style.color = '#1a7a38';
-  else if (line.startsWith('Error') || line.startsWith('✗')) div.style.color = 'var(--accent-red)';
-  else if (line.startsWith('>') || line.startsWith('$')) div.style.color = 'var(--accent)';
+  if (line.startsWith('✓') || line.includes('completed') || line.includes('Done')) div.style.color = '#10b981';
+  else if (line.startsWith('Error') || line.startsWith('✗')) div.style.color = 'var(--red)';
+  else if (line.startsWith('>') || line.startsWith('$')) div.style.color = 'var(--blue)';
   outputEl.appendChild(div);
   outputEl.scrollTop = outputEl.scrollHeight;
 }
@@ -2284,17 +1773,16 @@ function _startPolling(agent, filename) {
       d.lines.slice(linesShown).forEach(line => _appendLine(outputEl, line));
       linesShown = d.lines.length;
       if (d.done) {
-        clearInterval(_agentPolls[agent]);
-        delete _agentPolls[agent];
+        clearInterval(_agentPolls[agent]); delete _agentPolls[agent];
         statusEl.textContent = '✓ Done';
-        statusEl.style.color = '#1a7a38';
+        statusEl.style.color = '#10b981';
         const win = document.getElementById(`ww-${agent}`);
         if (win) win.className = 'work-window done';
         runningAgents.delete(agent);
         addLog(agent, null, `Completed: ${taskLabel(filename)}`);
         const ca = agents.find(a => a.id === agent);
-        if (ca) { ca.state = 'idle'; ca.stateTimer = randi(20, 40); ca.bubble = { text: 'Done!', timer: 120 }; }
-        setTimeout(() => { loadTasks().then(renderTaskManager); refreshOutputAfterRun(); }, 1500);
+        if (ca) { ca.state='idle'; ca.stateTimer=randi(20,40); ca.bubble={ text:'Done!', timer:120 }; }
+        setTimeout(() => { loadTasks(); refreshOutputAfterRun(); }, 1500);
       } else {
         statusEl.textContent = `Running… (${linesShown} lines)`;
       }
@@ -2303,6 +1791,7 @@ function _startPolling(agent, filename) {
 }
 
 async function runTask(filename, agent) {
+  navigate('run');
   _openWorkWindow(agent, filename);
   try {
     const res = await fetch(`/api/projects/${currentProject}/run`, {
@@ -2324,16 +1813,14 @@ async function runTask(filename, agent) {
     const outputEl = document.getElementById(`ww-${agent}-output`);
     const statusEl = document.getElementById(`ww-${agent}-status`);
     if (outputEl) outputEl.textContent = `Error: ${e.message}\n\nMake sure server.py is running.`;
-    if (statusEl) { statusEl.textContent = 'Failed'; statusEl.style.color = 'var(--accent-red)'; }
+    if (statusEl) { statusEl.textContent='Failed'; statusEl.style.color='var(--red)'; }
     const win = document.getElementById(`ww-${agent}`);
     if (win) win.className = 'work-window';
   }
 }
 
-// ============================================================
-// AUTO-LOAD + START
-// ============================================================
-loadProjects();
+// ── INIT ──────────────────────────────────────────────────
+navigate('projects');
 pollRunStatus();
 requestAnimationFrame(gameLoop);
 </script>

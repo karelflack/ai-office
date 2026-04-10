@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AI Office — Sign In</title>
+  <title>Pathless</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      background-color: #f2f0ec;
-      background-image: radial-gradient(circle, rgba(0,0,0,0.05) 1px, transparent 1px);
-      background-size: 24px 24px;
+      background: #07080f;
+      background-image: radial-gradient(circle, rgba(14,165,233,0.07) 1px, transparent 1px);
+      background-size: 28px 28px;
       font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
       min-height: 100vh;
       display: flex;
@@ -20,40 +20,43 @@
     }
 
     #login-card {
-      background: rgba(255,255,255,0.78);
-      backdrop-filter: blur(28px) saturate(180%);
-      -webkit-backdrop-filter: blur(28px) saturate(180%);
-      border: 1px solid rgba(0,0,0,0.08);
-      border-radius: 20px;
+      background: rgba(13,15,26,0.95);
+      border: 1px solid rgba(255,255,255,0.09);
+      border-radius: 18px;
       padding: 2.5rem 2.25rem 2rem;
       width: 340px;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.1), 0 2px 6px rgba(0,0,0,0.06);
+      box-shadow: 0 8px 48px rgba(0,0,0,0.55), 0 0 0 1px rgba(14,165,233,0.07), inset 0 1px 0 rgba(255,255,255,0.04);
     }
 
     .card-logo {
       display: flex;
       align-items: center;
-      gap: 9px;
+      gap: 10px;
       margin-bottom: 1.75rem;
     }
-    .logo-dot {
+    .logo-glow {
       width: 9px; height: 9px;
       border-radius: 50%;
-      background: #30d158;
-      box-shadow: 0 0 0 3px rgba(48,209,88,0.18);
+      background: #22d3ee;
+      box-shadow: 0 0 8px #22d3ee, 0 0 24px rgba(34,211,238,0.4);
+      animation: glowPulse 2.5s ease-in-out infinite;
     }
-    .logo-text {
-      font-size: 17px;
-      font-weight: 600;
-      color: #1d1d1f;
-      letter-spacing: -0.3px;
+    @keyframes glowPulse {
+      0%, 100% { box-shadow: 0 0 8px #22d3ee, 0 0 24px rgba(34,211,238,0.35); }
+      50%       { box-shadow: 0 0 12px #22d3ee, 0 0 36px rgba(34,211,238,0.55); }
+    }
+    .logo-img {
+      height: 32px;
+      width: auto;
+      display: block;
+      filter: brightness(1.05);
     }
 
     .card-sub {
       font-size: 13px;
-      color: #6e6e73;
+      color: #7b7f9e;
       margin-bottom: 1.75rem;
-      line-height: 1.45;
+      line-height: 1.5;
     }
 
     .field {
@@ -63,99 +66,94 @@
       margin-bottom: 0.875rem;
     }
     .field label {
-      font-size: 12px;
-      font-weight: 500;
-      color: #6e6e73;
-      letter-spacing: 0.1px;
+      font-size: 11px;
+      font-weight: 600;
+      color: #5c6080;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
     }
     .field input {
-      background: rgba(255,255,255,0.9);
-      border: 1px solid rgba(0,0,0,0.12);
-      border-radius: 10px;
-      color: #1d1d1f;
+      background: #0d0f1a;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 8px;
+      color: #e8eaf6;
       font-family: inherit;
-      font-size: 15px;
+      font-size: 14px;
       padding: 10px 14px;
       width: 100%;
       transition: border-color 0.15s, box-shadow 0.15s;
     }
     .field input:focus {
       outline: none;
-      border-color: #0071e3;
-      box-shadow: 0 0 0 3px rgba(0,113,227,0.18);
+      border-color: #0ea5e9;
+      box-shadow: 0 0 0 3px rgba(14,165,233,0.15);
     }
-    .field input::placeholder { color: #aeaeb2; }
+    .field input::placeholder { color: #3a3d58; }
 
     #error-msg {
       display: none;
       font-size: 12px;
-      color: #ff453a;
+      color: #f43f5e;
       margin-bottom: 0.75rem;
       padding: 8px 12px;
-      background: rgba(255,69,58,0.08);
-      border: 1px solid rgba(255,69,58,0.18);
-      border-radius: 8px;
+      background: rgba(244,63,94,0.08);
+      border: 1px solid rgba(244,63,94,0.2);
+      border-radius: 7px;
     }
     #error-msg.visible { display: block; }
 
     #login-btn {
-      background: #0071e3;
+      background: linear-gradient(135deg, #0ea5e9, #22d3ee);
       border: none;
-      border-radius: 10px;
+      border-radius: 9px;
       color: #fff;
       font-family: inherit;
-      font-size: 15px;
-      font-weight: 500;
+      font-size: 14px;
+      font-weight: 600;
       padding: 11px 14px;
       cursor: pointer;
       width: 100%;
       margin-top: 0.25rem;
       transition: opacity 0.15s, transform 0.1s;
+      box-shadow: 0 0 24px rgba(14,165,233,0.35);
     }
-    #login-btn:hover { opacity: 0.88; }
+    #login-btn:hover { opacity: 0.9; }
     #login-btn:active { transform: scale(0.98); }
   </style>
 </head>
 <body>
-
   <div id="login-card">
     <div class="card-logo">
-      <div class="logo-dot"></div>
-      <span class="logo-text">AI Office</span>
+      <img class="logo-img" src="/dashboard/logo.png" alt="Pathless AI" />
     </div>
-    <p class="card-sub">Sign in to access the agent dashboard.</p>
-
+    <p class="card-sub">Sign in to access the agent workspace.</p>
     <form id="login-form" novalidate>
       <div class="field">
         <label for="username">Username</label>
-        <input id="username" type="text" autocomplete="username"
-               placeholder="Username" spellcheck="false" autofocus />
+        <input id="username" type="text" autocomplete="username" placeholder="Username" spellcheck="false" autofocus />
       </div>
       <div class="field">
         <label for="password">Password</label>
-        <input id="password" type="password" autocomplete="current-password"
-               placeholder="Password" />
+        <input id="password" type="password" autocomplete="current-password" placeholder="Password" />
       </div>
       <p id="error-msg">Incorrect username or password.</p>
       <button id="login-btn" type="submit">Sign In</button>
     </form>
   </div>
-
   <script>
     var form     = document.getElementById('login-form');
     var errorMsg = document.getElementById('error-msg');
     var card     = document.getElementById('login-card');
 
-    form.addEventListener('submit', function (e) {
+    form.addEventListener('submit', function(e) {
       e.preventDefault();
       var username = document.getElementById('username').value.trim();
       var password = document.getElementById('password').value;
-
       fetch('/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: username, password: password })
-      }).then(function (r) { return r.json(); }).then(function (data) {
+      }).then(function(r) { return r.json(); }).then(function(data) {
         if (data.ok) {
           sessionStorage.setItem('authenticated', 'true');
           window.location.replace('/dashboard/');
@@ -163,23 +161,20 @@
           errorMsg.classList.add('visible');
           card.style.transition = 'transform 0.07s ease';
           card.style.transform  = 'translateX(7px)';
-          setTimeout(function () { card.style.transform = 'translateX(-7px)'; }, 70);
-          setTimeout(function () { card.style.transform = 'translateX(4px)'; },  140);
-          setTimeout(function () { card.style.transform = 'translateX(0)'; },    210);
+          setTimeout(function() { card.style.transform = 'translateX(-7px)'; }, 70);
+          setTimeout(function() { card.style.transform = 'translateX(4px)'; },  140);
+          setTimeout(function() { card.style.transform = 'translateX(0)'; },    210);
           document.getElementById('password').value = '';
           document.getElementById('password').focus();
         }
-      }).catch(function () {
-        errorMsg.classList.add('visible');
-      });
+      }).catch(function() { errorMsg.classList.add('visible'); });
     });
 
-    ['username', 'password'].forEach(function (id) {
-      document.getElementById(id).addEventListener('input', function () {
+    ['username', 'password'].forEach(function(id) {
+      document.getElementById(id).addEventListener('input', function() {
         errorMsg.classList.remove('visible');
       });
     });
   </script>
-
 </body>
 </html>
