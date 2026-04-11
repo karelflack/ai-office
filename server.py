@@ -133,6 +133,11 @@ def _record_token_usage(project, agent, task, input_tokens, output_tokens,
     except Exception:
         pass
 
+# Agents that get web search via Perplexity MCP
+WEB_SEARCH_AGENTS = {"else", "halvard", "guro", "laila", "knut", "nora", "frode"}
+
+MCP_SEARCH_CONFIG = BASE_DIR / "mcp_search.json"
+
 # Maps agent → output subfolder
 AGENT_OUTPUT_DIR = {
     "bjorn":    "architecture",
@@ -238,9 +243,18 @@ def _spawn_agent_task(slug: str, filename: str, agent: str,
             "Fix these issues specifically before submitting.\n"
         )
 
+    search_note = ""
+    if agent in WEB_SEARCH_AGENTS and os.environ.get("PERPLEXITY_API_KEY"):
+        search_note = (
+            "You have access to a web_search tool (Perplexity). "
+            "Use it to find current information — market data, competitor research, "
+            "pricing benchmarks, trends. Prefer real data over assumptions.\n\n"
+        )
+
     prompt = (
         f"You are the {agent} agent in the ai-office multi-agent framework.\n\n"
         f"You are working on project: '{slug}'\n\n"
+        f"{search_note}"
         "Steps to follow:\n"
         "1. Read CLAUDE.md for session protocol\n"
         f"2. Read agents/{agent}.md for your full role definition\n"
@@ -264,9 +278,14 @@ def _spawn_agent_task(slug: str, filename: str, agent: str,
         "Work autonomously. Use your tools. Produce real, useful output."
     )
 
+    cmd = ["claude", "--print", "--dangerously-skip-permissions",
+           "--verbose", "--output-format", "stream-json", "--model", model]
+    if agent in WEB_SEARCH_AGENTS and MCP_SEARCH_CONFIG.exists() and os.environ.get("PERPLEXITY_API_KEY"):
+        cmd += ["--mcp-config", str(MCP_SEARCH_CONFIG)]
+    cmd.append(prompt)
+
     proc = subprocess.Popen(
-        ["claude", "--print", "--dangerously-skip-permissions",
-         "--verbose", "--output-format", "stream-json", "--model", model, prompt],
+        cmd,
         stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
         stdin=subprocess.DEVNULL, text=True, cwd=str(BASE_DIR),
     )
@@ -1266,7 +1285,24 @@ Reply with ONLY a JSON array, no markdown, no explanation:
             super().log_message(format, *args)
 
 
+def _load_env():
+    """Load .env file from project root if it exists."""
+    env_path = BASE_DIR / ".env"
+    if not env_path.exists():
+        return
+    for line in env_path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, val = line.partition("=")
+        key = key.strip()
+        val = val.strip().strip('"').strip("'")
+        if key and key not in os.environ:
+            os.environ[key] = val
+
+
 if __name__ == "__main__":
+    _load_env()
     os.chdir(BASE_DIR)
     _init_tokens_db()
     server = http.server.HTTPServer(("", PORT), AIOfficeHandler)

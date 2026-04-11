@@ -23,8 +23,11 @@ node_modules/
 
 # Environment
 .env
-.env.*
+.env.local
 *.local
+
+# MCP config (contains local paths)
+mcp_search.json
 
 # Editors
 .vscode/
