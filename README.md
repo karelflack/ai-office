@@ -62,9 +62,15 @@ projects/
     │   ├── active/           — tasks currently running
     │   └── completed/        — finished tasks
     ├── memory/
-    │   └── project_memory.json  — project-specific context for agents
+    │   ├── project_memory.json       — project-specific context for agents
+    │   └── decisions/
+    │       ├── strategy.md           — seeded on kickoff, updated by strategy agents
+    │       ├── architecture.md       — written by bjorn, read by arve/dag
+    │       ├── implementation.md     — written by arve/dag/odd/per
+    │       ├── brand.md              — written by ingrid/jorunn/guro
+    │       └── compliance.md         — written by magnus
     └── output/
-        └── README.md         — index of all deliverables
+        └── README.md                 — index of all deliverables
 ```
 
 Agents read project memory for context and write all deliverables to `output/`.
@@ -86,6 +92,10 @@ ai-office/
 ├── runs/            — live run output (streamed per task)
 ├── tasks/           — global task queue (backlog/active/completed)
 ├── server.py        — HTTP server + REST API
+├── tokens.db        — SQLite token usage log (gitignored)
+├── mitm_addon.py    — mitmproxy addon for system-wide API token tracking
+├── proxy_start.sh   — start mitmproxy + set macOS system proxy
+├── proxy_stop.sh    — stop proxy + restore system settings
 └── CLAUDE.md        — entry point and protocol for any agent session
 ```
 
@@ -95,24 +105,50 @@ ai-office/
 
 - **Visual office floor** — all 16 agents at their desks, animated when working
 - **Per-agent work windows** — each running agent gets their own live output window
-- **Task Manager** — create, activate, assign, and delete tasks
+- **Task Manager** — agent-centric view: one row per agent showing their current task state
 - **Kickoff** — describe a project, get an auto-generated task plan with assigned agents
+- **Per-task model selection** — orchestrator assigns haiku or sonnet per task based on complexity
 - **Run All Active** — start all active tasks simultaneously
 - **Output panel** — browse and read all files agents have produced
+- **Memory panel** — read the structured decision log each agent writes to (architecture, strategy, brand, etc.)
+- **Token tracker** — live token usage across all agent runs + Claude Code conversations, with cost breakdown
 - **Activity log** — real-time feed of what agents are doing
+
+---
+
+## Quality Loop
+
+Every agent run goes through three layers of quality control:
+
+1. **Self-evaluation** — after completing, each agent scores its own output 1–10. If below 7, it identifies the gaps and retries (up to 2 retries).
+2. **Peer review** — selected agents (e.g. arve → odd, bjorn → arve) have a dedicated reviewer check the output. If the reviewer requests revisions, the original agent re-runs with specific feedback.
+3. **Dependency gating** — downstream tasks don't start until their upstream dependency passes review.
 
 ---
 
 ## Agent Memory
 
-Agents share two levels of memory:
+Agents share three levels of memory:
 
 | File | Scope | Purpose |
 |---|---|---|
 | `memory/team_memory.json` | Global | Team-wide state, decisions, agent notes |
 | `projects/{slug}/memory/project_memory.json` | Per project | Project goals, decisions, context |
+| `projects/{slug}/memory/decisions/{category}.md` | Per category | Structured decisions each agent writes and downstream agents read |
 
-Agents read memory before acting and update it after completing work.
+Decision categories: `architecture`, `implementation`, `strategy`, `brand`, `compliance`.
+
+On kickoff, `strategy.md` is seeded with the project description. Each agent reads its relevant categories before starting and appends a structured entry after completing:
+
+```
+## [2026-04-11] bjorn — System Architecture
+**Decision:** Use PostgreSQL with a event-sourced schema
+**Reason:** Audit trail required by compliance
+**Impact:** arve must use the schema defined in architecture.md
+---
+```
+
+The Memory tab in the Output panel shows all decision files with full markdown rendering.
 
 ---
 
