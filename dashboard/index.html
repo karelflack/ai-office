@@ -1636,6 +1636,18 @@ async function renderTaskManager() {
     const doneTag = doneCount > 0 && primaryBucket !== 'completed'
       ? `<span class="ar-done-count">${doneCount} done</span>` : '';
 
+    // Parse quality score from completed task output
+    let scoreTag = '';
+    if (primaryBucket === 'completed') {
+      const content = taskContentCache[primaryFile] || '';
+      const sm = content.match(/\*\*Quality score:\s*(\d+)\/10\*\*/);
+      if (sm) {
+        const sc = parseInt(sm[1]);
+        const scColor = sc >= 8 ? 'var(--green)' : sc >= 6 ? '#f59e0b' : 'var(--red)';
+        scoreTag = `<span style="font-size:9px;font-weight:700;color:${scColor};margin-left:4px">${sc}/10</span>`;
+      }
+    }
+
     return `<div class="agent-row ${primaryBucket==='failed'?'ar-failed':''}" data-filename="${escHtml(primaryFile)}">
       <div class="ar-left">
         <span class="ar-dot" style="background:${info.primary}"></span>
@@ -1647,7 +1659,7 @@ async function renderTaskManager() {
       <div class="ar-mid">
         <span class="ar-task">${escHtml(label)}</span>
         ${failReason}
-        <div class="ar-meta"><span class="ar-status ${s.cls}">${s.text}</span>${doneTag}</div>
+        <div class="ar-meta"><span class="ar-status ${s.cls}">${s.text}</span>${scoreTag}${doneTag}</div>
       </div>
       <div class="ar-right">${actions}</div>
     </div>`;

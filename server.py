@@ -26,6 +26,8 @@ TOKENS_DB = BASE_DIR / "tokens.db"
 
 # Tracks live subprocess references keyed by (project_slug, filename).
 _live_procs: dict = {}
+# Tracks retry counts keyed by (project_slug, filename).
+_retry_counts: dict = {}
 
 
 def _init_tokens_db():
@@ -149,7 +151,8 @@ def _parse_stream_event(line: str):
     return None
 
 
-def _spawn_agent_task(slug: str, filename: str, agent: str) -> bool:
+def _spawn_agent_task(slug: str, filename: str, agent: str,
+                      retry_count: int = 0, retry_context: str = "") -> bool:
     """Spawn a Claude subprocess for an active task. Returns False if already running."""
     key = (slug, filename)
     if key in _live_procs:
@@ -166,6 +169,14 @@ def _spawn_agent_task(slug: str, filename: str, agent: str) -> bool:
     output_subdir = AGENT_OUTPUT_DIR.get(agent, "strategy")
     output_path = f"output/{slug}/{output_subdir}"
 
+    retry_note = ""
+    if retry_count > 0:
+        retry_note = (
+            f"\n\nRETRY #{retry_count}: Your previous attempt did not meet quality standards.\n"
+            f"Issues identified: {retry_context}\n"
+            "Fix these issues specifically before submitting.\n"
+        )
+
     prompt = (
         f"You are the {agent} agent in the ai-office multi-agent framework.\n\n"
         f"You are working on project: '{slug}'\n\n"
@@ -178,7 +189,15 @@ def _spawn_agent_task(slug: str, filename: str, agent: str) -> bool:
         f"6. Write all deliverables to {output_path}/ — name files clearly (YYYY-MM-DD-description.ext)\n"
         f"7. Update output/{slug}/README.md — add a row: | path/to/file | what it contains | {agent} | today's date |\n"
         f"8. Update projects/{slug}/memory/project_memory.json with your notes under agent_notes\n"
-        f"9. Move the task to projects/{slug}/tasks/completed/ and delete it from active/\n\n"
+        f"9. Move the task to projects/{slug}/tasks/completed/ and delete it from active/\n"
+        "10. SELF-EVALUATION — before you finish:\n"
+        "    a. Re-read the original task description\n"
+        "    b. Review every deliverable you produced\n"
+        "    c. Score your output 1-10 on completeness, accuracy, and usefulness\n"
+        "    d. Append this exact line to your main output file:\n"
+        "       **Quality score: X/10** — [one sentence explaining the score]\n"
+        "    e. If your score is below 7: do NOT finish — identify what is missing, fix it, then re-score\n\n"
+        f"{retry_note}"
         "Work autonomously. Use your tools. Produce real, useful output."
     )
 
@@ -194,6 +213,8 @@ def _spawn_agent_task(slug: str, filename: str, agent: str) -> bool:
     def _reader():
         lines = []
         succeeded = False
+        eval_score = None
+        eval_reason = ""
         try:
             for line in proc.stdout:
                 line = line.rstrip("\n")
@@ -204,6 +225,11 @@ def _spawn_agent_task(slug: str, filename: str, agent: str) -> bool:
                     if formatted:
                         lines.append(formatted)
                         mem.write_run(filename, lines, False, project_slug=slug)
+                        # Parse quality score from agent output
+                        m = re.search(r'\*\*Quality score:\s*(\d+)/10\*\*\s*[—\-]+\s*(.+)', formatted)
+                        if m:
+                            eval_score = int(m.group(1))
+                            eval_reason = m.group(2).strip()
                     # Track success/failure and token usage from the result event
                     try:
                         event = json.loads(line)
@@ -236,7 +262,33 @@ def _spawn_agent_task(slug: str, filename: str, agent: str) -> bool:
                 reason = lines[-1] if lines else f"Process exited with code {exit_code}"
                 task_mgr.fail_task(filename, reason=reason, project_slug=slug)
                 task_mgr.cascade_fail(filename, project_slug=slug)
+                _retry_counts.pop(key, None)
                 return
+
+            # Evaluation-based retry: if score < 7 and retries remaining, re-run
+            if eval_score is not None and eval_score < 7:
+                current_retries = _retry_counts.get(key, 0)
+                if current_retries < 2:
+                    _retry_counts[key] = current_retries + 1
+                    msg = (f"⚡ Quality score {eval_score}/10 — retrying "
+                           f"(attempt {current_retries + 2}/3): {eval_reason}")
+                    lines.append(msg)
+                    mem.write_run(filename, lines, False, project_slug=slug)
+                    # Move task back to active if agent already completed it
+                    comp_path = BASE_DIR / "projects" / slug / "tasks" / "completed" / filename
+                    active_path = BASE_DIR / "projects" / slug / "tasks" / "active" / filename
+                    if comp_path.exists() and not active_path.exists():
+                        active_path.parent.mkdir(parents=True, exist_ok=True)
+                        comp_path.rename(active_path)
+                    _spawn_agent_task(slug, filename, agent,
+                                      retry_count=current_retries + 1,
+                                      retry_context=f"Score {eval_score}/10 — {eval_reason}")
+                    return
+                else:
+                    lines.append(f"⚠ Score {eval_score}/10 after 3 attempts — accepting output")
+                    mem.write_run(filename, lines, True, project_slug=slug)
+
+            _retry_counts.pop(key, None)
 
             # Auto-dispatch: move backlog dependents to active and run them
             newly_activated = task_mgr.resolve_handoffs(filename, project_slug=slug)
