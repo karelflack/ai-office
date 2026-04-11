@@ -48,6 +48,42 @@ def _init_tokens_db():
     con.close()
 
 
+def _read_claude_code_usage():
+    """Parse token usage from Claude Code's local JSONL conversation files."""
+    claude_dir = Path.home() / ".claude" / "projects" / "-Users-karelflack-ai-office"
+    totals = {"input_tokens": 0, "output_tokens": 0,
+              "cache_read_tokens": 0, "cache_creation_tokens": 0}
+    try:
+        for jsonl_path in claude_dir.rglob("*.jsonl"):
+            try:
+                with open(jsonl_path, encoding="utf-8", errors="replace") as f:
+                    for line in f:
+                        if '"usage"' not in line:
+                            continue
+                        try:
+                            entry = json.loads(line)
+                            msg   = entry.get("message", {})
+                            usage = msg.get("usage") if isinstance(msg, dict) else None
+                            if not usage:
+                                continue
+                            totals["input_tokens"]          += usage.get("input_tokens", 0)
+                            totals["output_tokens"]         += usage.get("output_tokens", 0)
+                            totals["cache_read_tokens"]     += usage.get("cache_read_input_tokens", 0)
+                            totals["cache_creation_tokens"] += usage.get("cache_creation_input_tokens", 0)
+                        except Exception:
+                            pass
+            except Exception:
+                pass
+    except Exception:
+        pass
+    inp, out = totals["input_tokens"], totals["output_tokens"]
+    cr,  cc  = totals["cache_read_tokens"], totals["cache_creation_tokens"]
+    totals["cost_usd"] = round(
+        (inp / 1_000_000) * 3.0  + (out / 1_000_000) * 15.0 +
+        (cr  / 1_000_000) * 0.30 + (cc  / 1_000_000) * 3.75, 4)
+    return totals
+
+
 def _record_token_usage(project, agent, task, input_tokens, output_tokens,
                         cache_read_tokens, cache_creation_tokens, cost_usd):
     try:
@@ -933,6 +969,7 @@ Reply with ONLY a JSON array, no markdown, no explanation:
             self._json_response({
                 "runs": [dict(r) for r in runs],
                 "totals": dict(totals) if totals else {},
+                "claude_code": _read_claude_code_usage(),
             })
         except Exception as e:
             self._json_response({"runs": [], "totals": {}, "error": str(e)})

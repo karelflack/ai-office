@@ -1953,18 +1953,44 @@ async function refreshTokenPanel() {
 function renderTokenPanel(d) {
   const totals = d.totals || {};
   const runs   = d.runs   || [];
+  const cc     = d.claude_code || {};
 
   const totalIn    = totals.input_tokens  || 0;
   const totalOut   = totals.output_tokens || 0;
   const totalCache = totals.cache_read_tokens || 0;
   const totalCost  = totals.cost_usd || 0;
 
-  // Stats
+  // Stats — agent runs
   document.getElementById('tp-total-tokens').textContent = fmtNum(totalIn + totalOut);
   document.getElementById('tp-total-cost').textContent   = '$' + totalCost.toFixed(4);
   document.getElementById('tp-input-tokens').textContent = fmtNum(totalIn);
   document.getElementById('tp-output-tokens').textContent= fmtNum(totalOut);
   document.getElementById('tp-cache-tokens').textContent = fmtNum(totalCache);
+
+  // Conversation stats
+  const ccIn  = cc.input_tokens  || 0;
+  const ccOut = cc.output_tokens || 0;
+  const ccCr  = cc.cache_read_tokens || 0;
+  const ccCost= cc.cost_usd || 0;
+  const ccEl  = document.getElementById('tp-cc-stats');
+  if (ccEl) {
+    ccEl.innerHTML = `
+      <div class="tp-stat-row">
+        <div class="tp-stat">
+          <div class="tp-stat-label">Total tokens</div>
+          <div class="tp-stat-value">${fmtNum(ccIn + ccOut)}</div>
+        </div>
+        <div class="tp-stat">
+          <div class="tp-stat-label">Est. cost</div>
+          <div class="tp-stat-value">$${ccCost.toFixed(4)}</div>
+        </div>
+      </div>
+      <div class="tp-stat-row" style="margin-top:6px">
+        <div class="tp-stat"><div class="tp-stat-label">Input</div><div class="tp-stat-value" style="font-size:14px">${fmtNum(ccIn)}</div></div>
+        <div class="tp-stat"><div class="tp-stat-label">Output</div><div class="tp-stat-value" style="font-size:14px">${fmtNum(ccOut)}</div></div>
+        <div class="tp-stat"><div class="tp-stat-label">Cached</div><div class="tp-stat-value" style="font-size:14px">${fmtNum(ccCr)}</div></div>
+      </div>`;
+  }
 
   // Update badge
   const badge = document.getElementById('token-cost-badge');
@@ -2057,7 +2083,11 @@ function fmtAgo(ts) {
   </div>
   <div id="token-panel-body">
     <div>
-      <div class="tp-section-label">All time</div>
+      <div class="tp-section-label">Claude Code conversations</div>
+      <div id="tp-cc-stats"></div>
+    </div>
+    <div>
+      <div class="tp-section-label">Agent runs</div>
       <div class="tp-stat-row">
         <div class="tp-stat">
           <div class="tp-stat-label">Total tokens</div>
