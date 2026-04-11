@@ -40,6 +40,25 @@ REVIEWER_MAP = {
     "halvard": "else",
 }
 
+# Structured memory — which categories each agent reads and writes
+AGENT_MEMORY = {
+    "bjorn":   {"read": ["architecture"],                       "write": "architecture"},
+    "arve":    {"read": ["architecture", "implementation"],     "write": "implementation"},
+    "dag":     {"read": ["architecture", "implementation"],     "write": "implementation"},
+    "magnus":  {"read": ["compliance"],                         "write": "compliance"},
+    "ingrid":  {"read": ["brand", "strategy"],                  "write": "brand"},
+    "jorunn":  {"read": ["brand", "strategy"],                  "write": "brand"},
+    "guro":    {"read": ["brand", "strategy"],                  "write": "brand"},
+    "else":    {"read": ["strategy"],                           "write": "strategy"},
+    "halvard": {"read": ["strategy"],                           "write": "strategy"},
+    "nora":    {"read": ["strategy"],                           "write": "strategy"},
+    "frode":   {"read": ["strategy", "implementation"],         "write": "strategy"},
+    "odd":     {"read": ["implementation"],                     "write": "implementation"},
+    "per":     {"read": ["implementation"],                     "write": "implementation"},
+    "knut":    {"read": ["strategy", "implementation"],         "write": "strategy"},
+    "laila":   {"read": ["strategy"],                           "write": "strategy"},
+}
+
 
 def _init_tokens_db():
     con = sqlite3.connect(str(TOKENS_DB))
@@ -180,6 +199,35 @@ def _spawn_agent_task(slug: str, filename: str, agent: str,
     output_subdir = AGENT_OUTPUT_DIR.get(agent, "strategy")
     output_path = f"output/{slug}/{output_subdir}"
 
+    # Build memory read/write instructions
+    mem_cfg = AGENT_MEMORY.get(agent, {})
+    read_cats = mem_cfg.get("read", [])
+    write_cat = mem_cfg.get("write", "strategy")
+    mem_base = f"projects/{slug}/memory/decisions"
+
+    if read_cats:
+        read_list = "\n".join(
+            f"   - {mem_base}/{cat}.md (if it exists)" for cat in read_cats
+        )
+        memory_read_step = (
+            "2.5. Read project memory (context from previous agents):\n"
+            f"{read_list}\n"
+            "   These files contain decisions made by agents before you. Use them as context.\n"
+        )
+    else:
+        memory_read_step = ""
+
+    memory_write_step = (
+        "8.5. Append your key decisions to project memory:\n"
+        f"   File: {mem_base}/{write_cat}.md\n"
+        "   Create it if it doesn't exist. Append (do NOT overwrite):\n"
+        f"   ## [{{today's date}}] {agent} — {{task title}}\n"
+        "   **Decision:** [the main decision or finding]\n"
+        "   **Reason:** [why this decision was made]\n"
+        "   **Impact:** [what downstream agents should know]\n"
+        "   ---\n"
+    )
+
     retry_note = ""
     if retry_count > 0:
         retry_note = (
@@ -194,12 +242,14 @@ def _spawn_agent_task(slug: str, filename: str, agent: str,
         "Steps to follow:\n"
         "1. Read CLAUDE.md for session protocol\n"
         f"2. Read agents/{agent}.md for your full role definition\n"
+        f"{memory_read_step}"
         f"3. Read projects/{slug}/memory/project_memory.json for project context\n"
         f"4. Read the task file at projects/{slug}/tasks/active/{filename}\n"
         "5. Complete the task as described\n"
         f"6. Write all deliverables to {output_path}/ — name files clearly (YYYY-MM-DD-description.ext)\n"
         f"7. Update output/{slug}/README.md — add a row: | path/to/file | what it contains | {agent} | today's date |\n"
         f"8. Update projects/{slug}/memory/project_memory.json with your notes under agent_notes\n"
+        f"{memory_write_step}"
         f"9. Move the task to projects/{slug}/tasks/completed/ and delete it from active/\n"
         "10. SELF-EVALUATION — before you finish:\n"
         "    a. Re-read the original task description\n"
@@ -558,6 +608,11 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
             self._handle_get_project_output_file(slug, rest[len("output/"):])
         elif rest == "memory":
             self._handle_get_project_memory(slug)
+        elif rest == "memory/decisions":
+            self._handle_get_project_decisions(slug)
+        elif rest.startswith("memory/decisions/"):
+            category = rest[len("memory/decisions/"):]
+            self._handle_get_project_decision_category(slug, category)
         elif rest == "run/output":
             self._handle_get_project_run_output(slug)
         elif rest == "run/status":
@@ -887,6 +942,27 @@ Reply with ONLY a JSON array, no markdown, no explanation:
             except Exception:
                 pass
 
+        # Seed strategy.md with project description so all agents have context
+        from datetime import date as _date
+        decisions_dir = BASE_DIR / "projects" / slug / "memory" / "decisions"
+        decisions_dir.mkdir(parents=True, exist_ok=True)
+        strategy_seed = decisions_dir / "strategy.md"
+        today_str = _date.today().isoformat()
+        seed_content = (
+            f"# Project Memory — {slug}\n\n"
+            f"## [{today_str}] kickoff — Project Brief\n"
+            f"**Decision:** {description}\n"
+            "**Reason:** Initial project kickoff — this is the primary brief\n"
+            "**Impact:** All agents should read this to understand what we are building\n"
+            "---\n"
+        )
+        if not strategy_seed.exists():
+            strategy_seed.write_text(seed_content, encoding="utf-8")
+        else:
+            # Append if already exists (re-kickoff scenario)
+            existing = strategy_seed.read_text(encoding="utf-8")
+            strategy_seed.write_text(existing + "\n" + seed_content, encoding="utf-8")
+
         self._json_response({"ok": True, "tasks": created})
 
     def _handle_get_project_output_list(self, slug):
@@ -925,6 +1001,30 @@ Reply with ONLY a JSON array, no markdown, no explanation:
             self._json_response(mem.read_project_memory(slug))
         except FileNotFoundError:
             self._error(404, f"Project memory not found: {slug}")
+
+    def _handle_get_project_decisions(self, slug):
+        """List all decision memory categories and their last-modified times."""
+        decisions_dir = BASE_DIR / "projects" / slug / "memory" / "decisions"
+        if not decisions_dir.exists():
+            self._json_response([])
+            return
+        result = []
+        for f in sorted(decisions_dir.glob("*.md")):
+            stat = f.stat()
+            result.append({"category": f.stem, "size": stat.st_size, "modified": stat.st_mtime})
+        self._json_response(result)
+
+    def _handle_get_project_decision_category(self, slug, category):
+        """Return the content of one decision memory file."""
+        if not category or ".." in category or "/" in category:
+            self._error(400, "Invalid category")
+            return
+        decisions_dir = BASE_DIR / "projects" / slug / "memory" / "decisions"
+        target = decisions_dir / f"{category}.md"
+        if not target.exists():
+            self._text_response("")
+            return
+        self._text_response(target.read_text(encoding="utf-8"))
 
     def _handle_get_project_run_output(self, slug):
         import urllib.parse

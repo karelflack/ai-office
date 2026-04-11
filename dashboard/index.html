@@ -497,6 +497,33 @@
     #output-viewer td { padding: 7px 10px; border: 1px solid var(--border); }
     .output-code-raw { font-family: var(--mono); font-size: 12px; line-height: 1.6; color: var(--ts); white-space: pre-wrap; word-break: break-all; }
 
+    /* ─── OUTPUT SIDEBAR TABS ────────────────── */
+    #output-sidebar-tabs {
+      display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0;
+    }
+    .osb-tab {
+      flex: 1; padding: 8px 0; text-align: center; cursor: pointer;
+      font-size: 11px; font-weight: 600; letter-spacing: 0.4px;
+      text-transform: uppercase; color: var(--tt); border-bottom: 2px solid transparent;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .osb-tab:hover { color: var(--ts); }
+    .osb-tab.active { color: var(--tp); border-bottom-color: var(--blue); }
+    #output-memory-list { flex: 1; overflow-y: auto; display: none; }
+    #output-memory-list.visible { display: block; }
+    #output-file-list.hidden { display: none; }
+    .memory-cat-item {
+      padding: 10px 14px; cursor: pointer;
+      display: flex; align-items: center; gap: 8px;
+      border-bottom: 1px solid rgba(255,255,255,0.03); transition: background 0.1s;
+    }
+    .memory-cat-item:hover { background: var(--surface-2); }
+    .memory-cat-item.selected { background: rgba(14,165,233,0.1); }
+    .memory-cat-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .memory-cat-name { font-size: 12px; color: var(--tp); flex: 1; }
+    .memory-cat-size { font-size: 10px; color: var(--tt); }
+    .memory-empty { padding: 14px; font-size: 12px; color: var(--tt); font-style: italic; }
+
     /* ─── MODAL ──────────────────────────────── */
     #modal-overlay {
       display: none; position: fixed; inset: 0;
@@ -615,11 +642,18 @@
 <div id="screen-output" class="screen">
   <div id="output-sidebar">
     <div id="output-sidebar-header">
-      <span>Output</span>
-      <button class="h-btn" onclick="loadOutput()" style="font-size:10px;padding:3px 8px;">↺</button>
+      <span>Files</span>
+      <button class="h-btn" onclick="refreshOutputSidebar()" style="font-size:10px;padding:3px 8px;">↺</button>
+    </div>
+    <div id="output-sidebar-tabs">
+      <div class="osb-tab active" id="osb-tab-files" onclick="switchOutputTab('files')">Output</div>
+      <div class="osb-tab" id="osb-tab-memory" onclick="switchOutputTab('memory')">Memory</div>
     </div>
     <div id="output-file-list">
       <div id="output-file-list-empty">No output files yet.</div>
+    </div>
+    <div id="output-memory-list">
+      <div class="memory-empty" id="output-memory-empty">No memory files yet.</div>
     </div>
   </div>
   <div id="output-main">
@@ -1213,7 +1247,16 @@ function navigate(screen) {
   updateHeader();
   if (screen === 'projects') loadProjects();
   if (screen === 'run')      loadTasks();
-  if (screen === 'output')   loadOutput();
+  if (screen === 'output') {
+    // Reset to files tab on navigation
+    outputSidebarTab = 'files';
+    selectedMemoryCategory = null;
+    document.getElementById('osb-tab-files').classList.add('active');
+    document.getElementById('osb-tab-memory').classList.remove('active');
+    document.getElementById('output-file-list').classList.remove('hidden');
+    document.getElementById('output-memory-list').classList.remove('visible');
+    loadOutput();
+  }
 }
 
 function updateHeader() {
@@ -1418,6 +1461,91 @@ async function kickoffRunAll() {
 // ── OUTPUT ────────────────────────────────────────────────
 let outputFiles = [];
 let selectedOutputFile = null;
+let outputSidebarTab = 'files'; // 'files' | 'memory'
+let memoryCategories = [];
+let selectedMemoryCategory = null;
+
+const MEMORY_CAT_COLORS = {
+  strategy:       '#10b981',
+  architecture:   '#0ea5e9',
+  implementation: '#3b82f6',
+  compliance:     '#dc2626',
+  brand:          '#d97706',
+};
+
+function switchOutputTab(tab) {
+  outputSidebarTab = tab;
+  document.getElementById('osb-tab-files').classList.toggle('active', tab === 'files');
+  document.getElementById('osb-tab-memory').classList.toggle('active', tab === 'memory');
+  const fileList = document.getElementById('output-file-list');
+  const memList  = document.getElementById('output-memory-list');
+  if (tab === 'files') {
+    fileList.classList.remove('hidden');
+    memList.classList.remove('visible');
+  } else {
+    fileList.classList.add('hidden');
+    memList.classList.add('visible');
+    loadMemoryCategories();
+  }
+}
+
+async function loadMemoryCategories() {
+  try {
+    const r = await fetch(`/api/projects/${currentProject}/memory/decisions`);
+    if (!r.ok) throw new Error();
+    memoryCategories = await r.json();
+    renderMemoryCategoryList();
+  } catch (e) {
+    document.getElementById('output-memory-list').innerHTML =
+      '<div class="memory-empty">Could not load memory.</div>';
+  }
+}
+
+function renderMemoryCategoryList() {
+  const el = document.getElementById('output-memory-list');
+  if (memoryCategories.length === 0) {
+    el.innerHTML = '<div class="memory-empty">No memory files yet.</div>';
+    return;
+  }
+  let html = '';
+  for (const cat of memoryCategories) {
+    const color = MEMORY_CAT_COLORS[cat.category] || '#6b7280';
+    const sel = cat.category === selectedMemoryCategory ? ' selected' : '';
+    html += `<div class="memory-cat-item${sel}" onclick="viewMemoryCategory('${escHtml(cat.category)}')">
+      <span class="memory-cat-dot" style="background:${color}"></span>
+      <span class="memory-cat-name">${escHtml(cat.category)}</span>
+      <span class="memory-cat-size">${formatBytes(cat.size)}</span>
+    </div>`;
+  }
+  el.innerHTML = html;
+}
+
+async function viewMemoryCategory(category) {
+  selectedMemoryCategory = category;
+  renderMemoryCategoryList();
+  const viewer = document.getElementById('output-viewer');
+  viewer.innerHTML = '<div style="color:var(--tt);font-size:12px;">Loading…</div>';
+  try {
+    const r = await fetch(`/api/projects/${currentProject}/memory/decisions/${encodeURIComponent(category)}`);
+    if (!r.ok) throw new Error();
+    const text = await r.text();
+    if (!text.trim()) {
+      viewer.innerHTML = '<div style="color:var(--tt);font-size:12px;font-style:italic;">Memory file is empty.</div>';
+    } else {
+      viewer.innerHTML = renderMarkdown(text);
+    }
+  } catch (e) {
+    viewer.innerHTML = '<div style="color:var(--red);font-size:12px;">Could not load memory.</div>';
+  }
+}
+
+function refreshOutputSidebar() {
+  if (outputSidebarTab === 'memory') {
+    loadMemoryCategories();
+  } else {
+    loadOutput();
+  }
+}
 
 async function loadOutput() {
   try {
