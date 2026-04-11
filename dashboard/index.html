@@ -1636,7 +1636,7 @@ async function renderTaskManager() {
     const doneTag = doneCount > 0 && primaryBucket !== 'completed'
       ? `<span class="ar-done-count">${doneCount} done</span>` : '';
 
-    // Parse quality score from completed task output
+    // Parse quality score + peer review from completed task output
     let scoreTag = '';
     if (primaryBucket === 'completed') {
       const content = taskContentCache[primaryFile] || '';
@@ -1645,6 +1645,11 @@ async function renderTaskManager() {
         const sc = parseInt(sm[1]);
         const scColor = sc >= 8 ? 'var(--green)' : sc >= 6 ? '#f59e0b' : 'var(--red)';
         scoreTag = `<span style="font-size:9px;font-weight:700;color:${scColor};margin-left:4px">${sc}/10</span>`;
+      }
+      const rm = content.match(/## Peer Review[\s\S]*?\*\*Status:\*\*\s*(Approved|Revision Requested)/);
+      if (rm) {
+        const approved = rm[1] === 'Approved';
+        scoreTag += `<span style="font-size:9px;font-weight:600;color:${approved ? 'var(--green)' : 'var(--red)'};margin-left:4px">${approved ? '✓ reviewed' : '↺ revision'}</span>`;
       }
     }
 

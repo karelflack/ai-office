@@ -29,6 +29,17 @@ _live_procs: dict = {}
 # Tracks retry counts keyed by (project_slug, filename).
 _retry_counts: dict = {}
 
+# Reviewer assignments — who reviews whose output
+REVIEWER_MAP = {
+    "arve":    "odd",
+    "bjorn":   "arve",
+    "dag":     "arve",
+    "jorunn":  "ingrid",
+    "ingrid":  "jorunn",
+    "else":    "halvard",
+    "halvard": "else",
+}
+
 
 def _init_tokens_db():
     con = sqlite3.connect(str(TOKENS_DB))
@@ -290,31 +301,140 @@ def _spawn_agent_task(slug: str, filename: str, agent: str,
 
             _retry_counts.pop(key, None)
 
-            # Auto-dispatch: move backlog dependents to active and run them
-            newly_activated = task_mgr.resolve_handoffs(filename, project_slug=slug)
-            to_run = set(newly_activated)
-            # Also pick up any tasks already in active/ that were waiting on this one
-            active_dir = BASE_DIR / "projects" / slug / "tasks" / "active"
-            if active_dir.exists():
-                for f in active_dir.glob("*.md"):
-                    try:
-                        content = f.read_text(encoding="utf-8")
-                        dep = task_mgr.parse_depends_on(content)
-                        if dep and dep == filename:
-                            to_run.add(f.name)
-                    except Exception:
-                        pass
-            for dep_filename in to_run:
-                dep_path = active_dir / dep_filename
-                dep_content = dep_path.read_text(encoding="utf-8") if dep_path.exists() else ""
-                m = re.search(r'^\*\*Agent:\*\*\s*(.+)$', dep_content, re.MULTILINE)
-                dep_agent = m.group(1).strip() if m else "orchestrator"
-                if dep_agent not in agent_registry.VALID_AGENTS:
-                    dep_agent = "orchestrator"
-                _spawn_agent_task(slug, dep_filename, dep_agent)
+            # Check if this agent has a peer reviewer
+            reviewer = REVIEWER_MAP.get(agent)
+            if reviewer:
+                lines.append(f"👁 Sending to {reviewer} for peer review…")
+                mem.write_run(filename, lines, False, project_slug=slug)
+                _spawn_peer_review(slug, filename, agent, reviewer, lines)
+            else:
+                _dispatch_dependents(slug, filename)
 
     threading.Thread(target=_reader, daemon=True).start()
     return True
+
+
+def _dispatch_dependents(slug: str, filename: str):
+    """Activate and spawn tasks that were waiting on filename."""
+    newly_activated = task_mgr.resolve_handoffs(filename, project_slug=slug)
+    to_run = set(newly_activated)
+    active_dir = BASE_DIR / "projects" / slug / "tasks" / "active"
+    if active_dir.exists():
+        for f in active_dir.glob("*.md"):
+            try:
+                content = f.read_text(encoding="utf-8")
+                dep = task_mgr.parse_depends_on(content)
+                if dep and dep == filename:
+                    to_run.add(f.name)
+            except Exception:
+                pass
+    for dep_filename in to_run:
+        dep_path = active_dir / dep_filename
+        dep_content = dep_path.read_text(encoding="utf-8") if dep_path.exists() else ""
+        m = re.search(r'^\*\*Agent:\*\*\s*(.+)$', dep_content, re.MULTILINE)
+        dep_agent = m.group(1).strip() if m else "orchestrator"
+        if dep_agent not in agent_registry.VALID_AGENTS:
+            dep_agent = "orchestrator"
+        _spawn_agent_task(slug, dep_filename, dep_agent)
+
+
+def _spawn_peer_review(slug: str, filename: str, original_agent: str,
+                       reviewer: str, parent_lines: list):
+    """Spawn a reviewer subprocess. On approval dispatch dependents; on revision re-run original."""
+    output_subdir = AGENT_OUTPUT_DIR.get(original_agent, "strategy")
+    output_path = f"output/{slug}/{output_subdir}"
+
+    prompt = (
+        f"You are {reviewer}, the peer reviewer in the ai-office framework.\n\n"
+        f"You are reviewing work produced by {original_agent} on project '{slug}'.\n\n"
+        f"Task file:       projects/{slug}/tasks/completed/{filename}\n"
+        f"Output folder:   {output_path}/\n\n"
+        "Your job:\n"
+        "1. Read the completed task file to understand what was asked\n"
+        "2. Read the output files produced for this task\n"
+        "3. Evaluate: does the output fully satisfy the task description?\n"
+        "4. Append your review to the MAIN output file using exactly this format:\n\n"
+        "   ## Peer Review\n"
+        f"   **Reviewer:** {reviewer}\n"
+        "   **Status:** Approved\n"
+        "   **Score:** X/10\n"
+        "   [2-4 sentences: what was done well, what (if anything) is missing]\n\n"
+        "   OR if the work needs fixing:\n\n"
+        "   ## Peer Review\n"
+        f"   **Reviewer:** {reviewer}\n"
+        "   **Status:** Revision Requested\n"
+        "   **Score:** X/10\n"
+        "   [Specific issues: list exactly what must be fixed]\n\n"
+        "Rules:\n"
+        "- Do NOT redo the work yourself\n"
+        "- Only append the review section — do not modify other content\n"
+        "- Be specific: vague feedback is useless\n"
+        "- Approve if the work is solid even if imperfect (score ≥ 7)\n"
+        "- Request revision only for genuinely incomplete or incorrect work\n"
+    )
+
+    proc = subprocess.Popen(
+        ["claude", "--print", "--dangerously-skip-permissions",
+         "--verbose", "--output-format", "stream-json",
+         "--model", "claude-sonnet-4-6", prompt],
+        stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+        stdin=subprocess.DEVNULL, text=True, cwd=str(BASE_DIR),
+    )
+
+    def _review_reader():
+        review_lines = list(parent_lines)
+        approved = True
+        revision_notes = ""
+        try:
+            for line in proc.stdout:
+                line = line.rstrip("\n")
+                if not line:
+                    continue
+                try:
+                    formatted = _parse_stream_event(line)
+                    if formatted:
+                        review_lines.append(f"[{reviewer}] {formatted}")
+                        mem.write_run(filename, review_lines, False, project_slug=slug)
+                        if "Revision Requested" in formatted:
+                            approved = False
+                        if not approved and len(formatted) > 20:
+                            revision_notes += " " + formatted
+                    try:
+                        event = json.loads(line)
+                        if event.get("type") == "result":
+                            usage = event.get("usage", {})
+                            _record_token_usage(
+                                project=slug, agent=reviewer, task=f"review:{filename}",
+                                input_tokens=usage.get("input_tokens", 0),
+                                output_tokens=usage.get("output_tokens", 0),
+                                cache_read_tokens=usage.get("cache_read_input_tokens", 0),
+                                cache_creation_tokens=usage.get("cache_creation_input_tokens", 0),
+                                cost_usd=event.get("total_cost_usd", 0),
+                            )
+                    except Exception:
+                        pass
+                except Exception:
+                    pass
+        finally:
+            proc.wait()
+            if approved:
+                review_lines.append(f"✓ Peer review passed ({reviewer})")
+                mem.write_run(filename, review_lines, True, project_slug=slug)
+                _dispatch_dependents(slug, filename)
+            else:
+                review_lines.append(f"↺ Revision requested by {reviewer} — re-running {original_agent}")
+                mem.write_run(filename, review_lines, False, project_slug=slug)
+                # Move task back to active for revision
+                comp_path = BASE_DIR / "projects" / slug / "tasks" / "completed" / filename
+                active_path = BASE_DIR / "projects" / slug / "tasks" / "active" / filename
+                if comp_path.exists() and not active_path.exists():
+                    active_path.parent.mkdir(parents=True, exist_ok=True)
+                    comp_path.rename(active_path)
+                _spawn_agent_task(slug, filename, original_agent,
+                                  retry_count=1,
+                                  retry_context=f"Peer review by {reviewer}: {revision_notes.strip()}")
+
+    threading.Thread(target=_review_reader, daemon=True).start()
 
 
 class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
