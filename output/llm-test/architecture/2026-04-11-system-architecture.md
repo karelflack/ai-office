@@ -309,3 +309,12 @@ All routes require `Authorization: Bearer <supabase_jwt>` except health check.
 ---
 
 **Quality score: 9/10** — Covers all four required deliverables (C4 context, component diagram, ERD, decision records) with concrete reasoning and downstream agent guidance. Minus one point because the GitHub OAuth ingestion flow and the Stripe billing integration are described at high level only — these would benefit from sequence diagrams when Arve picks them up.
+
+---
+
+## Peer Review
+**Reviewer:** arve
+**Status:** Approved
+**Score:** 8/10
+
+All four required deliverables are present and substantive: the C4 context diagram correctly identifies actors and external systems, the component diagram maps the full FastAPI backend with clear responsibilities per component, the ERD covers all seven core entities with field types and cardinality, and all three decision records (JWT auth, RLS multi-tenancy, ARQ async jobs) include reasoning and acknowledged trade-offs. Section 7's downstream agent guidance is a strong addition that will prevent coordination failures. Two minor gaps: (1) the C4 context diagram omits the React frontend as an explicit system boundary — the task spec asks for it to be shown as a distinct participant, and it only appears in the deployment topology later; (2) `cvss_score` in `CVE_MATCHES` is typed as `text` rather than `numeric`, which will complicate severity sorting queries. Neither is a blocker for downstream agents.
