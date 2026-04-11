@@ -10,3 +10,4 @@
 | output/llm-test/infra/Dockerfile | Multi-stage Docker build (builder + slim runtime) for the FastAPI API service | dag | 2026-04-11 |
 | output/llm-test/infra/.github/workflows/ci.yml | GitHub Actions CI — ruff lint, mypy type check, pytest with real Postgres + Redis on PRs | dag | 2026-04-11 |
 | output/llm-test/infra/.github/workflows/cd.yml | GitHub Actions CD — build & push Docker image to GHCR on merge to main | dag | 2026-04-11 |
+| output/llm-test/implementation/2026-04-11-backend-implementation.md | FastAPI backend scaffold — routers, models, Alembic migrations, ARQ worker, OSV.dev scanner, audit logging, envelope encryption, pytest suite, setup guide | arve | 2026-04-11 |
