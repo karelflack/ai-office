@@ -28,6 +28,8 @@ TOKENS_DB = BASE_DIR / "tokens.db"
 _live_procs: dict = {}
 # Tracks retry counts keyed by (project_slug, filename).
 _retry_counts: dict = {}
+# Feature flags
+_peer_review_enabled: bool = True
 
 # Reviewer assignments — who reviews whose output
 REVIEWER_MAP = {
@@ -351,9 +353,9 @@ def _spawn_agent_task(slug: str, filename: str, agent: str,
 
             _retry_counts.pop(key, None)
 
-            # Check if this agent has a peer reviewer
+            # Check if this agent has a peer reviewer (and peer review is enabled)
             reviewer = REVIEWER_MAP.get(agent)
-            if reviewer:
+            if reviewer and _peer_review_enabled:
                 lines.append(f"👁 Sending to {reviewer} for peer review…")
                 mem.write_run(filename, lines, False, project_slug=slug)
                 _spawn_peer_review(slug, filename, agent, reviewer, lines)
@@ -558,6 +560,8 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
             self._json_response(mem.list_runs())
         elif path == "/api/tokens":
             self._handle_get_tokens()
+        elif path == "/api/settings":
+            self._json_response({"peer_review_enabled": _peer_review_enabled})
         else:
             super().do_GET()
 
@@ -580,6 +584,8 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
             self._handle_post_run()
         elif path == "/api/tokens/record":
             self._handle_post_token_record()
+        elif path == "/api/settings/peer-review":
+            self._handle_post_toggle_peer_review()
         else:
             self.send_error(404, "Not found")
 
@@ -1207,6 +1213,15 @@ Reply with ONLY a JSON array, no markdown, no explanation:
             self._error(404, "team_memory.json not found")
         except (json.JSONDecodeError, IOError) as e:
             self._error(500, str(e))
+
+    def _handle_post_toggle_peer_review(self):
+        global _peer_review_enabled
+        try:
+            body = json.loads(self._read_body())
+            _peer_review_enabled = bool(body.get("enabled", not _peer_review_enabled))
+        except Exception:
+            _peer_review_enabled = not _peer_review_enabled
+        self._json_response({"peer_review_enabled": _peer_review_enabled})
 
     def _handle_post_token_record(self):
         try:
