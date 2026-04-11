@@ -11,7 +11,7 @@ if [ -f "$PIDFILE" ] && kill -0 "$(cat $PIDFILE)" 2>/dev/null; then
 fi
 
 echo "Starting token tracker proxy on port $PROXY_PORT..."
-mitmdump -s "$SCRIPT_DIR/mitm_addon.py" --listen-port $PROXY_PORT --quiet &
+mitmdump -s "$SCRIPT_DIR/mitm_addon.py" --listen-port $PROXY_PORT --allow-hosts api.anthropic.com --quiet &
 echo $! > "$PIDFILE"
 sleep 1
 

@@ -66,7 +66,14 @@ def parse_depends_on(content: str) -> str | None:
     return None
 
 
-def create_task(title: str, agent: str, description: str = "", project_slug: str = None, depends_on: str = None) -> str:
+def parse_model(content: str) -> str | None:
+    """Return the model from task content, or None (falls back to default)."""
+    m = re.search(r"^\*\*Model:\*\*\s*(.+)$", content, re.MULTILINE)
+    return m.group(1).strip() if m else None
+
+
+def create_task(title: str, agent: str, description: str = "", project_slug: str = None,
+                depends_on: str = None, model: str = None) -> str:
     """Write a new task file to backlog/. Returns the filename."""
     today = date.today().isoformat()
     filename = f"{today}-{slugify(title)}.md"
@@ -81,6 +88,8 @@ def create_task(title: str, agent: str, description: str = "", project_slug: str
         f"**Status:** backlog",
         f"**Created:** {today}",
     ]
+    if model:
+        lines.append(f"**Model:** {model}")
     if depends_on:
         lines.append(f"**depends_on:** {depends_on}")
     lines.append("")

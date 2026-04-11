@@ -119,6 +119,14 @@ def _spawn_agent_task(slug: str, filename: str, agent: str) -> bool:
     if key in _live_procs:
         return False
 
+    # Read model from task file, fall back to sonnet
+    task_path = BASE_DIR / "projects" / slug / "tasks" / "active" / filename
+    try:
+        task_content = task_path.read_text(encoding="utf-8")
+        model = task_mgr.parse_model(task_content) or "claude-sonnet-4-6"
+    except Exception:
+        model = "claude-sonnet-4-6"
+
     output_subdir = AGENT_OUTPUT_DIR.get(agent, "strategy")
     output_path = f"output/{slug}/{output_subdir}"
 
@@ -140,7 +148,7 @@ def _spawn_agent_task(slug: str, filename: str, agent: str) -> bool:
 
     proc = subprocess.Popen(
         ["claude", "--print", "--dangerously-skip-permissions",
-         "--verbose", "--output-format", "stream-json", prompt],
+         "--verbose", "--output-format", "stream-json", "--model", model, prompt],
         stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
         stdin=subprocess.DEVNULL, text=True, cwd=str(BASE_DIR),
     )
@@ -601,9 +609,12 @@ Rules:
 - Each description must be specific — what exactly to produce, what format, what decisions to make
 - Use the "depends_on" field to declare which task (by title) must complete before this one starts. Set to null if the task can start immediately.
 - Example: arve's implementation should depend on bjorn's architecture. odd's testing should depend on arve's implementation.
+- Set the "model" field based on task complexity:
+  - "claude-haiku-4-5-20251001" — simple tasks: research, writing, branding, content, social media, market research
+  - "claude-sonnet-4-6" — complex tasks: coding, architecture, system design, compliance, security, data models
 
 Reply with ONLY a JSON array, no markdown, no explanation:
-[{{"agent":"bjorn","title":"System Architecture","description":"Design the full system...","depends_on":null}},{{"agent":"arve","title":"Implementation","description":"...","depends_on":"System Architecture"}}]"""
+[{{"agent":"bjorn","title":"System Architecture","description":"Design the full system...","depends_on":null,"model":"claude-sonnet-4-6"}},{{"agent":"arve","title":"Implementation","description":"...","depends_on":"System Architecture","model":"claude-sonnet-4-6"}}]"""
 
         try:
             proc = subprocess.run(
@@ -648,11 +659,12 @@ Reply with ONLY a JSON array, no markdown, no explanation:
             title = str(item.get("title", "Untitled")).strip()
             desc  = str(item.get("description", "")).strip()
             raw_dep = item.get("depends_on")
+            model = str(item.get("model", "claude-sonnet-4-6")).strip() or "claude-sonnet-4-6"
             if agent not in valid_agents:
                 agent = "orchestrator"
             # Resolve depends_on title → filename from previously created tasks
             depends_on = title_to_filename.get(raw_dep) if raw_dep else None
-            filename = task_mgr.create_task(title, agent, desc, project_slug=slug, depends_on=depends_on)
+            filename = task_mgr.create_task(title, agent, desc, project_slug=slug, depends_on=depends_on, model=model)
             title_to_filename[title] = filename
             created.append({"filename": filename, "agent": agent, "title": title, "description": desc, "depends_on": depends_on})
 

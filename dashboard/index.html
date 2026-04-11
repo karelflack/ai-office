@@ -391,13 +391,8 @@
     .tp-run-name { color: var(--tp); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .tp-run-meta { color: var(--tt); font-size: 9px; }
     .tp-run-cost { color: var(--green); flex-shrink: 0; font-size: 10px; font-weight: 600; }
-    #token-toggle-btn {
-      position: fixed; bottom: 20px; right: 20px; z-index: 190;
-      background: rgba(14,165,233,0.12); border-color: rgba(14,165,233,0.3);
-      color: var(--blue); font-size: 12px; padding: 7px 14px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-    }
-    #token-toggle-btn:hover { background: rgba(14,165,233,0.2); }
+    #token-toggle-btn { position: relative; }
+    #token-toggle-btn:hover { background: var(--surface-3); color: var(--tp); }
     .token-btn-badge {
       position: absolute; top: -3px; right: -3px;
       background: var(--green); color: #000; font-size: 8px; font-weight: 700;
@@ -1231,13 +1226,15 @@ function updateHeader() {
   }
   const proj = projectList.find(p => p.slug === currentProject);
   label.textContent = proj ? ` / ${proj.name}` : '';
+  const tokenBtn = `<button id="token-toggle-btn" class="h-btn" onclick="toggleTokenPanel()">⚡ Tokens<span id="token-cost-badge" class="token-btn-badge"></span></button>`;
   if (currentScreen === 'kickoff') {
-    nav.innerHTML = `<button class="h-btn" onclick="navigate('projects')">← Back</button>`;
+    nav.innerHTML = `${tokenBtn}<button class="h-btn" onclick="navigate('projects')">← Back</button>`;
   } else if (currentScreen === 'run' || currentScreen === 'output') {
     nav.innerHTML = `
       <button class="h-btn accent" onclick="navigate('kickoff')">Kickoff</button>
       <button class="h-btn ${currentScreen==='run'?'active':''}" onclick="navigate('run')">Workspace</button>
       <button class="h-btn ${currentScreen==='output'?'active':''}" onclick="navigate('output')">Output</button>
+      ${tokenBtn}
       <button class="h-btn" onclick="navigate('projects')">← Projects</button>`;
   }
 }
@@ -2051,8 +2048,6 @@ function fmtAgo(ts) {
   return Math.floor(diff/86400) + 'd ago';
 }
 </script>
-
-<button id="token-toggle-btn" onclick="toggleTokenPanel()" title="Token usage">⚡ Tokens<span id="token-cost-badge" class="token-btn-badge"></span></button>
 
 <!-- TOKEN PANEL -->
 <div id="token-panel">
