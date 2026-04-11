@@ -1,0 +1,38 @@
+{
+  "project": "LLM test",
+  "slug": "llm-test",
+  "description": "",
+  "created": "2026-04-11",
+  "agent_notes": {
+    "jorunn": "Brand identity complete. Created comprehensive guidelines covering brand positioning ('single source of truth for your tech stack'), tone of voice (3 traits: Direct, Data-driven, Minimal), naming rationale for Stackr, color palette with severity indicators for CVE display, and Inter typography pairing. Key decision: avoid marketing language; let the product's value speak. Tagline: 'One dashboard. Total visibility.' All copy should follow the tone guide's dos/don'ts framework.",
+    "bjorn": "System architecture complete. Stack: FastAPI + Supabase (Postgres+Auth) + Redis (ARQ) + OSV.dev. Multi-tenancy via row-level security. JWT auth. Async vulnerability scanning via ARQ worker dyno on Railway. Full ERD, C4 context diagram, component diagram, and 3 decision records (auth, multi-tenancy, async jobs) in output/llm-test/architecture/2026-04-11-system-architecture.md. Arve must not bypass RLS with service role key in user-facing routes. Magnus: flag JWT revocation and tenant data confidentiality. Dag: needs web + worker dynos + Redis add-on on Railway.",
+    "magnus": "Compliance & GDPR review complete. 17 LAUNCH BLOCKER items identified — key ones for arve: API keys must use envelope encryption (never plaintext), passwords must use bcrypt/Argon2id, RBAC enforced server-side only, audit logs must be write-once/append-only, team data isolation enforced at data layer (no cross-tenant leakage), immediate access revocation on member removal. Privacy policy clauses drafted. Data minimisation recommendations for dependency metadata. Full checklist at output/llm-test/compliance/2026-04-11-compliance-checklist.md."
+  },
+  "kickoff_description": "A SaaS product called Stackr \u2014 a developer tool that lets teams track their tech stack,\n  dependencies, and security vulnerabilities in one dashboard. Needs architecture, a working\n  backend API in Python, compliance check, and a brand identity.",
+  "kickoff_plan": [
+    {
+      "agent": "bjorn",
+      "title": "System Architecture"
+    },
+    {
+      "agent": "magnus",
+      "title": "Compliance & GDPR Review"
+    },
+    {
+      "agent": "jorunn",
+      "title": "Brand Identity"
+    },
+    {
+      "agent": "dag",
+      "title": "Infrastructure & CI/CD"
+    },
+    {
+      "agent": "ingrid",
+      "title": "UI/UX Wireframes"
+    },
+    {
+      "agent": "arve",
+      "title": "Backend API Implementation"
+    }
+  ]
+}
