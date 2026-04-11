@@ -244,7 +244,7 @@ def _spawn_agent_task(slug: str, filename: str, agent: str,
         )
 
     search_note = ""
-    if agent in WEB_SEARCH_AGENTS and os.environ.get("PERPLEXITY_API_KEY"):
+    if agent in WEB_SEARCH_AGENTS and os.environ.get("OPENAI_API_KEY"):
         search_note = (
             "You have access to a web_search tool (Perplexity). "
             "Use it to find current information — market data, competitor research, "
@@ -280,7 +280,7 @@ def _spawn_agent_task(slug: str, filename: str, agent: str,
 
     cmd = ["claude", "--print", "--dangerously-skip-permissions",
            "--verbose", "--output-format", "stream-json", "--model", model]
-    if agent in WEB_SEARCH_AGENTS and MCP_SEARCH_CONFIG.exists() and os.environ.get("PERPLEXITY_API_KEY"):
+    if agent in WEB_SEARCH_AGENTS and MCP_SEARCH_CONFIG.exists() and os.environ.get("OPENAI_API_KEY"):
         cmd += ["--mcp-config", str(MCP_SEARCH_CONFIG)]
     cmd.append(prompt)
 
