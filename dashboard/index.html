@@ -228,7 +228,7 @@
     /* ─── SCREEN: RUN ────────────────────────── */
     #screen-run { height: calc(100vh - 52px); overflow: hidden; }
     #run-canvas-pane {
-      width: 60%; flex-shrink: 0; display: flex; flex-direction: column;
+      width: 42%; flex-shrink: 0; display: flex; flex-direction: column;
       border-right: 1px solid var(--border); overflow: hidden; background: var(--bg);
     }
     #game-canvas { width: 100%; aspect-ratio: 1056/672; display: block; flex-shrink: 0; }
@@ -295,46 +295,42 @@
     #task-add-btn:hover { background: var(--borderb); color: var(--tp); }
     #task-form-error { font-size: 11px; color: var(--red); padding: 3px 14px; flex-shrink: 0; }
     #task-error { font-size: 11px; color: var(--red); padding: 3px 14px; flex-shrink: 0; }
-    #task-columns-wrap {
-      flex: 1; overflow-y: auto; padding: 10px 12px; min-height: 0;
+    #agent-roster-wrap {
+      flex: 1; overflow-y: auto; padding: 8px 10px; min-height: 0;
     }
-    #task-columns-wrap::-webkit-scrollbar { width: 3px; }
-    #task-columns-wrap::-webkit-scrollbar-thumb { background: var(--surface-3); }
-    #task-columns { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; }
-    .task-col-header {
-      font-size: 10px; font-weight: 600; letter-spacing: 0.5px;
-      text-transform: uppercase; color: var(--tt);
-      margin-bottom: 6px; padding-bottom: 5px; border-bottom: 1px solid var(--border);
-    }
-    .task-col-header.tc-active    { color: var(--blue); }
-    .task-col-header.tc-completed { color: var(--green); }
-    .task-col-header.tc-failed    { color: var(--red); }
-    .task-card {
+    #agent-roster-wrap::-webkit-scrollbar { width: 3px; }
+    #agent-roster-wrap::-webkit-scrollbar-thumb { background: var(--surface-3); }
+    .agent-row {
+      display: flex; align-items: center; gap: 8px;
+      padding: 7px 8px; border-radius: 6px;
       background: var(--surface-2); border: 1px solid var(--border);
-      border-radius: 6px; padding: 8px 9px; margin-bottom: 5px;
-      transition: border-color 0.13s;
+      margin-bottom: 5px; transition: border-color 0.13s;
     }
-    .task-card:hover { border-color: var(--borderb); }
-    .task-card.failed { border-color: rgba(244,63,94,0.3); background: rgba(244,63,94,0.06); }
-    .task-card.blocked { opacity: 0.45; }
-    .task-card.failed .task-card-name { color: var(--red); }
-    .task-card-name {
-      font-size: 11px; font-weight: 500; color: var(--tp); margin-bottom: 4px;
-      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-    }
-    .task-card-agent { display: flex; align-items: center; gap: 4px; font-size: 10px; color: var(--tt); margin-bottom: 5px; }
-    .task-agent-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
-    .task-depends-badge { font-size: 9px; color: var(--tt); margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .task-fail-reason { font-size: 9px; color: var(--red); margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; opacity: 0.85; }
-    .task-card-actions { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
-    .task-delete-btn {
-      margin-left: auto; flex-shrink: 0;
+    .agent-row:hover { border-color: var(--borderb); }
+    .agent-row.ar-failed { border-color: rgba(244,63,94,0.3); background: rgba(244,63,94,0.06); }
+    .ar-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .ar-left { display: flex; align-items: center; gap: 7px; width: 88px; flex-shrink: 0; }
+    .ar-info { display: flex; flex-direction: column; gap: 1px; overflow: hidden; }
+    .ar-name { font-size: 11px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ar-role { font-size: 9px; color: var(--tt); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ar-mid { flex: 1; overflow: hidden; min-width: 0; }
+    .ar-task { font-size: 11px; color: var(--tp); display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: 3px; }
+    .ar-fail-reason { font-size: 9px; color: var(--red); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; opacity: 0.85; margin-bottom: 2px; }
+    .ar-meta { display: flex; align-items: center; gap: 6px; }
+    .ar-status { font-size: 9px; font-weight: 600; letter-spacing: 0.4px; text-transform: uppercase; padding: 1px 5px; border-radius: 3px; }
+    .ar-s-active  { background: rgba(14,165,233,0.12); color: var(--blue); }
+    .ar-s-failed  { background: rgba(244,63,94,0.12); color: var(--red); }
+    .ar-s-done    { background: rgba(16,185,129,0.12); color: var(--green); }
+    .ar-s-queued  { background: rgba(255,255,255,0.05); color: var(--ts); }
+    .ar-s-blocked { background: transparent; color: var(--tt); }
+    .ar-done-count { font-size: 9px; color: var(--tt); }
+    .ar-right { flex-shrink: 0; display: flex; align-items: center; gap: 4px; }
+    .ar-del {
       background: none; border: none; color: var(--tt); font-size: 13px; line-height: 1;
-      cursor: pointer; padding: 1px 4px; border-radius: 3px; opacity: 0;
-      transition: color 0.13s;
+      cursor: pointer; padding: 1px 4px; border-radius: 3px; opacity: 0; transition: color 0.13s;
     }
-    .task-card:hover .task-delete-btn { opacity: 1; }
-    .task-delete-btn:hover { color: var(--red); }
+    .agent-row:hover .ar-del { opacity: 1; }
+    .ar-del:hover { color: var(--red); }
     .tbtn {
       background: var(--surface-3); border: 1px solid var(--border);
       border-radius: 4px; color: var(--ts); font-family: var(--font);
@@ -354,7 +350,59 @@
       0%   { border-color: rgba(16,185,129,0.7); box-shadow: 0 0 8px rgba(16,185,129,0.4); }
       100% { border-color: var(--border); box-shadow: none; }
     }
-    .task-card.unlocked { animation: task-unlock 1.2s ease-out forwards; }
+    .agent-row.unlocked { animation: task-unlock 1.2s ease-out forwards; }
+
+    /* Token panel */
+    #token-panel {
+      display: none; position: fixed; top: 52px; right: 0; bottom: 0;
+      width: 320px; background: rgba(10,11,20,0.97);
+      border-left: 1px solid var(--border);
+      box-shadow: -8px 0 32px rgba(0,0,0,0.5);
+      z-index: 200; flex-direction: column; overflow: hidden;
+    }
+    #token-panel.open { display: flex; }
+    #token-panel-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 14px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+    }
+    #token-panel-header span { font-size: 11px; font-weight: 600; color: var(--tp); letter-spacing: 0.4px; text-transform: uppercase; }
+    #token-panel-close { background: none; border: none; color: var(--tt); font-size: 16px; cursor: pointer; padding: 0 2px; line-height: 1; }
+    #token-panel-close:hover { color: var(--tp); }
+    #token-panel-body { flex: 1; overflow-y: auto; padding: 12px 14px; display: flex; flex-direction: column; gap: 14px; }
+    #token-panel-body::-webkit-scrollbar { width: 3px; }
+    #token-panel-body::-webkit-scrollbar-thumb { background: var(--surface-3); }
+    .tp-stat-row { display: flex; gap: 8px; }
+    .tp-stat {
+      flex: 1; background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: 7px; padding: 9px 10px;
+    }
+    .tp-stat-label { font-size: 9px; color: var(--tt); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 4px; }
+    .tp-stat-value { font-size: 18px; font-weight: 700; color: var(--tp); line-height: 1; }
+    .tp-stat-sub { font-size: 9px; color: var(--ts); margin-top: 2px; }
+    .tp-section-label { font-size: 10px; font-weight: 600; color: var(--tt); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 6px; }
+    #token-chart { width: 100%; height: 100px; display: block; border-radius: 6px; background: var(--surface-2); border: 1px solid var(--border); }
+    .tp-run-row {
+      display: flex; align-items: center; gap: 7px;
+      padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.04);
+      font-size: 10px;
+    }
+    .tp-run-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+    .tp-run-info { flex: 1; overflow: hidden; }
+    .tp-run-name { color: var(--tp); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tp-run-meta { color: var(--tt); font-size: 9px; }
+    .tp-run-cost { color: var(--green); flex-shrink: 0; font-size: 10px; font-weight: 600; }
+    #token-toggle-btn {
+      position: fixed; bottom: 20px; right: 20px; z-index: 190;
+      background: rgba(14,165,233,0.12); border-color: rgba(14,165,233,0.3);
+      color: var(--blue); font-size: 12px; padding: 7px 14px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    }
+    #token-toggle-btn:hover { background: rgba(14,165,233,0.2); }
+    .token-btn-badge {
+      position: absolute; top: -3px; right: -3px;
+      background: var(--green); color: #000; font-size: 8px; font-weight: 700;
+      border-radius: 4px; padding: 1px 3px; line-height: 1.2;
+    }
 
     /* Work windows */
     #work-windows {
@@ -561,25 +609,8 @@
     </div>
     <div id="task-form-error"></div>
     <div id="task-error"></div>
-    <div id="task-columns-wrap">
-      <div id="task-columns">
-        <div>
-          <div class="task-col-header">Backlog</div>
-          <div id="task-col-backlog"></div>
-        </div>
-        <div>
-          <div class="task-col-header tc-active">Active</div>
-          <div id="task-col-active"></div>
-        </div>
-        <div>
-          <div class="task-col-header tc-completed">Done</div>
-          <div id="task-col-completed"></div>
-        </div>
-        <div>
-          <div class="task-col-header tc-failed">Failed</div>
-          <div id="task-col-failed"></div>
-        </div>
-      </div>
+    <div id="agent-roster-wrap">
+      <div id="agent-roster"></div>
     </div>
     <div id="work-windows"></div>
   </div>
@@ -741,7 +772,11 @@ function tickAgents() {
         agent.x = agent.targetX; agent.y = agent.targetY;
         agent.walkFrame = 0; agent.walkTick = 0;
         agent.state = agent.pendingState === 'working' ? 'working' : 'idle';
-        agent.stateTimer = agent.state === 'working' ? 9999 : randi(30,90);
+        if (agent.state === 'working' && runningAgents.has(agent.id)) {
+          agent.stateTimer = randi(60, 150);
+        } else {
+          agent.stateTimer = agent.state === 'working' ? 9999 : randi(30,90);
+        }
         agent.pendingState = null;
       } else {
         agent.x += (dx/d)*speed; agent.y += (dy/d)*speed;
@@ -752,7 +787,13 @@ function tickAgents() {
       }
     } else {
       if (runningAgents.has(agent.id)) {
-        agent.state = 'working'; agent.stateTimer = 999;
+        if (agent.stateTimer > 120) agent.stateTimer = randi(20, 60);
+        agent.stateTimer--;
+        if (agent.stateTimer <= 0) decideRunningAction(agent);
+        if (agent.state === 'working') {
+          agent.cursorTick++;
+          if (agent.cursorTick >= 18) { agent.cursorTick=0; agent.cursorVisible=!agent.cursorVisible; }
+        } else { agent.cursorVisible=false; agent.cursorTick=0; }
       } else {
         agent.stateTimer--;
         if (agent.stateTimer <= 0) {
@@ -773,6 +814,30 @@ function decideNextAction(agent) {
   const pos = deskStandPos(agent.id);
   agent.x = pos.x; agent.y = pos.y;
   agent.state = 'idle'; agent.stateTimer = randi(300,600);
+}
+
+function decideRunningAction(agent) {
+  const roll = Math.random();
+  if (roll < 0.35) {
+    // Walk to meeting table area
+    const seats = [
+      {x: tileX(9)+4,  y: tileY(6)-3},  {x: tileX(10)+4, y: tileY(6)-3},
+      {x: tileX(11)+4, y: tileY(6)-3},  {x: tileX(12)+4, y: tileY(6)-3},
+      {x: tileX(9)+4,  y: tileY(8)+TILE},{x: tileX(10)+4, y: tileY(8)+TILE},
+      {x: tileX(11)+4, y: tileY(8)+TILE},{x: tileX(12)+4, y: tileY(8)+TILE},
+    ];
+    const seat = seats[Math.floor(Math.random()*seats.length)];
+    startWalking(agent, seat.x, seat.y, 'working');
+  } else if (roll < 0.6) {
+    // Walk to a random floor spot
+    const rx = tileX(randi(2,18)) + TILE/2;
+    const ry = tileY(randi(2,11)) + TILE/2;
+    startWalking(agent, rx, ry, 'working');
+  } else {
+    // Return to desk and work there
+    const pos = deskStandPos(agent.id);
+    startWalking(agent, pos.x, pos.y, 'working');
+  }
 }
 
 function startWalking(agent, tx, ty, nextState) {
@@ -1517,63 +1582,102 @@ async function renderTaskManager() {
   ];
   await Promise.all(allFiles.map(f => fetchTaskContent(f)));
 
-  function isBlocked(filename, bucket) {
-    if (bucket !== 'backlog') return false;
+  // Group all tasks by agent
+  const agentTasks = {};
+  for (const [bucket, files] of Object.entries(taskData)) {
+    if (!Array.isArray(files)) continue;
+    for (const f of files) {
+      const agent = parseAgentFromContent(taskContentCache[f]) || 'orchestrator';
+      if (!agentTasks[agent]) agentTasks[agent] = { backlog:[], active:[], completed:[], failed:[] };
+      if (agentTasks[agent][bucket]) agentTasks[agent][bucket].push(f);
+    }
+  }
+
+  function isBlocked(filename) {
     const dep = parseDependsOnContent(taskContentCache[filename]);
     if (!dep) return false;
     return !(taskData.completed||[]).includes(dep);
   }
 
-  function renderCard(filename, bucket) {
-    const label     = taskLabel(filename);
-    const content   = taskContentCache[filename];
-    const agent     = parseAgentFromContent(content) || 'orchestrator';
-    const agentInfo = AGENT_COLORS[agent];
-    const agentLabel= agentInfo ? agentInfo.name : agent;
-    const agentColor= agentInfo ? agentInfo.primary : '#888';
-    const dep       = parseDependsOnContent(content);
-    const blocked   = isBlocked(filename, bucket);
-    const depBadge  = dep ? `<div class="task-depends-badge">⏳ after: ${escHtml(taskLabel(dep))}</div>` : '';
-    const delBtn    = `<button class="task-delete-btn" onclick="handleDeleteTask('${escHtml(filename)}')" title="Delete">&#215;</button>`;
+  function renderAgentRow(agentId) {
+    const info  = AGENT_COLORS[agentId] || { primary: '#888', name: agentId, role: '' };
+    const tasks = agentTasks[agentId];
 
-    const failReason = bucket === 'failed' ? (() => {
+    // Pick the most important task to show (active > failed > backlog > completed)
+    let primaryBucket = null, primaryFile = null;
+    if (tasks.active.length)    { primaryBucket = 'active';    primaryFile = tasks.active[tasks.active.length-1]; }
+    else if (tasks.failed.length)   { primaryBucket = 'failed';    primaryFile = tasks.failed[tasks.failed.length-1]; }
+    else if (tasks.backlog.length)  { primaryBucket = 'backlog';   primaryFile = tasks.backlog[tasks.backlog.length-1]; }
+    else if (tasks.completed.length){ primaryBucket = 'completed'; primaryFile = tasks.completed[tasks.completed.length-1]; }
+    if (!primaryFile) return '';
+
+    const label   = taskLabel(primaryFile);
+    const blocked = primaryBucket === 'backlog' && isBlocked(primaryFile);
+    const doneCount = tasks.completed.length;
+    const delBtn  = `<button class="ar-del" onclick="handleDeleteTask('${escHtml(primaryFile)}')" title="Delete">&#215;</button>`;
+
+    const statusMap = {
+      active:    { text:'active',   cls:'ar-s-active' },
+      failed:    { text:'failed',   cls:'ar-s-failed' },
+      backlog:   { text: blocked ? 'blocked' : 'queued', cls: blocked ? 'ar-s-blocked' : 'ar-s-queued' },
+      completed: { text:'done',     cls:'ar-s-done' },
+    };
+    const s = statusMap[primaryBucket];
+
+    const failReason = primaryBucket === 'failed' ? (() => {
+      const content = taskContentCache[primaryFile];
       if (!content) return '';
       const m = content.match(/## Failure Reason\s*\n+(.+)/);
-      return m ? `<div class="task-fail-reason" title="${escHtml(m[1].trim())}">✗ ${escHtml(m[1].trim())}</div>` : '';
+      return m ? `<div class="ar-fail-reason" title="${escHtml(m[1].trim())}">✗ ${escHtml(m[1].trim())}</div>` : '';
     })() : '';
 
-    let actions = '';
-    if (bucket === 'backlog') {
-      actions = blocked
-        ? `<div class="task-card-actions"><span style="font-size:10px;color:var(--tt);">blocked</span>${delBtn}</div>`
-        : `<div class="task-card-actions">${delBtn}</div>`;
-    } else if (bucket === 'active') {
-      actions = `<div class="task-card-actions">${delBtn}</div>`;
-    } else if (bucket === 'completed') {
-      actions = `<div class="task-card-actions">${delBtn}</div>`;
-    } else if (bucket === 'failed') {
-      actions = `<div class="task-card-actions">
-        <button class="tbtn retry-t" onclick="handleRetry('${escHtml(filename)}','${escHtml(agent)}')">↺ Retry</button>
-        ${delBtn}
-      </div>`;
+    let actions = delBtn;
+    if (primaryBucket === 'failed') {
+      actions = `<button class="tbtn retry-t" onclick="handleRetry('${escHtml(primaryFile)}','${escHtml(agentId)}')">↺ Retry</button>${delBtn}`;
     }
 
-    const cardClass = blocked ? 'task-card blocked' : bucket==='failed' ? 'task-card failed' : 'task-card';
-    return `<div class="${cardClass}" title="${escHtml(filename)}" data-filename="${escHtml(filename)}">
-      <div class="task-card-name">${escHtml(label)}</div>
-      <div class="task-card-agent"><span class="task-agent-dot" style="background:${agentColor}"></span><span style="color:${agentColor}">${escHtml(agentLabel)}</span></div>
-      ${depBadge}${failReason}${actions}
+    const doneTag = doneCount > 0 && primaryBucket !== 'completed'
+      ? `<span class="ar-done-count">${doneCount} done</span>` : '';
+
+    return `<div class="agent-row ${primaryBucket==='failed'?'ar-failed':''}" data-filename="${escHtml(primaryFile)}">
+      <div class="ar-left">
+        <span class="ar-dot" style="background:${info.primary}"></span>
+        <div class="ar-info">
+          <span class="ar-name" style="color:${info.primary}">${escHtml(info.name)}</span>
+          <span class="ar-role">${escHtml(info.role)}</span>
+        </div>
+      </div>
+      <div class="ar-mid">
+        <span class="ar-task">${escHtml(label)}</span>
+        ${failReason}
+        <div class="ar-meta"><span class="ar-status ${s.cls}">${s.text}</span>${doneTag}</div>
+      </div>
+      <div class="ar-right">${actions}</div>
     </div>`;
   }
 
-  for (const bucket of ['backlog','active','completed','failed']) {
-    const el = document.getElementById(`task-col-${bucket}`);
-    if (!el) continue;
-    const files = taskData[bucket] || [];
-    el.innerHTML = files.length === 0
-      ? `<div class="task-col-empty">empty</div>`
-      : [...files].reverse().map(f => renderCard(f, bucket)).join('');
+  const roster = document.getElementById('agent-roster');
+  if (!roster) return;
+
+  const agentIds = Object.keys(agentTasks);
+  if (agentIds.length === 0) {
+    roster.innerHTML = `<div class="task-col-empty" style="padding:12px 4px">No tasks yet</div>`;
+    return;
   }
+
+  // Sort: active first, failed, queued/backlog, done
+  agentIds.sort((a, b) => {
+    const pri = id => {
+      const t = agentTasks[id];
+      if (t.active.length)    return 0;
+      if (t.failed.length)    return 1;
+      if (t.backlog.length)   return 2;
+      return 3;
+    };
+    return pri(a) - pri(b);
+  });
+
+  roster.innerHTML = agentIds.map(id => renderAgentRow(id)).join('');
 }
 
 async function handleCreateTask() {
@@ -1823,6 +1927,176 @@ async function runTask(filename, agent) {
 navigate('projects');
 pollRunStatus();
 requestAnimationFrame(gameLoop);
+
+// ── TOKEN PANEL ───────────────────────────────────────────
+let _tokenPollInterval = null;
+
+function toggleTokenPanel() {
+  const panel = document.getElementById('token-panel');
+  const btn   = document.getElementById('token-toggle-btn');
+  const open  = panel.classList.toggle('open');
+  btn.classList.toggle('active', open);
+  if (open) {
+    refreshTokenPanel();
+    if (!_tokenPollInterval) _tokenPollInterval = setInterval(refreshTokenPanel, 5000);
+  } else {
+    clearInterval(_tokenPollInterval); _tokenPollInterval = null;
+  }
+}
+
+async function refreshTokenPanel() {
+  try {
+    const r = await fetch('/api/tokens');
+    if (!r.ok) return;
+    const d = await r.json();
+    renderTokenPanel(d);
+  } catch (e) {}
+}
+
+function renderTokenPanel(d) {
+  const totals = d.totals || {};
+  const runs   = d.runs   || [];
+
+  const totalIn    = totals.input_tokens  || 0;
+  const totalOut   = totals.output_tokens || 0;
+  const totalCache = totals.cache_read_tokens || 0;
+  const totalCost  = totals.cost_usd || 0;
+
+  // Stats
+  document.getElementById('tp-total-tokens').textContent = fmtNum(totalIn + totalOut);
+  document.getElementById('tp-total-cost').textContent   = '$' + totalCost.toFixed(4);
+  document.getElementById('tp-input-tokens').textContent = fmtNum(totalIn);
+  document.getElementById('tp-output-tokens').textContent= fmtNum(totalOut);
+  document.getElementById('tp-cache-tokens').textContent = fmtNum(totalCache);
+
+  // Update badge
+  const badge = document.getElementById('token-cost-badge');
+  if (badge) badge.textContent = totalCost > 0 ? '$' + totalCost.toFixed(3) : '';
+
+  // Chart
+  drawTokenChart(runs);
+
+  // Run list
+  const list = document.getElementById('tp-run-list');
+  if (!list) return;
+  if (runs.length === 0) { list.innerHTML = '<div style="font-size:10px;color:var(--tt);font-style:italic">No runs yet</div>'; return; }
+  list.innerHTML = runs.slice(0, 20).map(r => {
+    const isModel = r.project === 'claude-code';
+    const col  = isModel ? '#8b5cf6' : (AGENT_COLORS[r.agent]?.primary || '#888');
+    const name = isModel
+      ? (r.agent.includes('opus') ? 'Claude Opus' : r.agent.includes('haiku') ? 'Claude Haiku' : 'Claude Sonnet')
+      : (AGENT_COLORS[r.agent]?.name || r.agent);
+    const label = isModel ? 'You (Claude Code)' : taskLabel(r.task || '');
+    const tok  = fmtNum((r.input_tokens||0) + (r.output_tokens||0));
+    const cost = '$' + (r.cost_usd||0).toFixed(4);
+    const ago  = fmtAgo(r.ts);
+    return `<div class="tp-run-row">
+      <span class="tp-run-dot" style="background:${col}"></span>
+      <div class="tp-run-info">
+        <div class="tp-run-name">${escHtml(name)} — ${escHtml(label)}</div>
+        <div class="tp-run-meta">${tok} tokens · ${ago}</div>
+      </div>
+      <span class="tp-run-cost">${cost}</span>
+    </div>`;
+  }).join('');
+}
+
+function drawTokenChart(runs) {
+  const canvas = document.getElementById('token-chart');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.offsetWidth, H = canvas.offsetHeight;
+  canvas.width = W; canvas.height = H;
+  ctx.clearRect(0, 0, W, H);
+
+  const recent = [...runs].reverse().slice(-20);
+  if (recent.length === 0) return;
+
+  const maxCost = Math.max(...recent.map(r => r.cost_usd || 0), 0.0001);
+  const pad = { l: 6, r: 6, t: 8, b: 20 };
+  const barW = Math.max(4, ((W - pad.l - pad.r) / recent.length) - 2);
+  const chartH = H - pad.t - pad.b;
+
+  recent.forEach((r, i) => {
+    const x = pad.l + i * ((W - pad.l - pad.r) / recent.length);
+    const barH = Math.max(2, (r.cost_usd / maxCost) * chartH);
+    const y = pad.t + chartH - barH;
+    const col = AGENT_COLORS[r.agent]?.primary || '#0ea5e9';
+    ctx.fillStyle = col + '99';
+    ctx.beginPath();
+    ctx.roundRect(x, y, barW, barH, 2);
+    ctx.fill();
+
+    // Agent initial below bar
+    const initial = (AGENT_COLORS[r.agent]?.name || r.agent || '?')[0].toUpperCase();
+    ctx.fillStyle = '#4a4f70';
+    ctx.font = '7px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(initial, x + barW/2, H - 5);
+  });
+}
+
+function fmtNum(n) {
+  if (!n) return '0';
+  if (n >= 1000000) return (n/1000000).toFixed(1) + 'M';
+  if (n >= 1000)    return (n/1000).toFixed(1) + 'K';
+  return String(n);
+}
+
+function fmtAgo(ts) {
+  const diff = Math.floor(Date.now()/1000) - ts;
+  if (diff < 60)   return diff + 's ago';
+  if (diff < 3600) return Math.floor(diff/60) + 'm ago';
+  if (diff < 86400)return Math.floor(diff/3600) + 'h ago';
+  return Math.floor(diff/86400) + 'd ago';
+}
 </script>
+
+<button id="token-toggle-btn" onclick="toggleTokenPanel()" title="Token usage">⚡ Tokens<span id="token-cost-badge" class="token-btn-badge"></span></button>
+
+<!-- TOKEN PANEL -->
+<div id="token-panel">
+  <div id="token-panel-header">
+    <span>Token Usage</span>
+    <button id="token-panel-close" onclick="toggleTokenPanel()">×</button>
+  </div>
+  <div id="token-panel-body">
+    <div>
+      <div class="tp-section-label">All time</div>
+      <div class="tp-stat-row">
+        <div class="tp-stat">
+          <div class="tp-stat-label">Total tokens</div>
+          <div class="tp-stat-value" id="tp-total-tokens">—</div>
+        </div>
+        <div class="tp-stat">
+          <div class="tp-stat-label">Est. cost</div>
+          <div class="tp-stat-value" id="tp-total-cost">—</div>
+        </div>
+      </div>
+      <div class="tp-stat-row" style="margin-top:6px">
+        <div class="tp-stat">
+          <div class="tp-stat-label">Input</div>
+          <div class="tp-stat-value" style="font-size:14px" id="tp-input-tokens">—</div>
+        </div>
+        <div class="tp-stat">
+          <div class="tp-stat-label">Output</div>
+          <div class="tp-stat-value" style="font-size:14px" id="tp-output-tokens">—</div>
+        </div>
+        <div class="tp-stat">
+          <div class="tp-stat-label">Cached</div>
+          <div class="tp-stat-value" style="font-size:14px" id="tp-cache-tokens">—</div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="tp-section-label">Cost per run</div>
+      <canvas id="token-chart"></canvas>
+    </div>
+    <div>
+      <div class="tp-section-label">Recent runs</div>
+      <div id="tp-run-list"></div>
+    </div>
+  </div>
+</div>
 </body>
 </html>

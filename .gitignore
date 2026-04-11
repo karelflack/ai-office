@@ -37,3 +37,4 @@ runs/
 projects/*/tasks/
 projects/*/memory/
 output/*/
+tokens.db

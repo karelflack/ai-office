@@ -9,8 +9,10 @@ import http.server
 import json
 import os
 import re
+import sqlite3
 import subprocess
 import threading
+import time
 from pathlib import Path
 
 from core import agents as agent_registry
@@ -20,9 +22,46 @@ from core import projects as project_mgr
 
 PORT = 8000
 BASE_DIR = Path(__file__).parent.resolve()
+TOKENS_DB = BASE_DIR / "tokens.db"
 
 # Tracks live subprocess references keyed by (project_slug, filename).
 _live_procs: dict = {}
+
+
+def _init_tokens_db():
+    con = sqlite3.connect(str(TOKENS_DB))
+    con.execute("""
+        CREATE TABLE IF NOT EXISTS token_usage (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ts INTEGER NOT NULL,
+            project TEXT,
+            agent TEXT,
+            task TEXT,
+            input_tokens INTEGER DEFAULT 0,
+            output_tokens INTEGER DEFAULT 0,
+            cache_read_tokens INTEGER DEFAULT 0,
+            cache_creation_tokens INTEGER DEFAULT 0,
+            cost_usd REAL DEFAULT 0
+        )
+    """)
+    con.commit()
+    con.close()
+
+
+def _record_token_usage(project, agent, task, input_tokens, output_tokens,
+                        cache_read_tokens, cache_creation_tokens, cost_usd):
+    try:
+        con = sqlite3.connect(str(TOKENS_DB))
+        con.execute(
+            "INSERT INTO token_usage (ts, project, agent, task, input_tokens, output_tokens, "
+            "cache_read_tokens, cache_creation_tokens, cost_usd) VALUES (?,?,?,?,?,?,?,?,?)",
+            (int(time.time()), project, agent, task,
+             input_tokens, output_tokens, cache_read_tokens, cache_creation_tokens, cost_usd)
+        )
+        con.commit()
+        con.close()
+    except Exception:
+        pass
 
 # Maps agent → output subfolder
 AGENT_OUTPUT_DIR = {
@@ -121,11 +160,22 @@ def _spawn_agent_task(slug: str, filename: str, agent: str) -> bool:
                     if formatted:
                         lines.append(formatted)
                         mem.write_run(filename, lines, False, project_slug=slug)
-                    # Track success/failure from the result event
+                    # Track success/failure and token usage from the result event
                     try:
                         event = json.loads(line)
                         if event.get("type") == "result":
                             succeeded = event.get("subtype") == "success"
+                            usage = event.get("usage", {})
+                            _record_token_usage(
+                                project=slug,
+                                agent=agent,
+                                task=filename,
+                                input_tokens=usage.get("input_tokens", 0),
+                                output_tokens=usage.get("output_tokens", 0),
+                                cache_read_tokens=usage.get("cache_read_input_tokens", 0),
+                                cache_creation_tokens=usage.get("cache_creation_input_tokens", 0),
+                                cost_usd=event.get("total_cost_usd", 0),
+                            )
                     except Exception:
                         pass
                 except Exception:
@@ -240,6 +290,8 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
             self._handle_get_run_output()
         elif path == "/api/run/status":
             self._json_response(mem.list_runs())
+        elif path == "/api/tokens":
+            self._handle_get_tokens()
         else:
             super().do_GET()
 
@@ -260,6 +312,8 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
             self._handle_post_done()
         elif path == "/api/run":
             self._handle_post_run()
+        elif path == "/api/tokens/record":
+            self._handle_post_token_record()
         else:
             self.send_error(404, "Not found")
 
@@ -629,6 +683,8 @@ Reply with ONLY a JSON array, no markdown, no explanation:
         self._json_response(files)
 
     def _handle_get_project_output_file(self, slug, filepath):
+        import urllib.parse
+        filepath = urllib.parse.unquote(filepath)
         if ".." in filepath:
             self._error(400, "Invalid path")
             return
@@ -832,13 +888,51 @@ Reply with ONLY a JSON array, no markdown, no explanation:
         except (json.JSONDecodeError, IOError) as e:
             self._error(500, str(e))
 
+    def _handle_post_token_record(self):
+        try:
+            data = json.loads(self._read_body())
+            _record_token_usage(
+                project=data.get("project", ""),
+                agent=data.get("agent", ""),
+                task=data.get("task", ""),
+                input_tokens=data.get("input_tokens", 0),
+                output_tokens=data.get("output_tokens", 0),
+                cache_read_tokens=data.get("cache_read_tokens", 0),
+                cache_creation_tokens=data.get("cache_creation_tokens", 0),
+                cost_usd=data.get("cost_usd", 0),
+            )
+            self._json_response({"ok": True})
+        except Exception as e:
+            self._error(500, str(e))
+
+    def _handle_get_tokens(self):
+        try:
+            con = sqlite3.connect(str(TOKENS_DB))
+            con.row_factory = sqlite3.Row
+            runs = con.execute(
+                "SELECT * FROM token_usage ORDER BY ts DESC LIMIT 100"
+            ).fetchall()
+            totals = con.execute(
+                "SELECT SUM(input_tokens) as input_tokens, SUM(output_tokens) as output_tokens, "
+                "SUM(cache_read_tokens) as cache_read_tokens, SUM(cost_usd) as cost_usd "
+                "FROM token_usage"
+            ).fetchone()
+            con.close()
+            self._json_response({
+                "runs": [dict(r) for r in runs],
+                "totals": dict(totals) if totals else {},
+            })
+        except Exception as e:
+            self._json_response({"runs": [], "totals": {}, "error": str(e)})
+
     def log_message(self, format, *args):
-        if "/api/" in (args[0] if args else ""):
+        if "/api/" in str(args[0] if args else ""):
             super().log_message(format, *args)
 
 
 if __name__ == "__main__":
     os.chdir(BASE_DIR)
+    _init_tokens_db()
     server = http.server.HTTPServer(("", PORT), AIOfficeHandler)
     print(f"AI Office running at http://localhost:{PORT}/dashboard/")
     try:
