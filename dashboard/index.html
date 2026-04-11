@@ -1271,8 +1271,8 @@ function updateHeader() {
   }
   const proj = projectList.find(p => p.slug === currentProject);
   label.textContent = proj ? ` / ${proj.name}` : '';
-  const tokenBtn = `<button id="token-toggle-btn" class="h-btn" onclick="toggleTokenPanel()">⚡ Tokens<span id="token-cost-badge" class="token-btn-badge"></span></button>`;
-  const prBtn = `<button id="peer-review-btn" class="h-btn" onclick="togglePeerReview()" title="Peer Review">${_peerReviewEnabled ? '👁 Review: ON' : '👁 Review: OFF'}</button>`;
+  const tokenBtn = `<button id="token-toggle-btn" class="h-btn" onclick="toggleTokenPanel()">Tokens<span id="token-cost-badge" class="token-btn-badge"></span></button>`;
+  const prBtn = `<button id="peer-review-btn" class="h-btn" onclick="togglePeerReview()" title="Peer Review">${_peerReviewEnabled ? 'Review: ON' : 'Review: OFF'}</button>`;
   if (currentScreen === 'kickoff') {
     nav.innerHTML = `${tokenBtn}${prBtn}<button class="h-btn" onclick="navigate('projects')">← Back</button>`;
   } else if (currentScreen === 'run' || currentScreen === 'output') {
@@ -2106,7 +2106,7 @@ async function togglePeerReview() {
 function _updatePeerReviewBtn() {
   const btn = document.getElementById('peer-review-btn');
   if (!btn) return;
-  btn.textContent = _peerReviewEnabled ? '👁 Review: ON' : '👁 Review: OFF';
+  btn.textContent = _peerReviewEnabled ? 'Review: ON' : 'Review: OFF';
   btn.classList.toggle('active', _peerReviewEnabled);
 }
 
