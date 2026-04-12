@@ -172,12 +172,13 @@ def _parse_stream_event(line: str):
             elif item.get("type") == "tool_use":
                 name = item.get("name", "")
                 inp = item.get("input", {})
-                if name == "Read":   return f"> Read: {inp.get('file_path', '')}"
-                if name == "Write":  return f"> Write: {inp.get('file_path', '')}"
-                if name == "Edit":   return f"> Edit: {inp.get('file_path', '')}"
-                if name == "Bash":   return f"> $ {inp.get('command', '')[:80]}"
-                if name == "Glob":   return f"> Glob: {inp.get('pattern', '')}"
-                if name == "Grep":   return f"> Grep: {inp.get('pattern', '')}"
+                if name == "Read":       return f"> Read: {inp.get('file_path', '')}"
+                if name == "Write":      return f"> Write: {inp.get('file_path', '')}"
+                if name == "Edit":       return f"> Edit: {inp.get('file_path', '')}"
+                if name == "Bash":       return f"> $ {inp.get('command', '')[:80]}"
+                if name == "Glob":       return f"> Glob: {inp.get('pattern', '')}"
+                if name == "Grep":       return f"> Grep: {inp.get('pattern', '')}"
+                if name == "web_search": return f"[OpenAI] web_search: {inp.get('query', '')[:80]}"
                 return f"> {name}()"
     elif t == "result":
         cost = event.get("total_cost_usd", 0)

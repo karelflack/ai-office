@@ -1058,6 +1058,21 @@ function drawAgentSprite(cx, cy, agentId) {
     ctx.restore();
   }
 
+  // Orange outer ring when using OpenAI web search
+  if (webSearchAgents.has(agentId)) {
+    const pulse = 0.5 + 0.4*Math.sin(Date.now()/180);
+    ctx.save();
+    ctx.globalAlpha = pulse;
+    ctx.strokeStyle = '#f97316';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([4, 3]);
+    ctx.beginPath();
+    ctx.arc(cxPx, avatarCY, R+13, 0, Math.PI*2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+
   // Drop shadow
   ctx.fillStyle = 'rgba(0,0,0,0.35)';
   ctx.beginPath();
@@ -1949,6 +1964,8 @@ async function handleDone(filename) {
 let runningAgents = new Set();
 const _agentPolls = {};
 
+let webSearchAgents = new Set(); // agents currently using OpenAI web search
+
 function pollRunStatus() {
   setInterval(async () => {
     try {
@@ -1956,6 +1973,10 @@ function pollRunStatus() {
       if (!r.ok) return;
       const d = await r.json();
       runningAgents = new Set((d.running||[]).map(fname => {
+        const content = taskContentCache[fname];
+        return parseAgentFromContent(content) || null;
+      }).filter(Boolean));
+      webSearchAgents = new Set((d.web_search||[]).map(fname => {
         const content = taskContentCache[fname];
         return parseAgentFromContent(content) || null;
       }).filter(Boolean));
@@ -2002,9 +2023,10 @@ function closeWorkWindow(agent) {
 function _appendLine(outputEl, line) {
   const div = document.createElement('div');
   div.textContent = line;
-  if (line.startsWith('✓') || line.includes('completed') || line.includes('Done')) div.style.color = '#10b981';
-  else if (line.startsWith('Error') || line.startsWith('✗')) div.style.color = 'var(--red)';
-  else if (line.startsWith('>') || line.startsWith('$')) div.style.color = 'var(--blue)';
+  if (line.startsWith('[OpenAI]'))                                                   { div.style.color = '#f97316'; div.style.fontWeight = '600'; }
+  else if (line.startsWith('✓') || line.includes('completed') || line.includes('Done')) div.style.color = '#10b981';
+  else if (line.startsWith('Error') || line.startsWith('✗'))                        div.style.color = 'var(--red)';
+  else if (line.startsWith('>') || line.startsWith('$'))                            div.style.color = 'var(--blue)';
   outputEl.appendChild(div);
   outputEl.scrollTop = outputEl.scrollHeight;
 }

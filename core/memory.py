@@ -44,14 +44,20 @@ def read_run(task_id: str, project_slug: str = None) -> dict:
 
 
 def list_runs(project_slug: str = None) -> dict:
-    """Return {"running": [...], "done": [...]} task IDs."""
+    """Return {"running": [...], "done": [...], "web_search": [...]} task IDs."""
     run_dir = (RUNS_DIR / project_slug) if project_slug else RUNS_DIR
     run_dir.mkdir(parents=True, exist_ok=True)
-    running, done = [], []
+    running, done, web_search = [], [], []
     for f in run_dir.glob("*.json"):
         try:
             data = json.loads(f.read_text(encoding="utf-8"))
-            (done if data.get("done") else running).append(f.stem)
+            is_done = data.get("done", False)
+            (done if is_done else running).append(f.stem)
+            # Flag tasks that have used web_search and are still running
+            if not is_done:
+                lines = data.get("lines", [])
+                if any("[OpenAI]" in l for l in lines):
+                    web_search.append(f.stem)
         except Exception:
             pass
-    return {"running": running, "done": done}
+    return {"running": running, "done": done, "web_search": web_search}
