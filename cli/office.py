@@ -20,6 +20,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from core import agents as agent_registry
 from core import memory as mem
 from core import tasks as task_mgr
+from core import projects as proj_mgr
 
 AGENTS_DIR = task_mgr.BASE_DIR / "agents"
 
@@ -65,31 +66,33 @@ def status() -> None:
         sys.exit(1)
 
     ps = memory.get("project_status", {})
-    print(f"\n=== Project Status ===")
+    print(f"\n=== Framework Status ===")
     print(f"Phase:        {ps.get('phase', 'unknown')}")
     print(f"Last updated: {ps.get('last_updated', 'unknown')}")
     print(f"Summary:      {ps.get('summary', '')}")
-
-    decisions = memory.get("active_decisions", [])
-    print(f"\n=== Active Decisions ({len(decisions)}) ===")
-    for d in decisions:
-        print(f"  - {d}")
 
     updates = memory.get("recent_updates", [])
     print(f"\n=== Recent Updates ===")
     for u in updates[-5:]:
         print(f"  [{u.get('date', '?')}] {u.get('note', '')}")
 
-    notes = memory.get("agent_notes", {})
-    print(f"\n=== Agent Notes ===")
-    for agent, note in notes.items():
-        print(f"  {agent}: {note}")
-
-    counts = task_mgr.list_tasks()
-    print(f"\n=== Tasks ===")
-    print(f"  Backlog:   {len(counts['backlog'])}")
-    print(f"  Active:    {len(counts['active'])}")
-    print(f"  Completed: {len(counts['completed'])}")
+    # List all projects with their task counts
+    projects = proj_mgr.list_projects()
+    print(f"\n=== Projects ({len(projects)}) ===")
+    if not projects:
+        print("  (none)")
+    for p in projects:
+        slug = p.get("slug", "")
+        name = p.get("name", slug)
+        try:
+            counts = task_mgr.list_tasks(project_slug=slug)
+            backlog = len(counts.get("backlog", []))
+            active = len(counts.get("active", []))
+            completed = len(counts.get("completed", []))
+            failed = len(counts.get("failed", []))
+            print(f"  {name:<30} backlog={backlog}  active={active}  completed={completed}  failed={failed}")
+        except Exception:
+            print(f"  {name}")
     print()
 
 

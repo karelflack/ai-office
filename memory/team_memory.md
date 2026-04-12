@@ -1,63 +1,72 @@
 # Team Memory
 
-_This file is the human-readable log of the ai-office team's shared state. Update it after every significant action._
+_Human-readable log of the ai-office framework's shared state. Updated after every significant change._
 
 ---
 
-## Project Status
+## Framework Status
 
-**Current phase:** Active development
-**Last updated:** 2026-04-01
+**Current phase:** Production-ready
+**Last updated:** 2026-04-11
 
-The ai-office framework is operational. The full Norwegian team is integrated and has completed multiple tasks across two projects (Neutral, Landing Page). The dashboard has a visual office floor, per-agent work windows, project workspaces, kickoff flow, and output panel.
+The ai-office framework is fully operational. 16 specialized agents run as Claude CLI subprocesses with `--output-format stream-json`. All work is project-scoped. The dashboard provides a visual office floor with live agent output, a Memory tab for browsing decisions, and controls for peer review and token tracking.
 
 ---
 
 ## Active Decisions
 
-- Agents should always read `team_memory.json` before starting work
-- Task files use the naming convention `YYYY-MM-DD-<slug>.md`
-- One agent per task — no concurrent ownership
-- Shared memory lives at `memory/team_memory.json` and `memory/team_memory.md`
-- Project-scoped memory lives at `projects/{slug}/memory/project_memory.json`
-- All deliverables go to `projects/{slug}/output/` — never to repo root
-- Orchestrator must delegate specialist work — never do it directly
+- **Memory**: Agent decisions live in `projects/{slug}/memory/decisions/{category}.md` — five categories: `architecture`, `implementation`, `compliance`, `brand`, `strategy`. Seeded at project kickoff.
+- **Self-eval**: Agents score output 1–10. Server retries up to 2x if score is below 7.
+- **Peer review**: Togglable via dashboard (Review: ON/OFF). Assignments: arve→odd, bjorn→arve, dag→arve, jorunn↔ingrid, else↔halvard.
+- **Web search**: Agents with web access (else, halvard, guro, laila, knut, nora, frode, jorunn, magnus) use OpenAI `gpt-4o-search-preview` via MCP. Shown with orange indicator in dashboard.
+- **Phased execution**: Phase 1 (bjorn, dag, magnus) → Phase 2 (arve, ingrid, jorunn, else, frode) → Phase 3 (odd, per). Never run arve in parallel with magnus on user-data projects.
+- **Task files**: `YYYY-MM-DD-<slug>.md` in `projects/{slug}/tasks/{bucket}/`
+- **Output**: All deliverables go to `output/{slug}/{category}/` — `output/` and `projects/` are gitignored
+- **MCP config**: `mcp_search.json` regenerated at server startup with real `OPENAI_API_KEY` — never commit it
+- **Stuck tasks**: `_recover_stuck_tasks()` moves any `active/` tasks back to `backlog` on server restart
+- **Magnus labels**: `LAUNCH BLOCKER` / `HIGH RISK` / `ADVISORY` — arve must implement all `LAUNCH BLOCKER` items
 
 ---
 
-## Recent Updates
+## Timeline
 
-- 2026-03-27: Framework initialized. Norwegian team integrated (Arve, Bjørn, Dag, Else, Frode, Halvard, Guro, Jorunn, Ingrid, Knut, Laila, Magnus, Nora, Odd, Per).
-- 2026-03-27: Login page built (`dashboard/login.html`, sessionStorage auth, credentials: admin/office).
-- 2026-03-27: Else — top 5 open source multi-agent frameworks researched and documented.
-- 2026-03-27: Else — top 5 AI agent platform competitors researched and documented.
-- 2026-03-27: Magnus — AI Agent Usage Policy drafted (GDPR, EU AI Act, liability, incident response).
-- 2026-03-28: `core/` module extracted — shared domain logic for tasks, memory, projects, agents.
-- 2026-03-28: Project workspaces added — each project has isolated tasks, memory, and output.
-- 2026-03-29: Dashboard redesigned — visual office floor with glass panels, agent avatars at desks.
-- 2026-03-29: Kickoff flow added — describe a project, orchestrator generates a task plan.
-- 2026-03-29: Output panel added — browse and read all agent deliverables in the dashboard.
-- 2026-03-30: Neutral project — Bjorn, Ingrid, Else, Jorunn, Arve all completed landing page tasks.
-- 2026-04-01: Neutral project — Else (competitive analysis), Magnus (privacy policy + compliance checklist), Nora (pricing model), Halvard (growth strategy) all completed.
-- 2026-04-01: Per-agent work windows added — each running agent gets their own live output window.
+- **2026-03-27**: Framework initialized. Norwegian team of 16 agents integrated.
+- **2026-03-27**: Login page (`dashboard/login.html`), sessionStorage auth, credentials: admin/office.
+- **2026-03-28**: `core/` module extracted — shared domain logic for tasks, memory, projects, agents.
+- **2026-03-28**: Project workspaces — each project has isolated `tasks/`, `memory/`, and `output/`.
+- **2026-03-29**: Dashboard redesigned — visual office floor with glass panels, agent avatars at desks.
+- **2026-03-29**: Kickoff flow — describe a project, orchestrator generates a phased task plan.
+- **2026-03-29**: Output panel — browse and read all agent deliverables in the dashboard.
+- **2026-03-30**: Neutral project — Bjorn, Ingrid, Else, Jorunn, Arve all completed tasks.
+- **2026-04-01**: Neutral project — Else, Magnus, Nora, Halvard, Knut completed. Per-agent work windows added.
+- **2026-04-05**: Structured decisions memory — `projects/{slug}/memory/decisions/{category}.md`. Kickoff seeds `strategy.md`.
+- **2026-04-06**: Self-evaluation loop — agents score 1–10, server retries up to 2× if below 7.
+- **2026-04-06**: Peer review system — second agent subprocess reviews output before dispatch unblocks.
+- **2026-04-07**: Dashboard: peer review toggle button, token tracking (SQLite), Memory tab in output panel.
+- **2026-04-08**: OpenAI web search via MCP — search agents get `--mcp-config` pointing to `tools/perplexity_search.py`.
+- **2026-04-09**: Dashboard orange indicator for web search agents (dashed canvas ring, orange text).
+- **2026-04-09**: Fixed MCP key substitution bug — `_write_mcp_config()` bakes real API key at startup.
+- **2026-04-10**: Stuck-task recovery — `_recover_stuck_tasks()` on server restart. `output/` and `projects/` gitignored.
+- **2026-04-11**: Stale file audit — CLAUDE.md rewritten, all 16 agent files updated, dead `backend/`+`frontend/` deleted, `core/projects.py` and `cli/office.py` updated.
 
 ---
 
-## Agent Notes
+## Agent Roster
 
-- **Orchestrator**: Routes tasks, delegates to specialists. Completed login page (delegated to Arve) and open source frameworks research (delegated to Else). Duplicate competitor research task detected and cleaned up.
-- **Arve** (coding): Completed landing page implementation for Neutral project. `projects/neutral/output/landing-page/` — full Next.js 15 codebase.
-- **Bjørn** (architecture): Completed tech stack selection for Neutral project. Next.js static export, Tailwind v4, Framer Motion, Vercel.
-- **Dag** (devops): Ready. No active tasks.
-- **Else** (research): Completed top 5 open source multi-agent frameworks (`output/2026-03-27-top-5-open-source-multi-agent-frameworks.md`). Completed AI agent platform competitor research (`output/2026-03-27-ai-agent-platform-competitor-research.md`). Completed Neutral market research (`projects/neutral/output/2026-03-30-market-research.md`). Completed competitive analysis for AI Office launch (`projects/neutral/output/2026-04-01-competitive-analysis.md`).
-- **Frode** (sprint planning): Ready. No active tasks.
-- **Halvard** (growth): Completed go-to-market playbook for first 100 customers (`projects/neutral/output/2026-04-01-growth-strategy.md`).
-- **Guro** (social media): Ready. No active tasks.
-- **Jorunn** (branding): Completed brand identity and homepage copy for Neutral (`projects/neutral/output/2026-03-30-brand-copy.md`).
-- **Ingrid** (UI/UX): Completed visual design system and wireframe for Neutral (`projects/neutral/output/2026-03-30-design-direction.md`).
-- **Knut** (project tracking): Completed B2B launch milestone tracker for Neutral (`projects/neutral/output/2026-04-01-launch-milestones.md`).
-- **Laila** (support): Ready. No active tasks.
-- **Magnus** (legal): Completed AI Agent Usage Policy (`output/ai-agent-usage-policy.md`). Completed privacy policy and engineering compliance checklist for Neutral (`projects/neutral/output/2026-04-01-privacy-policy.md`, `2026-04-01-compliance-checklist.md`).
-- **Nora** (finance): Completed B2B SaaS pricing model for Neutral — 3 tiers, unit economics, revenue projections (`projects/neutral/output/2026-04-01-pricing-model.md`).
-- **Odd** (API testing): Ready. No active tasks.
-- **Per** (benchmarking): Ready. No active tasks.
+| Agent | Role | Phase | Web Search | Peer Review |
+|-------|------|-------|------------|-------------|
+| bjorn | Architecture | 1 | — | reviewed by arve |
+| dag | Infrastructure / DevOps | 1 | — | reviewed by arve |
+| magnus | Legal / Compliance | 1 | yes | — |
+| arve | Implementation | 2 | — | reviewed by odd |
+| ingrid | UI/UX Design | 2 | — | reviewed by jorunn |
+| jorunn | Brand / Tone | 2 | yes | reviewed by ingrid |
+| else | Research / Insights | 2 | yes | reviewed by halvard |
+| frode | Sprint Planning | 2 | yes | — |
+| halvard | Growth Strategy | 2 | yes | reviewed by else |
+| guro | Social Media | 2 | yes | — |
+| nora | Pricing / Finance | 2 | yes | — |
+| knut | Project Tracking | 2 | yes | — |
+| laila | Customer Support | 2 | yes | — |
+| odd | API Testing | 3 | — | — |
+| per | Performance | 3 | — | — |

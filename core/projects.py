@@ -20,6 +20,7 @@ def project_task_dirs(slug: str) -> dict:
         "backlog":   base / "backlog",
         "active":    base / "active",
         "completed": base / "completed",
+        "failed":    base / "failed",
     }
 
 
@@ -66,8 +67,15 @@ def create_project(name: str, description: str = "") -> str:
         "support",        # laila, knut
     ]
 
-    for subdir in ["tasks/backlog", "tasks/active", "tasks/completed", "tasks/failed", "memory"]:
+    for subdir in ["tasks/backlog", "tasks/active", "tasks/completed", "tasks/failed",
+                   "memory", "memory/decisions"]:
         (p / subdir).mkdir(parents=True, exist_ok=True)
+
+    # Seed empty decision files so agents can append without creating them
+    for category in ("architecture", "implementation", "compliance", "brand", "strategy"):
+        cat_file = p / "memory" / "decisions" / f"{category}.md"
+        if not cat_file.exists():
+            cat_file.write_text(f"# {category.capitalize()} Decisions\n\n", encoding="utf-8")
 
     # Output lives in the top-level output/{slug}/ directory
     output_base = BASE_DIR / "output" / slug
