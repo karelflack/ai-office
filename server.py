@@ -192,7 +192,7 @@ def _parse_stream_event(line: str):
 
 
 def _spawn_agent_task(slug: str, filename: str, agent: str,
-                      retry_count: int = 0, retry_context: str = "") -> bool:
+                      retry_count: int = 0, retry_context: str = "", **kwargs) -> bool:
     """Spawn a Claude subprocess for an active task. Returns False if already running."""
     key = (slug, filename)
     if key in _live_procs:
@@ -283,7 +283,9 @@ def _spawn_agent_task(slug: str, filename: str, agent: str,
 
     cmd = ["claude", "--print", "--dangerously-skip-permissions",
            "--verbose", "--output-format", "stream-json", "--model", model]
-    if agent in WEB_SEARCH_AGENTS and MCP_SEARCH_CONFIG.exists() and os.environ.get("OPENAI_API_KEY"):
+    use_mcp = (agent in WEB_SEARCH_AGENTS and MCP_SEARCH_CONFIG.exists()
+               and os.environ.get("OPENAI_API_KEY") and not kwargs.get("skip_mcp"))
+    if use_mcp:
         cmd += ["--mcp-config", str(MCP_SEARCH_CONFIG)]
     cmd.append(prompt)
 
@@ -343,6 +345,25 @@ def _spawn_agent_task(slug: str, filename: str, agent: str,
             _live_procs.pop(key, None)
 
             if failed:
+                # If MCP config caused the failure, retry without it
+                mcp_error = any("Invalid MCP" in l or "ENAMETOOLONG" in l for l in lines)
+                if mcp_error and use_mcp:
+                    lines.append("⚠ MCP config failed — retrying without web search")
+                    mem.write_run(filename, lines, False, project_slug=slug)
+                    # Move back to active if needed
+                    comp_path = BASE_DIR / "projects" / slug / "tasks" / "completed" / filename
+                    active_path = BASE_DIR / "projects" / slug / "tasks" / "active" / filename
+                    failed_path = BASE_DIR / "projects" / slug / "tasks" / "failed" / filename
+                    for p in (comp_path, failed_path):
+                        if p.exists():
+                            active_path.parent.mkdir(parents=True, exist_ok=True)
+                            p.rename(active_path)
+                            break
+                    _spawn_agent_task(slug, filename, agent,
+                                      retry_count=retry_count,
+                                      retry_context=retry_context,
+                                      skip_mcp=True)
+                    return
                 # Mark task failed and cascade to dependents
                 reason = lines[-1] if lines else f"Process exited with code {exit_code}"
                 task_mgr.fail_task(filename, reason=reason, project_slug=slug)
