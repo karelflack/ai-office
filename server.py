@@ -84,7 +84,9 @@ def _init_tokens_db():
 
 def _read_claude_code_usage():
     """Parse token usage from Claude Code's local JSONL conversation files."""
-    claude_dir = Path.home() / ".claude" / "projects" / "-Users-karelflack-ai-office"
+    # Claude Code names the project dir by replacing / with - in the absolute path
+    project_key = str(BASE_DIR).replace("/", "-").lstrip("-")
+    claude_dir = Path.home() / ".claude" / "projects" / project_key
     totals = {"input_tokens": 0, "output_tokens": 0,
               "cache_read_tokens": 0, "cache_creation_tokens": 0}
     try:
@@ -1020,7 +1022,19 @@ Reply with ONLY a JSON array, no markdown, no explanation:
         if not target.exists() or not target.is_file():
             self._error(404, "File not found")
             return
-        self._text_response(target.read_text(encoding="utf-8", errors="replace"))
+        qs = urllib.parse.parse_qs(self.path.split("?", 1)[1] if "?" in self.path else "")
+        if qs.get("download", ["0"])[0] == "1":
+            body = target.read_bytes()
+            filename = target.name
+            self.send_response(200)
+            self.send_header("Content-Type", "application/octet-stream")
+            self.send_header("Content-Disposition", f'attachment; filename="{filename}"')
+            self.send_header("Content-Length", str(len(body)))
+            self._send_cors_headers()
+            self.end_headers()
+            self.wfile.write(body)
+        else:
+            self._text_response(target.read_text(encoding="utf-8", errors="replace"))
 
     def _handle_get_project_memory(self, slug):
         try:
