@@ -1302,8 +1302,56 @@ def _load_env():
             os.environ[key] = val
 
 
+def _write_mcp_config():
+    """Write mcp_search.json with the real API key substituted in."""
+    api_key = os.environ.get("OPENAI_API_KEY", "")
+    if not api_key:
+        return
+    config = {
+        "mcpServers": {
+            "web_search": {
+                "command": "python3",
+                "args": [str(BASE_DIR / "tools" / "perplexity_search.py")],
+                "env": {"OPENAI_API_KEY": api_key},
+            }
+        }
+    }
+    MCP_SEARCH_CONFIG.write_text(json.dumps(config, indent=2), encoding="utf-8")
+    print(f"MCP config written with OpenAI key ({api_key[:8]}…)")
+
+
+def _recover_stuck_tasks():
+    """On startup, move any tasks left in active/ back to backlog.
+
+    These are tasks that were running when the server last crashed.
+    They have no live process — move them back so they can be re-run.
+    """
+    projects_dir = BASE_DIR / "projects"
+    if not projects_dir.exists():
+        return
+    recovered = 0
+    for active_dir in projects_dir.glob("*/tasks/active"):
+        slug = active_dir.parts[-3]
+        for task_file in active_dir.glob("*.md"):
+            try:
+                content = task_file.read_text(encoding="utf-8")
+                content = re.sub(r"^\*\*Status:\*\*.*$", "**Status:** backlog",
+                                 content, flags=re.MULTILINE)
+                backlog_dir = active_dir.parent / "backlog"
+                backlog_dir.mkdir(parents=True, exist_ok=True)
+                (backlog_dir / task_file.name).write_text(content, encoding="utf-8")
+                task_file.unlink()
+                recovered += 1
+            except Exception:
+                pass
+    if recovered:
+        print(f"Recovered {recovered} stuck task(s) → backlog")
+
+
 if __name__ == "__main__":
     _load_env()
+    _write_mcp_config()
+    _recover_stuck_tasks()
     os.chdir(BASE_DIR)
     _init_tokens_db()
     server = http.server.HTTPServer(("", PORT), AIOfficeHandler)
