@@ -434,6 +434,132 @@ def _notify_n8n(slug: str, agent: str, filename: str, status: str):
         pass  # Never block agent flow due to notification failure
 
 
+def _all_tasks_done(slug: str) -> bool:
+    """Return True if backlog and active are both empty for this project."""
+    dirs = task_mgr._get_task_dirs(slug)
+    for bucket in ("backlog", "active"):
+        d = dirs[bucket]
+        if d.exists() and any(d.glob("*.md")):
+            return False
+    return True
+
+
+def _find_docker_compose(slug: str) -> Path | None:
+    """Find a docker-compose.yml anywhere in output/{slug}/."""
+    output_dir = BASE_DIR / "output" / slug
+    for p in output_dir.rglob("docker-compose.yml"):
+        return p
+    return None
+
+
+def _verify_docker_build(slug: str, attempt: int = 0):
+    """Try to build and boot the project with Docker. Runs in a background thread."""
+    compose_file = _find_docker_compose(slug)
+    if not compose_file:
+        return  # No docker-compose — nothing to verify
+
+    compose_dir = compose_file.parent
+    max_attempts = 2
+
+    def _run():
+        _notify_n8n(slug, "system", f"docker-verify-attempt-{attempt+1}.md",
+                    f"Docker build started (attempt {attempt+1}/{max_attempts+1})")
+
+        # Tear down any previous run first
+        subprocess.run(
+            ["docker", "compose", "-f", str(compose_file), "down", "--remove-orphans", "--volumes"],
+            cwd=str(compose_dir), capture_output=True, timeout=60,
+        )
+
+        # Build and start
+        build_result = subprocess.run(
+            ["docker", "compose", "-f", str(compose_file), "up", "--build", "-d"],
+            cwd=str(compose_dir), capture_output=True, text=True, timeout=300,
+        )
+
+        if build_result.returncode != 0:
+            # Build failed — grab last 20 lines of stderr
+            error_lines = (build_result.stderr or build_result.stdout or "").splitlines()
+            error_summary = "\n".join(error_lines[-20:])
+            _handle_docker_failure(slug, compose_file, error_summary, attempt, max_attempts)
+            return
+
+        # Wait for healthchecks (up to 90s)
+        healthy = False
+        for _ in range(18):
+            time.sleep(5)
+            ps = subprocess.run(
+                ["docker", "compose", "-f", str(compose_file), "ps", "--format", "json"],
+                cwd=str(compose_dir), capture_output=True, text=True,
+            )
+            output = ps.stdout.strip()
+            if output and '"health"' in output:
+                try:
+                    services = json.loads(f"[{output}]") if not output.startswith("[") else json.loads(output)
+                    if all(s.get("Health", "") in ("healthy", "") for s in services):
+                        healthy = True
+                        break
+                except Exception:
+                    pass
+            elif ps.returncode == 0 and output:
+                healthy = True
+                break
+
+        if healthy:
+            _notify_n8n(slug, "system", "docker-verify-passed.md", "Docker build passed")
+            # Clean up
+            subprocess.run(
+                ["docker", "compose", "-f", str(compose_file), "down", "--remove-orphans", "--volumes"],
+                cwd=str(compose_dir), capture_output=True, timeout=60,
+            )
+        else:
+            # Get last 20 lines of logs from failed services
+            logs = subprocess.run(
+                ["docker", "compose", "-f", str(compose_file), "logs", "--tail", "20"],
+                cwd=str(compose_dir), capture_output=True, text=True, timeout=30,
+            )
+            error_summary = "\n".join(logs.stdout.splitlines()[-20:])
+            subprocess.run(
+                ["docker", "compose", "-f", str(compose_file), "down", "--remove-orphans", "--volumes"],
+                cwd=str(compose_dir), capture_output=True, timeout=60,
+            )
+            _handle_docker_failure(slug, compose_file, error_summary, attempt, max_attempts)
+
+    threading.Thread(target=_run, daemon=True).start()
+
+
+def _handle_docker_failure(slug: str, compose_file: Path, error_summary: str,
+                            attempt: int, max_attempts: int):
+    """Send error to Arve for fixing, then re-verify. Give up after max_attempts."""
+    if attempt >= max_attempts:
+        _notify_n8n(slug, "system", "docker-verify-failed.md",
+                    f"Docker build failed after {max_attempts+1} attempts — needs manual review")
+        return
+
+    _notify_n8n(slug, "system", f"docker-verify-attempt-{attempt+1}.md",
+                "Docker build failed — sending to Arve for fix")
+
+    # Create a repair task for Arve
+    fix_title = f"Fix Docker build error (attempt {attempt+1})"
+    description = (
+        f"The Docker build for this project failed. Fix the code so it builds and boots.\n\n"
+        f"## Error (last 20 lines)\n\n```\n{error_summary}\n```\n\n"
+        f"Focus on the error above. Do not rewrite working code."
+    )
+    fix_filename = task_mgr.create_task(fix_title, "arve", description=description, project_slug=slug)
+    task_mgr.assign_task(fix_filename, "arve", project_slug=slug)
+    _spawn_agent_task(slug, fix_filename, "arve",
+                      retry_context=f"Docker fix attempt {attempt+1}")
+
+    # After Arve finishes this fix task, _dispatch_dependents will check _all_tasks_done
+    # and trigger _verify_docker_build again — but we need to pass the next attempt count.
+    # Store it so _dispatch_dependents knows to re-verify.
+    _docker_verify_attempts[slug] = attempt + 1
+
+
+_docker_verify_attempts: dict = {}
+
+
 def _dispatch_dependents(slug: str, filename: str):
     """Activate and spawn tasks that were waiting on filename."""
     newly_activated = task_mgr.resolve_handoffs(filename, project_slug=slug)
@@ -456,6 +582,12 @@ def _dispatch_dependents(slug: str, filename: str):
         if dep_agent not in agent_registry.VALID_AGENTS:
             dep_agent = "orchestrator"
         _spawn_agent_task(slug, dep_filename, dep_agent)
+
+    # If no more tasks remain, trigger Docker verification
+    if not to_run and _all_tasks_done(slug):
+        attempt = _docker_verify_attempts.get(slug, 0)
+        _docker_verify_attempts[slug] = attempt
+        _verify_docker_build(slug, attempt=attempt)
 
 
 def _spawn_peer_review(slug: str, filename: str, original_agent: str,
