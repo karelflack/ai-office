@@ -645,7 +645,10 @@
   <div id="output-sidebar">
     <div id="output-sidebar-header">
       <span>Files</span>
-      <button class="h-btn" onclick="refreshOutputSidebar()" style="font-size:10px;padding:3px 8px;">↺</button>
+      <div style="display:flex;gap:4px;">
+        <button class="h-btn" onclick="refreshOutputSidebar()" style="font-size:10px;padding:3px 8px;">↺</button>
+        <button class="h-btn" onclick="clearProjectOutput()" style="font-size:10px;padding:3px 8px;color:var(--red);">Clear</button>
+      </div>
     </div>
     <div id="output-sidebar-tabs">
       <div class="osb-tab active" id="osb-tab-files" onclick="switchOutputTab('files')">Output</div>
@@ -1362,6 +1365,10 @@ function openProject(slug) {
   currentProject = slug;
   Object.keys(taskContentCache).forEach(k => delete taskContentCache[k]);
   selectedOutputFile = null;
+  outputFiles = [];
+  document.getElementById('output-file-list').innerHTML = '<div id="output-file-list-empty">No output files yet.</div>';
+  document.getElementById('output-viewer').innerHTML = '<div id="output-viewer-placeholder">Select a file to view its contents.</div>';
+  document.getElementById('output-toolbar').style.display = 'none';
   navigate('run');
 }
 
@@ -1638,6 +1645,17 @@ function downloadOutputFile() {
   a.href = `/api/projects/${currentProject}/output/${encodeURIComponent(selectedOutputFile)}?download=1`;
   a.download = selectedOutputFile.split('/').pop();
   a.click();
+}
+
+async function clearProjectOutput() {
+  if (!currentProject) return;
+  if (!confirm(`Clear all output files for this project? This cannot be undone.`)) return;
+  await fetch(`/api/projects/${currentProject}/output/clear`, { method: 'POST' });
+  selectedOutputFile = null;
+  outputFiles = [];
+  document.getElementById('output-file-list').innerHTML = '<div id="output-file-list-empty">No output files yet.</div>';
+  document.getElementById('output-viewer').innerHTML = '<div id="output-viewer-placeholder">Select a file to view its contents.</div>';
+  document.getElementById('output-toolbar').style.display = 'none';
 }
 
 function renderMarkdown(raw) {
@@ -2165,7 +2183,8 @@ function toggleTokenPanel() {
 
 async function refreshTokenPanel() {
   try {
-    const r = await fetch('/api/tokens');
+    const url = currentProject ? `/api/tokens?project=${encodeURIComponent(currentProject)}` : '/api/tokens';
+    const r = await fetch(url);
     if (!r.ok) return;
     const d = await r.json();
     renderTokenPanel(d);

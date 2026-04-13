@@ -856,6 +856,8 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
             self._handle_post_project_kickoff(slug)
         elif rest == "run/all":
             self._handle_post_project_run_all(slug)
+        elif rest == "output/clear":
+            self._handle_post_project_output_clear(slug)
         else:
             self._error(404, f"Not found: /api/projects/{sub}")
 
@@ -1171,6 +1173,15 @@ Reply with ONLY a JSON array, no markdown, no explanation:
 
         self._json_response({"ok": True, "tasks": created})
 
+    def _handle_post_project_output_clear(self, slug):
+        import shutil
+        output_dir = BASE_DIR / "output" / slug
+        if output_dir.exists():
+            for f in output_dir.rglob("*"):
+                if f.is_file() and f.name != "README.md":
+                    f.unlink()
+        self._json_response({"ok": True})
+
     def _handle_get_project_output_list(self, slug):
         output_dir = BASE_DIR / "output" / slug
         if not output_dir.exists():
@@ -1453,17 +1464,32 @@ Reply with ONLY a JSON array, no markdown, no explanation:
             self._error(500, str(e))
 
     def _handle_get_tokens(self):
+        import urllib.parse
+        qs = urllib.parse.parse_qs(self.path.split("?", 1)[1] if "?" in self.path else "")
+        project_filter = qs.get("project", [None])[0]
         try:
             con = sqlite3.connect(str(TOKENS_DB))
             con.row_factory = sqlite3.Row
-            runs = con.execute(
-                "SELECT * FROM token_usage ORDER BY ts DESC LIMIT 100"
-            ).fetchall()
-            totals = con.execute(
-                "SELECT SUM(input_tokens) as input_tokens, SUM(output_tokens) as output_tokens, "
-                "SUM(cache_read_tokens) as cache_read_tokens, SUM(cost_usd) as cost_usd "
-                "FROM token_usage"
-            ).fetchone()
+            if project_filter:
+                runs = con.execute(
+                    "SELECT * FROM token_usage WHERE project=? ORDER BY ts DESC LIMIT 100",
+                    (project_filter,)
+                ).fetchall()
+                totals = con.execute(
+                    "SELECT SUM(input_tokens) as input_tokens, SUM(output_tokens) as output_tokens, "
+                    "SUM(cache_read_tokens) as cache_read_tokens, SUM(cost_usd) as cost_usd "
+                    "FROM token_usage WHERE project=?",
+                    (project_filter,)
+                ).fetchone()
+            else:
+                runs = con.execute(
+                    "SELECT * FROM token_usage ORDER BY ts DESC LIMIT 100"
+                ).fetchall()
+                totals = con.execute(
+                    "SELECT SUM(input_tokens) as input_tokens, SUM(output_tokens) as output_tokens, "
+                    "SUM(cache_read_tokens) as cache_read_tokens, SUM(cost_usd) as cost_usd "
+                    "FROM token_usage"
+                ).fetchone()
             con.close()
             self._json_response({
                 "runs": [dict(r) for r in runs],
