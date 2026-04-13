@@ -30,6 +30,7 @@ _live_procs: dict = {}
 _retry_counts: dict = {}
 # Feature flags
 _peer_review_enabled: bool = True
+N8N_WEBHOOK_URL = os.environ.get("N8N_WEBHOOK_URL", "http://localhost:5678/webhook/agent-complete")
 
 # Reviewer assignments — who reviews whose output
 REVIEWER_MAP = {
@@ -369,6 +370,7 @@ def _spawn_agent_task(slug: str, filename: str, agent: str,
                 task_mgr.fail_task(filename, reason=reason, project_slug=slug)
                 task_mgr.cascade_fail(filename, project_slug=slug)
                 _retry_counts.pop(key, None)
+                _notify_n8n(slug, agent, filename, "failed")
                 return
 
             # Evaluation-based retry: if score < 7 and retries remaining, re-run
@@ -395,6 +397,7 @@ def _spawn_agent_task(slug: str, filename: str, agent: str,
                     mem.write_run(filename, lines, True, project_slug=slug)
 
             _retry_counts.pop(key, None)
+            _notify_n8n(slug, agent, filename, "completed")
 
             # Check if this agent has a peer reviewer (and peer review is enabled)
             reviewer = REVIEWER_MAP.get(agent)
@@ -407,6 +410,28 @@ def _spawn_agent_task(slug: str, filename: str, agent: str,
 
     threading.Thread(target=_reader, daemon=True).start()
     return True
+
+
+def _notify_n8n(slug: str, agent: str, filename: str, status: str):
+    """Fire n8n webhook when an agent finishes. Non-blocking, errors are silent."""
+    try:
+        task_title = filename.replace(".md", "").split("-", 3)[-1].replace("-", " ").title()
+        payload = json.dumps({
+            "project": slug,
+            "agent": agent.capitalize(),
+            "task": task_title,
+            "status": status,
+            "file": filename,
+        }).encode("utf-8")
+        req = urllib.request.Request(
+            N8N_WEBHOOK_URL,
+            data=payload,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        urllib.request.urlopen(req, timeout=3)
+    except Exception:
+        pass  # Never block agent flow due to notification failure
 
 
 def _dispatch_dependents(slug: str, filename: str):
