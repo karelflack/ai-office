@@ -659,6 +659,10 @@
     </div>
   </div>
   <div id="output-main">
+    <div id="output-toolbar" style="display:none;padding:8px 14px;border-bottom:1px solid var(--border);align-items:center;gap:8px;flex-shrink:0;">
+      <span id="output-toolbar-filename" style="font-size:11px;color:var(--tt);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
+      <button id="output-download-btn" onclick="downloadOutputFile()" style="font-size:11px;padding:4px 10px;background:var(--surface-2);border:1px solid var(--border);border-radius:4px;color:var(--tp);cursor:pointer;">Download</button>
+    </div>
     <div id="output-viewer">
       <div id="output-viewer-placeholder">Select a file to view its contents.</div>
     </div>
@@ -1620,9 +1624,20 @@ async function viewOutputFile(path) {
     const text = await r.text();
     const ext  = path.split('.').pop().toLowerCase();
     viewer.innerHTML = ext === 'md' ? renderMarkdown(text) : `<div class="output-code-raw">${escHtml(text)}</div>`;
+    const toolbar = document.getElementById('output-toolbar');
+    toolbar.style.display = 'flex';
+    document.getElementById('output-toolbar-filename').textContent = path.split('/').pop();
   } catch (e) {
     viewer.innerHTML = '<div style="color:var(--red);font-size:12px;">Could not load file.</div>';
   }
+}
+
+function downloadOutputFile() {
+  if (!selectedOutputFile || !currentProject) return;
+  const a = document.createElement('a');
+  a.href = `/api/projects/${currentProject}/output/${encodeURIComponent(selectedOutputFile)}?download=1`;
+  a.download = selectedOutputFile.split('/').pop();
+  a.click();
 }
 
 function renderMarkdown(raw) {
