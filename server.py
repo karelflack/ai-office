@@ -43,6 +43,28 @@ _live_procs_lock = threading.Lock()
 # Tracks retry counts keyed by (project_slug, filename).
 _retry_counts: dict = {}
 _retry_counts_lock = threading.Lock()
+# Per-project lock for project_memory.json to prevent concurrent write corruption
+_memory_locks: dict = {}
+_memory_locks_lock = threading.Lock()
+
+
+def _get_memory_lock(slug: str) -> threading.Lock:
+    with _memory_locks_lock:
+        if slug not in _memory_locks:
+            _memory_locks[slug] = threading.Lock()
+        return _memory_locks[slug]
+
+
+def _update_project_memory(slug: str, updates: dict) -> None:
+    """Thread-safe read-modify-write of project_memory.json."""
+    mem_path = BASE_DIR / "projects" / slug / "memory" / "project_memory.json"
+    with _get_memory_lock(slug):
+        try:
+            data = json.loads(mem_path.read_text(encoding="utf-8")) if mem_path.exists() else {}
+        except (json.JSONDecodeError, OSError):
+            data = {}
+        data.update(updates)
+        mem_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
 # Feature flags
 _peer_review_enabled: bool = True
 N8N_WEBHOOK_URL = os.environ.get("N8N_WEBHOOK_URL", "http://localhost:5678/webhook/agent-complete")
@@ -576,15 +598,10 @@ def _push_to_github(slug: str):
             return
 
         # 4. Store PR URL in project memory
-        mem_path = BASE_DIR / "projects" / slug / "memory" / "project_memory.json"
-        if mem_path.exists():
-            try:
-                data = json.loads(mem_path.read_text(encoding="utf-8"))
-                data["github_pr"] = pr_url
-                data["github_repo"] = f"https://github.com/{GITHUB_USERNAME}/{repo_name}"
-                mem_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
-            except Exception:
-                pass
+        _update_project_memory(slug, {
+            "github_pr": pr_url,
+            "github_repo": f"https://github.com/{GITHUB_USERNAME}/{repo_name}",
+        })
 
         _notify_n8n(slug, "system", "github-pr.md",
                     f"GitHub PR opened: {pr_url}")
@@ -662,14 +679,7 @@ def _linear_create_issues(slug: str, tasks: list):
         if not issue_map:
             return
 
-        mem_path = BASE_DIR / "projects" / slug / "memory" / "project_memory.json"
-        if mem_path.exists():
-            try:
-                m = json.loads(mem_path.read_text(encoding="utf-8"))
-                m["linear_issues"] = issue_map
-                mem_path.write_text(json.dumps(m, indent=2), encoding="utf-8")
-            except Exception:
-                pass
+        _update_project_memory(slug, {"linear_issues": issue_map})
 
     threading.Thread(target=_run, daemon=True).start()
 
@@ -844,15 +854,10 @@ Reply with ONLY a JSON array — no markdown, no explanation, no code fences:
         title_to_filename[title] = filename
         created.append({"filename": filename, "agent": agent, "title": title, "description": desc, "depends_on": depends_on})
 
-    mem_path = BASE_DIR / "projects" / slug / "memory" / "project_memory.json"
-    if mem_path.exists():
-        try:
-            m = json.loads(mem_path.read_text(encoding="utf-8"))
-            m["kickoff_description"] = description
-            m["kickoff_plan"] = [{"agent": t["agent"], "title": t["title"]} for t in created]
-            mem_path.write_text(json.dumps(m, indent=2), encoding="utf-8")
-        except Exception:
-            pass
+    _update_project_memory(slug, {
+        "kickoff_description": description,
+        "kickoff_plan": [{"agent": t["agent"], "title": t["title"]} for t in created],
+    })
 
     from datetime import date as _date
     decisions_dir = BASE_DIR / "projects" / slug / "memory" / "decisions"
@@ -2369,6 +2374,9 @@ def _recover_stuck_tasks():
 
     These are tasks that were running when the server last crashed.
     They have no live process — move them back so they can be re-run.
+
+    Also re-trigger CI for any project that finished all tasks but never
+    got a GitHub PR (server was killed between last task completing and CI).
     """
     projects_dir = BASE_DIR / "projects"
     if not projects_dir.exists():
@@ -2391,9 +2399,42 @@ def _recover_stuck_tasks():
     if recovered:
         print(f"Recovered {recovered} stuck task(s) → backlog")
 
+    # Re-trigger CI for projects that completed all tasks but never got a PR
+    for mem_path in projects_dir.glob("*/memory/project_memory.json"):
+        slug = mem_path.parts[-3]
+        try:
+            raw = mem_path.read_text(encoding="utf-8")
+            # Use string search as fallback when JSON is malformed
+            try:
+                has_pr = bool(json.loads(raw).get("github_pr"))
+            except (json.JSONDecodeError, AttributeError):
+                has_pr = '"github_pr"' in raw and '"github_pr": null' not in raw
+            if has_pr:
+                continue
+            completed_dir = BASE_DIR / "projects" / slug / "tasks" / "completed"
+            if not completed_dir.exists() or not any(completed_dir.glob("*.md")):
+                continue
+            if not _all_tasks_done(slug):
+                continue
+            print(f"Re-triggering CI for {slug} (completed but no PR)")
+            threading.Thread(target=_run_ci_tests, args=(slug, 0), daemon=True).start()
+        except Exception:
+            pass
+
 
 if __name__ == "__main__":
     _load_env()
+    # Re-read env-backed globals now that .env is loaded into os.environ
+    GITHUB_TOKEN    = os.environ.get("GITHUB_TOKEN", "")
+    GITHUB_USERNAME = os.environ.get("GITHUB_USERNAME", "")
+    LINEAR_API_KEY        = os.environ.get("LINEAR_API_KEY", "")
+    LINEAR_TEAM_ID        = os.environ.get("LINEAR_TEAM_ID", "")
+    LINEAR_WEBHOOK_SECRET = os.environ.get("LINEAR_WEBHOOK_SECRET", "")
+    JIRA_WEBHOOK_SECRET   = os.environ.get("JIRA_WEBHOOK_SECRET", "")
+    WEBHOOK_TRIGGER_LABEL = os.environ.get("WEBHOOK_TRIGGER_LABEL", "ai-office")
+    NOTION_API_KEY        = os.environ.get("NOTION_API_KEY", "")
+    NOTION_DATABASE_ID    = os.environ.get("NOTION_DATABASE_ID", "")
+    N8N_WEBHOOK_URL = os.environ.get("N8N_WEBHOOK_URL", "http://localhost:5678/webhook/agent-complete")
     _write_mcp_config()
     _recover_stuck_tasks()
     os.chdir(BASE_DIR)
