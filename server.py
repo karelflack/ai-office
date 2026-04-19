@@ -13,7 +13,18 @@ import sqlite3
 import subprocess
 import threading
 import time
+import urllib.request
+import urllib.error
 from pathlib import Path
+
+# Load .env before anything else
+_env_path = Path(__file__).parent / ".env"
+if _env_path.exists():
+    for _line in _env_path.read_text().splitlines():
+        _line = _line.strip()
+        if _line and not _line.startswith("#") and "=" in _line:
+            _k, _v = _line.split("=", 1)
+            os.environ.setdefault(_k.strip(), _v.strip())
 
 from core import agents as agent_registry
 from core import memory as mem
@@ -35,6 +46,9 @@ _peer_review_enabled: bool = True
 N8N_WEBHOOK_URL = os.environ.get("N8N_WEBHOOK_URL", "http://localhost:5678/webhook/agent-complete")
 GITHUB_TOKEN    = os.environ.get("GITHUB_TOKEN", "")
 GITHUB_USERNAME = os.environ.get("GITHUB_USERNAME", "")
+LINEAR_API_KEY  = os.environ.get("LINEAR_API_KEY", "")
+LINEAR_TEAM_ID  = os.environ.get("LINEAR_TEAM_ID", "")
+_linear_states_cache: dict = {}  # team_id -> {name: state_id}
 
 # Reviewer assignments — who reviews whose output
 REVIEWER_MAP = {
@@ -379,6 +393,7 @@ def _spawn_agent_task(slug: str, filename: str, agent: str,
                 with _retry_counts_lock:
                     _retry_counts.pop(key, None)
                 _notify_n8n(slug, agent, filename, "failed")
+                _linear_update_issue(slug, filename, "Cancelled")
                 return
 
             # Evaluation-based retry: if score < 7 and retries remaining, re-run
@@ -409,6 +424,7 @@ def _spawn_agent_task(slug: str, filename: str, agent: str,
             with _retry_counts_lock:
                 _retry_counts.pop(key, None)
             _notify_n8n(slug, agent, filename, "completed")
+            _linear_update_issue(slug, filename, "Done")
 
             # Check if this agent has a peer reviewer (and peer review is enabled)
             reviewer = REVIEWER_MAP.get(agent)
@@ -460,7 +476,7 @@ def _push_to_github(slug: str):
         import tempfile
         import urllib.error
 
-        repo_name = f"ai-office-{slug}"
+        repo_name = slug
         api_base = "https://api.github.com"
         headers = {
             "Authorization": f"token {GITHUB_TOKEN}",
@@ -558,6 +574,157 @@ def _push_to_github(slug: str):
 
         _notify_n8n(slug, "system", "github-pr.md",
                     f"GitHub PR opened: {pr_url}")
+
+    threading.Thread(target=_run, daemon=True).start()
+
+
+def _linear_api(query: str, variables: dict = None) -> dict:
+    """Execute a Linear GraphQL query. Returns data dict or {} on failure."""
+    if not LINEAR_API_KEY:
+        return {}
+    payload = json.dumps({"query": query, "variables": variables or {}}).encode()
+    req = urllib.request.Request(
+        "https://api.linear.app/graphql",
+        data=payload,
+        headers={"Authorization": LINEAR_API_KEY, "Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        resp = urllib.request.urlopen(req, timeout=15)
+        return json.loads(resp.read()).get("data", {})
+    except Exception:
+        return {}
+
+
+def _get_linear_state_id(state_name: str) -> str | None:
+    """Return the workflow state ID for the given name in LINEAR_TEAM_ID, with caching."""
+    global _linear_states_cache
+    if LINEAR_TEAM_ID not in _linear_states_cache:
+        data = _linear_api(
+            """query($teamId: String!) {
+                workflowStates(filter: { team: { id: { eq: $teamId } } }) {
+                    nodes { id name }
+                }
+            }""",
+            {"teamId": LINEAR_TEAM_ID},
+        )
+        nodes = data.get("workflowStates", {}).get("nodes", [])
+        _linear_states_cache[LINEAR_TEAM_ID] = {n["name"]: n["id"] for n in nodes}
+    states = _linear_states_cache.get(LINEAR_TEAM_ID, {})
+    return states.get(state_name) or next(
+        (v for k, v in states.items() if k.lower() == state_name.lower()), None
+    )
+
+
+def _linear_create_issues(slug: str, tasks: list):
+    """Create one Linear issue per task at kickoff. Stores issue URLs in project memory."""
+    if not LINEAR_API_KEY or not LINEAR_TEAM_ID:
+        return
+
+    def _run():
+        issue_map = {}  # filename -> {id, url}
+        for task in tasks:
+            agent = task.get("agent", "")
+            title = task.get("title", "")
+            desc  = task.get("description", "")
+            filename = task.get("filename", "")
+
+            data = _linear_api(
+                """mutation($title: String!, $description: String!, $teamId: String!) {
+                    issueCreate(input: { title: $title, description: $description, teamId: $teamId }) {
+                        issue { id url }
+                    }
+                }""",
+                {
+                    "title": f"[{agent.upper()}] {title}",
+                    "description": f"**Project:** {slug}\n**Agent:** {agent}\n\n{desc}",
+                    "teamId": LINEAR_TEAM_ID,
+                },
+            )
+            issue = data.get("issueCreate", {}).get("issue", {})
+            if issue.get("id"):
+                issue_map[filename] = {"id": issue["id"], "url": issue["url"]}
+
+        if not issue_map:
+            return
+
+        mem_path = BASE_DIR / "projects" / slug / "memory" / "project_memory.json"
+        if mem_path.exists():
+            try:
+                m = json.loads(mem_path.read_text(encoding="utf-8"))
+                m["linear_issues"] = issue_map
+                mem_path.write_text(json.dumps(m, indent=2), encoding="utf-8")
+            except Exception:
+                pass
+
+    threading.Thread(target=_run, daemon=True).start()
+
+
+def _linear_update_issue(slug: str, filename: str, state_name: str, comment: str = ""):
+    """Move a Linear issue to a new state and optionally add a comment."""
+    if not LINEAR_API_KEY:
+        return
+
+    def _run():
+        mem_path = BASE_DIR / "projects" / slug / "memory" / "project_memory.json"
+        if not mem_path.exists():
+            return
+        try:
+            m = json.loads(mem_path.read_text(encoding="utf-8"))
+            issue_info = m.get("linear_issues", {}).get(filename)
+            if not issue_info:
+                return
+            issue_id = issue_info["id"]
+        except Exception:
+            return
+
+        state_id = _get_linear_state_id(state_name)
+        if state_id:
+            _linear_api(
+                """mutation($id: String!, $stateId: String!) {
+                    issueUpdate(id: $id, input: { stateId: $stateId }) { success }
+                }""",
+                {"id": issue_id, "stateId": state_id},
+            )
+
+        if comment:
+            _linear_api(
+                """mutation($issueId: String!, $body: String!) {
+                    commentCreate(input: { issueId: $issueId, body: $body }) { success }
+                }""",
+                {"issueId": issue_id, "body": comment},
+            )
+
+    threading.Thread(target=_run, daemon=True).start()
+
+
+def _linear_add_pr_comment(slug: str):
+    """After all tasks done, comment the GitHub PR URL on every Linear issue for this project."""
+    if not LINEAR_API_KEY:
+        return
+
+    def _run():
+        mem_path = BASE_DIR / "projects" / slug / "memory" / "project_memory.json"
+        if not mem_path.exists():
+            return
+        try:
+            m = json.loads(mem_path.read_text(encoding="utf-8"))
+        except Exception:
+            return
+
+        pr_url = m.get("github_pr", "")
+        issue_map = m.get("linear_issues", {})
+        if not issue_map:
+            return
+
+        comment = f"✅ All AI agents completed.\n\n{f'GitHub PR: {pr_url}' if pr_url else 'No GitHub PR (GITHUB_TOKEN not configured).'}"
+        for info in issue_map.values():
+            _linear_api(
+                """mutation($issueId: String!, $body: String!) {
+                    commentCreate(input: { issueId: $issueId, body: $body }) { success }
+                }""",
+                {"issueId": info["id"], "body": comment},
+            )
 
     threading.Thread(target=_run, daemon=True).start()
 
@@ -711,12 +878,13 @@ def _dispatch_dependents(slug: str, filename: str):
             dep_agent = "orchestrator"
         _spawn_agent_task(slug, dep_filename, dep_agent)
 
-    # If no more tasks remain, trigger Docker verification and GitHub push
+    # If no more tasks remain, trigger Docker verification, GitHub push, and Linear wrap-up
     if not to_run and _all_tasks_done(slug):
         attempt = _docker_verify_attempts.get(slug, 0)
         _docker_verify_attempts[slug] = attempt
         _verify_docker_build(slug, attempt=attempt)
         _push_to_github(slug)
+        _linear_add_pr_comment(slug)
 
 
 def _spawn_peer_review(slug: str, filename: str, original_agent: str,
@@ -954,6 +1122,8 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
             self._json_response(mem.list_runs(project_slug=slug))
         elif rest == "github":
             self._handle_get_project_github(slug)
+        elif rest == "linear":
+            self._handle_get_project_linear(slug)
         else:
             # Return project info for /api/projects/{slug}
             try:
@@ -1304,6 +1474,7 @@ Reply with ONLY a JSON array, no markdown, no explanation:
             existing = strategy_seed.read_text(encoding="utf-8")
             strategy_seed.write_text(existing + "\n" + seed_content, encoding="utf-8")
 
+        _linear_create_issues(slug, created)
         self._json_response({"ok": True, "tasks": created})
 
     def _handle_post_project_output_clear(self, slug):
@@ -1322,6 +1493,17 @@ Reply with ONLY a JSON array, no markdown, no explanation:
             if d.exists():
                 shutil.rmtree(d)
         self._json_response({"ok": True})
+
+    def _handle_get_project_linear(self, slug):
+        mem_path = BASE_DIR / "projects" / slug / "memory" / "project_memory.json"
+        if not mem_path.exists():
+            self._json_response({"issues": {}})
+            return
+        try:
+            data = json.loads(mem_path.read_text(encoding="utf-8"))
+            self._json_response({"issues": data.get("linear_issues", {})})
+        except Exception:
+            self._json_response({"issues": {}})
 
     def _handle_get_project_github(self, slug):
         mem_path = BASE_DIR / "projects" / slug / "memory" / "project_memory.json"

@@ -1378,7 +1378,9 @@ function openProject(slug) {
   document.getElementById('output-viewer').innerHTML = '<div id="output-viewer-placeholder">Select a file to view its contents.</div>';
   document.getElementById('output-toolbar').style.display = 'none';
   document.getElementById('github-banner').style.display = 'none';
+  linearIssues = {};
   refreshGithubBanner();
+  loadLinearIssues();
   navigate('run');
 }
 
@@ -1745,6 +1747,16 @@ function refreshOutputAfterRun() {
 // ── TASK MANAGER ──────────────────────────────────────────
 let taskData = { backlog:[], active:[], completed:[], failed:[] };
 const taskContentCache = {};
+let linearIssues = {};  // filename -> {id, url}
+
+async function loadLinearIssues() {
+  if (!currentProject) return;
+  try {
+    const r = await fetch(`/api/projects/${currentProject}/linear`);
+    const d = await r.json();
+    linearIssues = d.issues || {};
+  } catch(e) { linearIssues = {}; }
+}
 
 async function loadTasks() {
   const errEl = document.getElementById('task-error');
@@ -1843,9 +1855,13 @@ async function renderTaskManager() {
       return m ? `<div class="ar-fail-reason" title="${escHtml(m[1].trim())}">✗ ${escHtml(m[1].trim())}</div>` : '';
     })() : '';
 
-    let actions = delBtn;
+    const linearInfo = linearIssues[primaryFile];
+    const linearBtn = linearInfo
+      ? `<a href="${escHtml(linearInfo.url)}" target="_blank" title="View in Linear" style="font-size:10px;color:var(--tt);text-decoration:none;padding:2px 6px;border:1px solid var(--border);border-radius:4px;white-space:nowrap;">Linear</a>`
+      : '';
+    let actions = linearBtn + delBtn;
     if (primaryBucket === 'failed') {
-      actions = `<button class="tbtn retry-t" onclick="handleRetry('${escHtml(primaryFile)}','${escHtml(agentId)}')">↺ Retry</button>${delBtn}`;
+      actions = `<button class="tbtn retry-t" onclick="handleRetry('${escHtml(primaryFile)}','${escHtml(agentId)}')">↺ Retry</button>${linearBtn}${delBtn}`;
     }
 
     const doneTag = doneCount > 0 && primaryBucket !== 'completed'
@@ -2036,6 +2052,7 @@ const _agentPolls = {};
 let webSearchAgents = new Set(); // agents currently using OpenAI web search
 
 function pollRunStatus() {
+  let prevRunningKey = '';
   setInterval(async () => {
     try {
       const r = await fetch(`/api/projects/${currentProject}/run/status`);
@@ -2049,7 +2066,18 @@ function pollRunStatus() {
         const content = taskContentCache[fname];
         return parseAgentFromContent(content) || null;
       }).filter(Boolean));
+
+      // Re-fetch tasks and re-render roster whenever the running set changes
+      const runningKey = (d.running||[]).slice().sort().join(',');
+      if (runningKey !== prevRunningKey) {
+        prevRunningKey = runningKey;
+        await loadTasks();
+        renderAgentRoster();
+        refreshGithubBanner();
+      }
     } catch (e) {}
+    // Refresh Linear issue links periodically (they appear after kickoff)
+    if (Object.keys(linearIssues).length === 0) loadLinearIssues();
   }, 3000);
 }
 
