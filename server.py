@@ -1100,13 +1100,28 @@ Accept failure (task is out of scope or impossible):
             except (json.JSONDecodeError, AttributeError):
                 text = proc.stdout
 
-            match = re.search(r'\{[\s\S]*\}', text)
-            if not match:
+            # Strip markdown code fences before searching for JSON
+            text = re.sub(r'```(?:json)?\s*', '', text).strip()
+
+            plan = None
+            for match in re.finditer(r'\{[\s\S]*?\}(?=\s*$|\s*\n)', text) or []:
+                try:
+                    plan = json.loads(match.group())
+                    break
+                except json.JSONDecodeError:
+                    continue
+            if plan is None:
+                # Fallback: grab everything between first { and last }
+                start, end = text.find('{'), text.rfind('}')
+                if start != -1 and end > start:
+                    try:
+                        plan = json.loads(text[start:end + 1])
+                    except json.JSONDecodeError:
+                        pass
+            if plan is None:
                 task_mgr.fail_task(filename, reason="Replan parse failed", project_slug=slug)
                 task_mgr.cascade_fail(filename, project_slug=slug)
                 return
-
-            plan = json.loads(match.group())
             action = plan.get("action", "accept")
             _notify_n8n(slug, "orchestrator", filename, f"replan → {action}")
 
