@@ -581,7 +581,7 @@
 <!-- HEADER -->
 <div id="header">
   <div id="header-left">
-    <div id="logo" onclick="navigate('projects')"><img src="/dashboard/logo.png" alt="Pathless AI" /></div>
+    <div id="logo" onclick="navigate('projects')"><img src="/dashboard/logo.svg" alt="Pathless AI" /></div>
     <div id="live-dot"></div>
     <span id="header-project-label"></span>
   </div>
@@ -613,6 +613,18 @@
         <button id="kickoff-run-btn" onclick="kickoffRunAll()">&#9654;&nbsp; Run All Agents</button>
         <button id="kickoff-again" onclick="resetKickoff()">Plan again</button>
       </div>
+    </div>
+    <div id="webhook-info" style="margin-top:2rem;padding:1rem 1.2rem;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;">
+      <div style="font-size:.75rem;color:var(--tt);opacity:.6;margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.05em;">Auto-trigger via webhook</div>
+      <div style="display:flex;gap:.5rem;align-items:center;margin-bottom:.4rem;">
+        <span style="font-size:.7rem;color:var(--tt);opacity:.5;min-width:3.5rem;">Linear</span>
+        <code id="webhook-linear-url" style="font-size:.72rem;color:var(--tt);opacity:.8;cursor:pointer;" onclick="copyWebhookUrl('linear')" title="Click to copy">—</code>
+      </div>
+      <div style="display:flex;gap:.5rem;align-items:center;">
+        <span style="font-size:.7rem;color:var(--tt);opacity:.5;min-width:3.5rem;">Jira</span>
+        <code id="webhook-jira-url" style="font-size:.72rem;color:var(--tt);opacity:.8;cursor:pointer;" onclick="copyWebhookUrl('jira')" title="Click to copy">—</code>
+      </div>
+      <div style="font-size:.68rem;color:var(--tt);opacity:.4;margin-top:.5rem;">Add label <strong>ai-office</strong> to any issue to trigger a run automatically</div>
     </div>
   </div>
 </div>
@@ -1519,6 +1531,21 @@ function resetKickoff() {
   document.getElementById('kickoff-input').focus();
 }
 
+function initWebhookUrls() {
+  const base = window.location.origin;
+  document.getElementById('webhook-linear-url').textContent = `${base}/api/webhook/linear`;
+  document.getElementById('webhook-jira-url').textContent   = `${base}/api/webhook/jira`;
+}
+
+function copyWebhookUrl(type) {
+  const el = document.getElementById(`webhook-${type}-url`);
+  navigator.clipboard.writeText(el.textContent).then(() => {
+    const orig = el.textContent;
+    el.textContent = 'Copied!';
+    setTimeout(() => { el.textContent = orig; }, 1200);
+  });
+}
+
 async function kickoffRunAll() {
   navigate('run');
   await loadTasks(); // wait for task data before running
@@ -2192,6 +2219,7 @@ navigate('projects');
 pollRunStatus();
 requestAnimationFrame(gameLoop);
 loadPeerReviewState();
+initWebhookUrls();
 
 // ── PEER REVIEW TOGGLE ────────────────────────────────────
 let _peerReviewEnabled = true;

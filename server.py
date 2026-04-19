@@ -5,6 +5,8 @@ Serves static files from project root and provides a REST API under /api/.
 Run with: python3 server.py
 """
 
+import hashlib
+import hmac
 import http.server
 import json
 import os
@@ -46,8 +48,13 @@ _peer_review_enabled: bool = True
 N8N_WEBHOOK_URL = os.environ.get("N8N_WEBHOOK_URL", "http://localhost:5678/webhook/agent-complete")
 GITHUB_TOKEN    = os.environ.get("GITHUB_TOKEN", "")
 GITHUB_USERNAME = os.environ.get("GITHUB_USERNAME", "")
-LINEAR_API_KEY  = os.environ.get("LINEAR_API_KEY", "")
-LINEAR_TEAM_ID  = os.environ.get("LINEAR_TEAM_ID", "")
+LINEAR_API_KEY        = os.environ.get("LINEAR_API_KEY", "")
+LINEAR_TEAM_ID        = os.environ.get("LINEAR_TEAM_ID", "")
+LINEAR_WEBHOOK_SECRET = os.environ.get("LINEAR_WEBHOOK_SECRET", "")
+JIRA_WEBHOOK_SECRET   = os.environ.get("JIRA_WEBHOOK_SECRET", "")
+WEBHOOK_TRIGGER_LABEL = os.environ.get("WEBHOOK_TRIGGER_LABEL", "ai-office")
+NOTION_API_KEY        = os.environ.get("NOTION_API_KEY", "")
+NOTION_DATABASE_ID    = os.environ.get("NOTION_DATABASE_ID", "")
 _linear_states_cache: dict = {}  # team_id -> {name: state_id}
 
 # Reviewer assignments — who reviews whose output
@@ -218,13 +225,18 @@ def _spawn_agent_task(slug: str, filename: str, agent: str,
         if key in _live_procs:
             return False
 
-    # Read model from task file, fall back to sonnet
+    # Read model and title from task file, fall back to sonnet
+    from datetime import date as _date
     task_path = BASE_DIR / "projects" / slug / "tasks" / "active" / filename
     try:
         task_content = task_path.read_text(encoding="utf-8")
         model = task_mgr.parse_model(task_content) or "claude-sonnet-4-6"
+        _title_match = re.search(r'^#\s+(.+)$', task_content, re.MULTILINE)
+        task_title = _title_match.group(1).strip() if _title_match else filename
     except Exception:
         model = "claude-sonnet-4-6"
+        task_title = filename
+    today_str = _date.today().isoformat()
 
     output_subdir = AGENT_OUTPUT_DIR.get(agent, "strategy")
     output_path = f"output/{slug}/{output_subdir}"
@@ -251,7 +263,7 @@ def _spawn_agent_task(slug: str, filename: str, agent: str,
         "8.5. Append your key decisions to project memory:\n"
         f"   File: {mem_base}/{write_cat}.md\n"
         "   Create it if it doesn't exist. Append (do NOT overwrite):\n"
-        f"   ## [{{today's date}}] {agent} — {{task title}}\n"
+        f"   ## [{today_str}] {agent} — {task_title}\n"
         "   **Decision:** [the main decision or finding]\n"
         "   **Reason:** [why this decision was made]\n"
         "   **Impact:** [what downstream agents should know]\n"
@@ -739,6 +751,143 @@ def _all_tasks_done(slug: str) -> bool:
     return True
 
 
+def _do_kickoff(slug: str, description: str) -> tuple:
+    """Run orchestrator to plan tasks for a project. Returns (created_list, error_str)."""
+    prompt = f"""You are a project planner for an AI agent office.
+
+Project to plan: "{description}"
+
+Choose 3-6 agents and define their tasks. Available agents:
+- bjorn: system architecture, tech stack, data models, Mermaid diagrams
+- arve: writing code, scaffolding projects, implementing features
+- dag: DevOps, Docker, CI/CD pipelines, deployment
+- else: research, market analysis, competitor landscape
+- frode: sprint planning, backlog breakdown, story points
+- nora: pricing model, revenue streams, unit economics
+- magnus: legal, compliance, GDPR, privacy policy
+- ingrid: UI/UX design, wireframes, user flows
+- jorunn: brand identity, naming, tone of voice
+- halvard: growth strategy, acquisition channels, onboarding
+- knut: project milestones, progress tracking
+
+Rules:
+- For software projects: always start with bjorn (architecture), include arve (code)
+- Only include agents genuinely relevant to this project type
+- Order tasks logically: research/architecture first, implementation last
+- Each description must be specific — what exactly to produce, what format, what decisions to make
+- Use the "depends_on" field to declare which task (by title) must complete before this one starts. Set to null if the task can start immediately.
+- Example: arve's implementation should depend on bjorn's architecture. odd's testing should depend on arve's implementation.
+- Set the "model" field based on task complexity:
+  - "claude-haiku-4-5-20251001" — simple tasks: research, writing, branding, content, social media, market research
+  - "claude-sonnet-4-6" — complex tasks: coding, architecture, system design, compliance, security, data models
+
+Reply with ONLY a JSON array, no markdown, no explanation:
+[{{"agent":"bjorn","title":"System Architecture","description":"Design the full system...","depends_on":null,"model":"claude-sonnet-4-6"}},{{"agent":"arve","title":"Implementation","description":"...","depends_on":"System Architecture","model":"claude-sonnet-4-6"}}]"""
+
+    try:
+        proc = subprocess.run(
+            ["claude", "--print", "--dangerously-skip-permissions",
+             "--output-format", "json", prompt],
+            capture_output=True, text=True,
+            cwd=str(BASE_DIR), timeout=120,
+        )
+    except subprocess.TimeoutExpired:
+        return None, "Planning timed out"
+    except FileNotFoundError:
+        return None, "claude CLI not found"
+
+    try:
+        outer = json.loads(proc.stdout)
+        text = outer.get("result", "")
+    except (json.JSONDecodeError, AttributeError):
+        text = proc.stdout
+
+    match = re.search(r'\[[\s\S]*\]', text)
+    if not match:
+        return None, "Could not parse plan from orchestrator"
+
+    try:
+        plan = json.loads(match.group())
+    except json.JSONDecodeError:
+        return None, "Orchestrator returned malformed plan"
+
+    created = []
+    valid_agents = agent_registry.VALID_AGENTS
+    title_to_filename: dict = {}
+    for item in plan:
+        agent = str(item.get("agent", "orchestrator")).strip().lower()
+        title = str(item.get("title", "Untitled")).strip()
+        desc  = str(item.get("description", "")).strip()
+        raw_dep = item.get("depends_on")
+        model = str(item.get("model", "claude-sonnet-4-6")).strip() or "claude-sonnet-4-6"
+        if agent not in valid_agents:
+            agent = "orchestrator"
+        depends_on = title_to_filename.get(raw_dep) if raw_dep else None
+        filename = task_mgr.create_task(title, agent, desc, project_slug=slug, depends_on=depends_on, model=model)
+        title_to_filename[title] = filename
+        created.append({"filename": filename, "agent": agent, "title": title, "description": desc, "depends_on": depends_on})
+
+    mem_path = BASE_DIR / "projects" / slug / "memory" / "project_memory.json"
+    if mem_path.exists():
+        try:
+            m = json.loads(mem_path.read_text(encoding="utf-8"))
+            m["kickoff_description"] = description
+            m["kickoff_plan"] = [{"agent": t["agent"], "title": t["title"]} for t in created]
+            mem_path.write_text(json.dumps(m, indent=2), encoding="utf-8")
+        except Exception:
+            pass
+
+    from datetime import date as _date
+    decisions_dir = BASE_DIR / "projects" / slug / "memory" / "decisions"
+    decisions_dir.mkdir(parents=True, exist_ok=True)
+    strategy_seed = decisions_dir / "strategy.md"
+    today_str = _date.today().isoformat()
+    seed_content = (
+        f"# Project Memory — {slug}\n\n"
+        f"## [{today_str}] kickoff — Project Brief\n"
+        f"**Decision:** {description}\n"
+        "**Reason:** Initial project kickoff — this is the primary brief\n"
+        "**Impact:** All agents should read this to understand what we are building\n"
+        "---\n"
+    )
+    if not strategy_seed.exists():
+        strategy_seed.write_text(seed_content, encoding="utf-8")
+    else:
+        existing = strategy_seed.read_text(encoding="utf-8")
+        strategy_seed.write_text(existing + "\n" + seed_content, encoding="utf-8")
+
+    _linear_create_issues(slug, created)
+    return created, None
+
+
+def _run_webhook_project(name: str, description: str):
+    """Background: create project, run kickoff, auto-start Phase 1 tasks."""
+    try:
+        slug = project_mgr.create_project(name, description)
+    except ValueError:
+        slug = project_mgr.create_project(f"{name}-{int(time.time())}", description)
+
+    created, err = _do_kickoff(slug, description)
+    if err or not created:
+        return
+
+    backlog_dir = BASE_DIR / "projects" / slug / "tasks" / "backlog"
+    for task_file in sorted(backlog_dir.glob("*.md")):
+        try:
+            content = task_file.read_text(encoding="utf-8")
+            dep = task_mgr.parse_depends_on(content)
+            if dep:
+                continue
+            m = re.search(r'^\*\*Agent:\*\*\s*(.+)$', content, re.MULTILINE)
+            agent = m.group(1).strip() if m else "orchestrator"
+            if agent not in agent_registry.VALID_AGENTS:
+                agent = "orchestrator"
+            task_mgr.assign_task(task_file.name, agent, project_slug=slug)
+            _spawn_agent_task(slug, task_file.name, agent)
+        except Exception:
+            pass
+
+
 def _find_docker_compose(slug: str) -> Path | None:
     """Find a docker-compose.yml anywhere in output/{slug}/."""
     output_dir = BASE_DIR / "output" / slug
@@ -853,6 +1002,184 @@ def _handle_docker_failure(slug: str, compose_file: Path, error_summary: str,
 
 
 _docker_verify_attempts: dict = {}
+_ci_test_attempts: dict = {}
+
+
+def _detect_test_command(output_dir: Path) -> tuple:
+    """Return (command_list, cwd) for the first test suite found, or (None, None)."""
+    for root, dirs, files in os.walk(str(output_dir)):
+        dirs[:] = [d for d in dirs if d not in (".git", "node_modules", "__pycache__", ".venv")]
+        root_path = Path(root)
+        filenames = set(files)
+
+        if any(f.startswith("test_") and f.endswith(".py") for f in filenames) or \
+           any(f.endswith("_test.py") for f in filenames) or \
+           "pytest.ini" in filenames or "setup.cfg" in filenames:
+            return (["python3", "-m", "pytest", "--tb=short", "-q"], root_path)
+
+        if "package.json" in filenames:
+            try:
+                pkg = json.loads((root_path / "package.json").read_text(encoding="utf-8"))
+                if "test" in pkg.get("scripts", {}):
+                    return (["npm", "test", "--", "--watchAll=false", "--passWithNoTests"], root_path)
+            except Exception:
+                pass
+
+    return None, None
+
+
+def _write_to_notion(slug: str):
+    """Write a project summary page to Notion. No-op if NOTION_API_KEY not set."""
+    if not NOTION_API_KEY or not NOTION_DATABASE_ID:
+        return
+
+    # Load project info
+    try:
+        proj = project_mgr.get_project(slug)
+        project_name = proj.get("name", slug)
+        description  = proj.get("description", "")
+    except Exception:
+        project_name = slug
+        description  = ""
+
+    # Load decision memory categories
+    decisions_dir = BASE_DIR / "projects" / slug / "memory" / "decisions"
+    def _read_cat(cat: str) -> str:
+        p = decisions_dir / f"{cat}.md"
+        try:
+            return p.read_text(encoding="utf-8").strip() if p.exists() else ""
+        except Exception:
+            return ""
+
+    architecture   = _read_cat("architecture")
+    implementation = _read_cat("implementation")
+    strategy       = _read_cat("strategy")
+    compliance     = _read_cat("compliance")
+
+    # Load GitHub PR URL if available
+    mem_path = BASE_DIR / "projects" / slug / "memory" / "project_memory.json"
+    pr_url = ""
+    try:
+        m = json.loads(mem_path.read_text(encoding="utf-8"))
+        pr_url = m.get("pr_url", "")
+    except Exception:
+        pass
+
+    def _text_block(content: str, heading: str) -> list:
+        """Return a heading + paragraph block(s), chunked to Notion's 2000-char limit."""
+        if not content:
+            return []
+        blocks = [{"object": "block", "type": "heading_2",
+                   "heading_2": {"rich_text": [{"type": "text", "text": {"content": heading}}]}}]
+        for i in range(0, min(len(content), 10000), 1900):
+            chunk = content[i:i + 1900]
+            blocks.append({"object": "block", "type": "paragraph",
+                           "paragraph": {"rich_text": [{"type": "text", "text": {"content": chunk}}]}})
+        return blocks
+
+    children = []
+    if description:
+        children += [{"object": "block", "type": "paragraph",
+                      "paragraph": {"rich_text": [{"type": "text", "text": {"content": description}}]}}]
+    if pr_url:
+        children += [{"object": "block", "type": "paragraph",
+                      "paragraph": {"rich_text": [{"type": "text", "text": {"content": f"GitHub PR: {pr_url}",
+                                                   "link": {"url": pr_url}}}]}}]
+    children += _text_block(architecture,   "Architecture")
+    children += _text_block(strategy,       "Strategy")
+    children += _text_block(implementation, "Implementation")
+    children += _text_block(compliance,     "Compliance")
+
+    payload = json.dumps({
+        "parent": {"database_id": NOTION_DATABASE_ID},
+        "properties": {
+            "title": {"title": [{"type": "text", "text": {"content": project_name}}]}
+        },
+        "children": children[:100],  # Notion API limit: 100 blocks per request
+    }).encode("utf-8")
+
+    try:
+        req = urllib.request.Request(
+            "https://api.notion.com/v1/pages",
+            data=payload,
+            headers={
+                "Authorization": f"Bearer {NOTION_API_KEY}",
+                "Content-Type": "application/json",
+                "Notion-Version": "2022-06-28",
+            },
+            method="POST",
+        )
+        urllib.request.urlopen(req, timeout=30)
+        _notify_n8n(slug, "system", "notion-page-created.md", f"Notion page created for {project_name}")
+    except Exception:
+        pass
+
+
+def _after_ci_pass(slug: str):
+    """Run Docker verify + GitHub push + Notion write after CI passes (or is skipped)."""
+    attempt = _docker_verify_attempts.get(slug, 0)
+    _docker_verify_attempts[slug] = attempt
+    _verify_docker_build(slug, attempt=attempt)
+    _push_to_github(slug)
+    _linear_add_pr_comment(slug)
+    threading.Thread(target=_write_to_notion, args=(slug,), daemon=True).start()
+
+
+def _handle_ci_failure(slug: str, error_output: str, attempt: int, max_attempts: int):
+    """Send test failure to Arve. Give up and proceed after max_attempts."""
+    if attempt >= max_attempts:
+        _notify_n8n(slug, "system", "ci-tests-failed.md",
+                    f"CI tests failed after {max_attempts + 1} attempts — proceeding to GitHub")
+        _after_ci_pass(slug)
+        return
+
+    _notify_n8n(slug, "system", f"ci-fix-attempt-{attempt + 1}.md",
+                "CI tests failed — sending to Arve for fix")
+
+    fix_title = f"Fix failing tests (attempt {attempt + 1})"
+    description = (
+        f"The automated test suite is failing. Fix the implementation so all tests pass.\n\n"
+        f"## Test output\n\n```\n{error_output[-3000:]}\n```\n\n"
+        f"Fix the code — do not delete or weaken the tests."
+    )
+    fix_filename = task_mgr.create_task(fix_title, "arve", description=description, project_slug=slug)
+    task_mgr.assign_task(fix_filename, "arve", project_slug=slug)
+    _ci_test_attempts[slug] = attempt + 1
+    _spawn_agent_task(slug, fix_filename, "arve", retry_context=f"CI fix attempt {attempt + 1}")
+
+
+def _run_ci_tests(slug: str, attempt: int = 0):
+    """Detect and run tests in output/{slug}/. Background thread."""
+    def _run():
+        output_dir = BASE_DIR / "output" / slug
+        test_cmd, test_cwd = _detect_test_command(output_dir)
+
+        if not test_cmd:
+            _after_ci_pass(slug)
+            return
+
+        _notify_n8n(slug, "system", "ci-tests-started.md",
+                    f"Running CI: {' '.join(test_cmd)}")
+        try:
+            result = subprocess.run(
+                test_cmd, cwd=str(test_cwd),
+                capture_output=True, text=True, timeout=300,
+            )
+        except subprocess.TimeoutExpired:
+            _handle_ci_failure(slug, "Test run timed out after 5 minutes", attempt, 2)
+            return
+        except Exception as e:
+            _handle_ci_failure(slug, str(e), attempt, 2)
+            return
+
+        if result.returncode == 0:
+            _notify_n8n(slug, "system", "ci-tests-passed.md", "CI tests passed")
+            _after_ci_pass(slug)
+        else:
+            error_output = (result.stdout + "\n" + result.stderr).strip()
+            _handle_ci_failure(slug, error_output, attempt, 2)
+
+    threading.Thread(target=_run, daemon=True).start()
 
 
 def _dispatch_dependents(slug: str, filename: str):
@@ -878,13 +1205,10 @@ def _dispatch_dependents(slug: str, filename: str):
             dep_agent = "orchestrator"
         _spawn_agent_task(slug, dep_filename, dep_agent)
 
-    # If no more tasks remain, trigger Docker verification, GitHub push, and Linear wrap-up
+    # If no more tasks remain, run CI tests → Docker → GitHub
     if not to_run and _all_tasks_done(slug):
-        attempt = _docker_verify_attempts.get(slug, 0)
-        _docker_verify_attempts[slug] = attempt
-        _verify_docker_build(slug, attempt=attempt)
-        _push_to_github(slug)
-        _linear_add_pr_comment(slug)
+        attempt = _ci_test_attempts.get(slug, 0)
+        _run_ci_tests(slug, attempt=attempt)
 
 
 def _spawn_peer_review(slug: str, filename: str, original_agent: str,
@@ -1083,6 +1407,10 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
             self._handle_post_token_record()
         elif path == "/api/settings/peer-review":
             self._handle_post_toggle_peer_review()
+        elif path == "/api/webhook/linear":
+            self._handle_webhook_linear()
+        elif path == "/api/webhook/jira":
+            self._handle_webhook_jira()
         else:
             self.send_error(404, "Not found")
 
@@ -1359,122 +1687,10 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
             self._error(400, "description is required")
             return
 
-        prompt = f"""You are a project planner for an AI agent office.
-
-Project to plan: "{description}"
-
-Choose 3-6 agents and define their tasks. Available agents:
-- bjorn: system architecture, tech stack, data models, Mermaid diagrams
-- arve: writing code, scaffolding projects, implementing features
-- dag: DevOps, Docker, CI/CD pipelines, deployment
-- else: research, market analysis, competitor landscape
-- frode: sprint planning, backlog breakdown, story points
-- nora: pricing model, revenue streams, unit economics
-- magnus: legal, compliance, GDPR, privacy policy
-- ingrid: UI/UX design, wireframes, user flows
-- jorunn: brand identity, naming, tone of voice
-- halvard: growth strategy, acquisition channels, onboarding
-- knut: project milestones, progress tracking
-
-Rules:
-- For software projects: always start with bjorn (architecture), include arve (code)
-- Only include agents genuinely relevant to this project type
-- Order tasks logically: research/architecture first, implementation last
-- Each description must be specific — what exactly to produce, what format, what decisions to make
-- Use the "depends_on" field to declare which task (by title) must complete before this one starts. Set to null if the task can start immediately.
-- Example: arve's implementation should depend on bjorn's architecture. odd's testing should depend on arve's implementation.
-- Set the "model" field based on task complexity:
-  - "claude-haiku-4-5-20251001" — simple tasks: research, writing, branding, content, social media, market research
-  - "claude-sonnet-4-6" — complex tasks: coding, architecture, system design, compliance, security, data models
-
-Reply with ONLY a JSON array, no markdown, no explanation:
-[{{"agent":"bjorn","title":"System Architecture","description":"Design the full system...","depends_on":null,"model":"claude-sonnet-4-6"}},{{"agent":"arve","title":"Implementation","description":"...","depends_on":"System Architecture","model":"claude-sonnet-4-6"}}]"""
-
-        try:
-            proc = subprocess.run(
-                ["claude", "--print", "--dangerously-skip-permissions",
-                 "--output-format", "json", prompt],
-                capture_output=True, text=True,
-                cwd=str(BASE_DIR), timeout=120,
-            )
-        except subprocess.TimeoutExpired:
-            self._error(504, "Planning timed out — try a shorter description")
+        created, err = _do_kickoff(slug, description)
+        if err:
+            self._error(500, err)
             return
-        except FileNotFoundError:
-            self._error(500, "claude CLI not found")
-            return
-
-        # Parse outer JSON from --output-format json
-        try:
-            outer = json.loads(proc.stdout)
-            text = outer.get("result", "")
-        except (json.JSONDecodeError, AttributeError):
-            text = proc.stdout
-
-        # Extract JSON array from the text
-        match = re.search(r'\[[\s\S]*\]', text)
-        if not match:
-            self._error(500, "Could not parse plan from orchestrator — try again")
-            return
-
-        try:
-            plan = json.loads(match.group())
-        except json.JSONDecodeError:
-            self._error(500, "Orchestrator returned malformed plan — try again")
-            return
-
-        # Validate and create task files
-        # First pass: create all tasks, build title → filename map
-        created = []
-        valid_agents = agent_registry.VALID_AGENTS
-        title_to_filename: dict = {}
-        for item in plan:
-            agent = str(item.get("agent", "orchestrator")).strip().lower()
-            title = str(item.get("title", "Untitled")).strip()
-            desc  = str(item.get("description", "")).strip()
-            raw_dep = item.get("depends_on")
-            model = str(item.get("model", "claude-sonnet-4-6")).strip() or "claude-sonnet-4-6"
-            if agent not in valid_agents:
-                agent = "orchestrator"
-            # Resolve depends_on title → filename from previously created tasks
-            depends_on = title_to_filename.get(raw_dep) if raw_dep else None
-            filename = task_mgr.create_task(title, agent, desc, project_slug=slug, depends_on=depends_on, model=model)
-            title_to_filename[title] = filename
-            created.append({"filename": filename, "agent": agent, "title": title, "description": desc, "depends_on": depends_on})
-
-        # Update project memory with the kickoff description
-        mem_path = BASE_DIR / "projects" / slug / "memory" / "project_memory.json"
-        if mem_path.exists():
-            try:
-                m = json.loads(mem_path.read_text(encoding="utf-8"))
-                m["kickoff_description"] = description
-                m["kickoff_plan"] = [{"agent": t["agent"], "title": t["title"]} for t in created]
-                mem_path.write_text(json.dumps(m, indent=2), encoding="utf-8")
-            except Exception:
-                pass
-
-        # Seed strategy.md with project description so all agents have context
-        from datetime import date as _date
-        decisions_dir = BASE_DIR / "projects" / slug / "memory" / "decisions"
-        decisions_dir.mkdir(parents=True, exist_ok=True)
-        strategy_seed = decisions_dir / "strategy.md"
-        today_str = _date.today().isoformat()
-        seed_content = (
-            f"# Project Memory — {slug}\n\n"
-            f"## [{today_str}] kickoff — Project Brief\n"
-            f"**Decision:** {description}\n"
-            "**Reason:** Initial project kickoff — this is the primary brief\n"
-            "**Impact:** All agents should read this to understand what we are building\n"
-            "---\n"
-        )
-        if not strategy_seed.exists():
-            strategy_seed.write_text(seed_content, encoding="utf-8")
-        else:
-            # Append if already exists (re-kickoff scenario)
-            existing = strategy_seed.read_text(encoding="utf-8")
-            strategy_seed.write_text(existing + "\n" + seed_content, encoding="utf-8")
-
-        _linear_create_issues(slug, created)
         self._json_response({"ok": True, "tasks": created})
 
     def _handle_post_project_output_clear(self, slug):
@@ -1775,6 +1991,71 @@ Reply with ONLY a JSON array, no markdown, no explanation:
             self._error(404, "team_memory.json not found")
         except (json.JSONDecodeError, IOError) as e:
             self._error(500, str(e))
+
+    def _handle_webhook_linear(self):
+        body = self._read_body()
+        if LINEAR_WEBHOOK_SECRET:
+            sig = self.headers.get("linear-signature", "")
+            expected = hmac.new(LINEAR_WEBHOOK_SECRET.encode(), body, hashlib.sha256).hexdigest()
+            if not hmac.compare_digest(sig, expected):
+                self._error(401, "Invalid signature")
+                return
+        try:
+            payload = json.loads(body)
+        except (json.JSONDecodeError, ValueError):
+            self._error(400, "Invalid JSON")
+            return
+
+        if payload.get("type") != "Issue":
+            self._json_response({"ok": True, "skipped": "not an issue event"})
+            return
+        if payload.get("action") not in ("create", "update"):
+            self._json_response({"ok": True, "skipped": "action not create/update"})
+            return
+
+        data = payload.get("data", {})
+        labels = [l.get("name", "").lower() for l in data.get("labels", [])]
+        if WEBHOOK_TRIGGER_LABEL.lower() not in labels:
+            self._json_response({"ok": True, "skipped": "trigger label not present"})
+            return
+
+        title = data.get("title", "").strip()
+        description = (data.get("description") or title).strip()
+        if not title:
+            self._error(400, "Issue has no title")
+            return
+
+        self._json_response({"ok": True, "project": title})
+        threading.Thread(target=_run_webhook_project, args=(title, description), daemon=True).start()
+
+    def _handle_webhook_jira(self):
+        body = self._read_body()
+        try:
+            payload = json.loads(body)
+        except (json.JSONDecodeError, ValueError):
+            self._error(400, "Invalid JSON")
+            return
+
+        event = payload.get("webhookEvent", "")
+        if event not in ("jira:issue_created", "jira:issue_updated"):
+            self._json_response({"ok": True, "skipped": f"event={event}"})
+            return
+
+        issue = payload.get("issue", {})
+        fields = issue.get("fields", {})
+        labels = [l.lower() for l in fields.get("labels", [])]
+        if WEBHOOK_TRIGGER_LABEL.lower() not in labels:
+            self._json_response({"ok": True, "skipped": "trigger label not present"})
+            return
+
+        title = fields.get("summary", "").strip()
+        description = (fields.get("description") or title).strip()
+        if not title:
+            self._error(400, "Issue has no summary")
+            return
+
+        self._json_response({"ok": True, "project": title})
+        threading.Thread(target=_run_webhook_project, args=(title, description), daemon=True).start()
 
     def _handle_post_toggle_peer_review(self):
         global _peer_review_enabled
