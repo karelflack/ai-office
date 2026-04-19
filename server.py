@@ -1216,7 +1216,7 @@ def _detect_test_command(output_dir: Path) -> tuple:
         if any(f.startswith("test_") and f.endswith(".py") for f in filenames) or \
            any(f.endswith("_test.py") for f in filenames) or \
            "pytest.ini" in filenames or "setup.cfg" in filenames:
-            return (["python3", "-m", "pytest", "--tb=short", "-q"], root_path)
+            return (["python3", "-m", "pytest", "--tb=long", "-v"], root_path)
 
         if "package.json" in filenames:
             try:
@@ -1326,7 +1326,97 @@ def _after_ci_pass(slug: str):
     threading.Thread(target=_write_to_notion, args=(slug,), daemon=True).start()
 
 
-def _handle_ci_failure(slug: str, error_output: str, attempt: int, max_attempts: int):
+def _parse_test_failures(error_output: str, test_cwd: Path) -> str:
+    """
+    Turn raw pytest/npm output into a structured brief for arve.
+    Extracts failing test names, assertion details, and reads the test source
+    for each failing test so arve knows exactly what to fix.
+    """
+    lines = error_output.splitlines()
+
+    # --- pytest: extract FAILED lines ---
+    # Format: "FAILED path/test_file.py::TestClass::test_name - AssertionError: ..."
+    failed_entries = []
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith("FAILED "):
+            failed_entries.append(stripped[7:].strip())
+
+    # --- npm/jest: extract failing test names ---
+    if not failed_entries:
+        for line in lines:
+            stripped = line.strip()
+            if stripped.startswith("✕ ") or stripped.startswith("× ") or stripped.startswith("FAIL "):
+                failed_entries.append(stripped.lstrip("✕×").strip())
+
+    if not failed_entries:
+        # No structured failures found — return full output, middle-first
+        # (pytest puts assertion details in the middle, summary at end)
+        mid = max(0, len(error_output) // 2 - 1500)
+        return error_output[mid:mid + 3000] if len(error_output) > 3000 else error_output
+
+    # Build per-test sections
+    sections = []
+    seen_files: set = set()
+
+    for entry in failed_entries[:10]:  # cap at 10
+        parts = entry.split(" - ", 1)
+        test_id = parts[0].strip()
+        reason = parts[1].strip() if len(parts) > 1 else ""
+
+        section = f"### `{test_id}`\n"
+        if reason:
+            section += f"**Error:** {reason}\n\n"
+
+        # Read test file source for failing tests
+        if "::" in test_id:
+            file_part = test_id.split("::")[0]
+            test_file = test_cwd / file_part
+            if test_file.exists() and str(test_file) not in seen_files:
+                seen_files.add(str(test_file))
+                try:
+                    src = test_file.read_text(encoding="utf-8")
+                    section += f"**Test source** (`{file_part}`):\n```python\n{src[:2500]}\n```\n"
+                except Exception:
+                    pass
+
+        sections.append(section)
+
+    # Extract detailed assertion blocks from pytest output
+    # pytest wraps each test's detail in "_ test_name _" underlines
+    detail_blocks: list = []
+    current_block: list = []
+    in_block = False
+    for line in lines:
+        if line.startswith("_ ") and line.endswith(" _"):
+            if current_block:
+                detail_blocks.append("\n".join(current_block))
+            current_block = [line]
+            in_block = True
+        elif in_block:
+            if line.startswith("="):
+                detail_blocks.append("\n".join(current_block))
+                current_block = []
+                in_block = False
+            else:
+                current_block.append(line)
+    if current_block:
+        detail_blocks.append("\n".join(current_block))
+
+    result = f"## {len(failed_entries)} failing test(s)\n\n"
+    result += "\n".join(sections) + "\n"
+
+    if detail_blocks:
+        combined = "\n\n".join(detail_blocks[:10])
+        result += f"\n## Assertion details\n```\n{combined[:3000]}\n```\n"
+    else:
+        result += f"\n## Full test output\n```\n{error_output[:3000]}\n```\n"
+
+    return result
+
+
+def _handle_ci_failure(slug: str, error_output: str, attempt: int, max_attempts: int,
+                       test_cwd: Path = None):
     """Send test failure to Arve. Give up and proceed after max_attempts."""
     if attempt >= max_attempts:
         _notify_n8n(slug, "system", "ci-tests-failed.md",
@@ -1337,11 +1427,15 @@ def _handle_ci_failure(slug: str, error_output: str, attempt: int, max_attempts:
     _notify_n8n(slug, "system", f"ci-fix-attempt-{attempt + 1}.md",
                 "CI tests failed — sending to Arve for fix")
 
+    structured = _parse_test_failures(error_output, test_cwd or Path("."))
     fix_title = f"Fix failing tests (attempt {attempt + 1})"
     description = (
         f"The automated test suite is failing. Fix the implementation so all tests pass.\n\n"
-        f"## Test output\n\n```\n{error_output[-3000:]}\n```\n\n"
-        f"Fix the code — do not delete or weaken the tests."
+        f"{structured}\n\n"
+        f"Rules:\n"
+        f"- Fix the implementation code, not the tests\n"
+        f"- Do not delete or weaken any assertions\n"
+        f"- Run the tests mentally against your fix before finishing\n"
     )
     fix_filename = task_mgr.create_task(fix_title, "arve", description=description, project_slug=slug)
     task_mgr.assign_task(fix_filename, "arve", project_slug=slug)
@@ -1378,7 +1472,7 @@ def _run_ci_tests(slug: str, attempt: int = 0):
             _after_ci_pass(slug)
         else:
             error_output = (result.stdout + "\n" + result.stderr).strip()
-            _handle_ci_failure(slug, error_output, attempt, 2)
+            _handle_ci_failure(slug, error_output, attempt, 2, test_cwd=test_cwd)
 
     threading.Thread(target=_run, daemon=True).start()
 
