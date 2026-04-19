@@ -759,29 +759,35 @@ def _do_kickoff(slug: str, description: str) -> tuple:
 
 Project to plan: "{description}"
 
-Choose 3-6 agents and define their tasks. Available agents:
+Choose as many agents as genuinely needed (up to all of them for large projects). Available agents:
 - bjorn: system architecture, tech stack, data models, Mermaid diagrams
 - arve: writing code, scaffolding projects, implementing features
-- dag: DevOps, Docker, CI/CD pipelines, deployment
+- dag: DevOps, Docker, CI/CD pipelines, deployment config
 - else: research, market analysis, competitor landscape
 - frode: sprint planning, backlog breakdown, story points
 - nora: pricing model, revenue streams, unit economics
 - magnus: legal, compliance, GDPR, privacy policy
-- ingrid: UI/UX design, wireframes, user flows
-- jorunn: brand identity, naming, tone of voice
-- halvard: growth strategy, acquisition channels, onboarding
-- knut: project milestones, progress tracking
+- ingrid: UI/UX design, wireframes, user flows, component specs
+- jorunn: brand identity, naming, tone of voice, visual guidelines
+- halvard: growth strategy, acquisition channels, onboarding funnel
+- guro: social media content, launch copywriting, tweet threads
+- knut: project milestones, timeline, progress tracking
+- laila: customer support docs, onboarding guides, FAQs
+- odd: API testing, endpoint validation, test suites
+- per: performance benchmarking, load testing, optimization analysis
 
 Rules:
-- For software projects: always start with bjorn (architecture), include arve (code)
-- Only include agents genuinely relevant to this project type
-- Order tasks logically: research/architecture first, implementation last
+- For software projects: always include bjorn (architecture first), arve (code), dag (Docker/deployment), odd (API tests after arve), per (performance after arve)
+- For projects with user data or payments: always include magnus (compliance)
+- For projects going to market: include jorunn, halvard, guro, nora as relevant
+- Only skip an agent if they have genuinely nothing to contribute to this specific project
+- Order tasks logically: research/architecture first, implementation middle, testing last
 - Each description must be specific — what exactly to produce, what format, what decisions to make
-- Use the "depends_on" field to declare which task (by title) must complete before this one starts. Set to null if the task can start immediately.
-- Example: arve's implementation should depend on bjorn's architecture. odd's testing should depend on arve's implementation.
+- Use the "depends_on" field to declare which task (by filename title) must complete before this one starts. Set to null if the task can start immediately.
+- arve depends on bjorn. odd and per depend on arve. dag depends on bjorn. nora depends on else (if else runs).
 - Set the "model" field based on task complexity:
-  - "claude-haiku-4-5-20251001" — simple tasks: research, writing, branding, content, social media, market research
-  - "claude-sonnet-4-6" — complex tasks: coding, architecture, system design, compliance, security, data models
+  - "claude-haiku-4-5-20251001" — simple tasks: research, writing, branding, content, social media, sprint planning, docs
+  - "claude-sonnet-4-6" — complex tasks: coding, architecture, system design, compliance, security, data models, DevOps
 
 Reply with ONLY a JSON array, no markdown, no explanation:
 [{{"agent":"bjorn","title":"System Architecture","description":"Design the full system...","depends_on":null,"model":"claude-sonnet-4-6"}},{{"agent":"arve","title":"Implementation","description":"...","depends_on":"System Architecture","model":"claude-sonnet-4-6"}}]"""
@@ -1849,6 +1855,24 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
         if err:
             self._error(500, err)
             return
+
+        # Auto-start tasks that have no dependencies (same logic as webhook path)
+        backlog_dir = BASE_DIR / "projects" / slug / "tasks" / "backlog"
+        for task_file in sorted(backlog_dir.glob("*.md")):
+            try:
+                content = task_file.read_text(encoding="utf-8")
+                dep = task_mgr.parse_depends_on(content)
+                if dep:
+                    continue
+                m = re.search(r'^\*\*Agent:\*\*\s*(.+)$', content, re.MULTILINE)
+                agent = m.group(1).strip() if m else "orchestrator"
+                if agent not in agent_registry.VALID_AGENTS:
+                    agent = "orchestrator"
+                task_mgr.assign_task(task_file.name, agent, project_slug=slug)
+                _spawn_agent_task(slug, task_file.name, agent)
+            except Exception:
+                pass
+
         self._json_response({"ok": True, "tasks": created})
 
     def _handle_post_project_output_clear(self, slug):
