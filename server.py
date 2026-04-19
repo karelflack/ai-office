@@ -564,14 +564,17 @@ def _push_to_github(slug: str):
                    "GIT_COMMITTER_NAME": "AI Office",
                    "GIT_COMMITTER_EMAIL": "ai@pathless.ai"}
 
+            # Checkout branch — switch to existing remote branch if already there
             subprocess.run(["git", "checkout", "-b", "ai-generated"],
+                           cwd=tmpdir, capture_output=True, env=env)
+            subprocess.run(["git", "checkout", "ai-generated"],
                            cwd=tmpdir, capture_output=True, env=env)
             subprocess.run(["git", "add", "."],
                            cwd=tmpdir, capture_output=True, env=env)
             subprocess.run(["git", "commit", "-m",
                             f"feat: AI Office implementation for {slug}"],
                            cwd=tmpdir, capture_output=True, env=env)
-            push = subprocess.run(["git", "push", auth_url, "ai-generated"],
+            push = subprocess.run(["git", "push", auth_url, "ai-generated", "--force"],
                                   cwd=tmpdir, capture_output=True, timeout=120, env=env)
             if push.returncode != 0:
                 return
@@ -594,6 +597,11 @@ def _push_to_github(slug: str):
         })
 
         pr_url = pr.get("html_url")
+        if not pr_url:
+            # PR may already exist — fetch it
+            existing = _gh("GET", f"/repos/{GITHUB_USERNAME}/{repo_name}/pulls?state=open&head={GITHUB_USERNAME}:ai-generated")
+            if isinstance(existing, list) and existing:
+                pr_url = existing[0].get("html_url")
         if not pr_url:
             return
 
