@@ -136,6 +136,8 @@
       background: rgba(14,165,233,0.14); border-color: rgba(14,165,233,0.25); color: var(--blue);
     }
     .pc-btn.primary:hover { background: rgba(14,165,233,0.24); }
+    .pc-btn.danger { background: rgba(239,68,68,0.08); border-color: rgba(239,68,68,0.2); color: #ef4444; }
+    .pc-btn.danger:hover { background: rgba(239,68,68,0.18); }
     .project-card-new {
       background: rgba(14,165,233,0.04); border: 1px dashed rgba(14,165,233,0.3);
       border-radius: var(--radius-lg); padding: 1.5rem; cursor: pointer;
@@ -662,6 +664,11 @@
     </div>
   </div>
   <div id="output-main">
+    <div id="github-banner" style="display:none;padding:8px 14px;border-bottom:1px solid var(--border);background:rgba(14,165,233,0.06);align-items:center;gap:10px;flex-shrink:0;">
+      <span style="font-size:12px;color:var(--ts);">GitHub</span>
+      <a id="github-pr-link" href="#" target="_blank" style="font-size:12px;color:var(--blue);text-decoration:none;flex:1;">View Pull Request →</a>
+      <a id="github-repo-link" href="#" target="_blank" style="font-size:11px;color:var(--tt);text-decoration:none;">Repo</a>
+    </div>
     <div id="output-toolbar" style="display:none;padding:8px 14px;border-bottom:1px solid var(--border);align-items:center;gap:8px;flex-shrink:0;">
       <span id="output-toolbar-filename" style="font-size:11px;color:var(--tt);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
       <button id="output-download-btn" onclick="downloadOutputFile()" style="font-size:11px;padding:4px 10px;background:var(--surface-2);border:1px solid var(--border);border-radius:4px;color:var(--tp);cursor:pointer;">Download</button>
@@ -1348,6 +1355,7 @@ function renderProjectsScreen() {
         <div class="project-card-desc">${escHtml(p.description || 'No description.')}</div>
         <div class="project-card-date">Created ${escHtml(p.created || '')}</div>
         <div class="project-card-actions">
+          <button class="pc-btn danger" onclick="deleteProject('${escHtml(p.slug)}')">Delete</button>
           <button class="pc-btn" onclick="goToKickoff('${escHtml(p.slug)}')">Kickoff</button>
           <button class="pc-btn primary" onclick="openProject('${escHtml(p.slug)}')">Open →</button>
         </div>
@@ -1369,12 +1377,40 @@ function openProject(slug) {
   document.getElementById('output-file-list').innerHTML = '<div id="output-file-list-empty">No output files yet.</div>';
   document.getElementById('output-viewer').innerHTML = '<div id="output-viewer-placeholder">Select a file to view its contents.</div>';
   document.getElementById('output-toolbar').style.display = 'none';
+  document.getElementById('github-banner').style.display = 'none';
+  refreshGithubBanner();
   navigate('run');
+}
+
+async function refreshGithubBanner() {
+  if (!currentProject) return;
+  try {
+    const r = await fetch(`/api/projects/${currentProject}/github`);
+    const d = await r.json();
+    const banner = document.getElementById('github-banner');
+    if (d.pr_url) {
+      document.getElementById('github-pr-link').href = d.pr_url;
+      document.getElementById('github-repo-link').href = d.repo_url || d.pr_url;
+      banner.style.display = 'flex';
+    } else {
+      banner.style.display = 'none';
+    }
+  } catch(e) {}
 }
 
 function goToKickoff(slug) {
   currentProject = slug;
   navigate('kickoff');
+}
+
+async function deleteProject(slug) {
+  if (!confirm(`Delete project "${slug}"?\n\nThis removes all tasks, output, and memory. This cannot be undone.`)) return;
+  const r = await fetch(`/api/projects/${slug}/delete`, { method: 'POST' });
+  if (r.ok) {
+    if (currentProject === slug) currentProject = 'neutral';
+    await loadProjects();
+    renderProjectGrid();
+  }
 }
 
 // ── NEW PROJECT MODAL ─────────────────────────────────────

@@ -26,11 +26,15 @@ TOKENS_DB = BASE_DIR / "tokens.db"
 
 # Tracks live subprocess references keyed by (project_slug, filename).
 _live_procs: dict = {}
+_live_procs_lock = threading.Lock()
 # Tracks retry counts keyed by (project_slug, filename).
 _retry_counts: dict = {}
+_retry_counts_lock = threading.Lock()
 # Feature flags
 _peer_review_enabled: bool = True
 N8N_WEBHOOK_URL = os.environ.get("N8N_WEBHOOK_URL", "http://localhost:5678/webhook/agent-complete")
+GITHUB_TOKEN    = os.environ.get("GITHUB_TOKEN", "")
+GITHUB_USERNAME = os.environ.get("GITHUB_USERNAME", "")
 
 # Reviewer assignments — who reviews whose output
 REVIEWER_MAP = {
@@ -196,8 +200,9 @@ def _spawn_agent_task(slug: str, filename: str, agent: str,
                       retry_count: int = 0, retry_context: str = "", **kwargs) -> bool:
     """Spawn a Claude subprocess for an active task. Returns False if already running."""
     key = (slug, filename)
-    if key in _live_procs:
-        return False
+    with _live_procs_lock:
+        if key in _live_procs:
+            return False
 
     # Read model from task file, fall back to sonnet
     task_path = BASE_DIR / "projects" / slug / "tasks" / "active" / filename
@@ -288,14 +293,15 @@ def _spawn_agent_task(slug: str, filename: str, agent: str,
                and os.environ.get("OPENAI_API_KEY") and not kwargs.get("skip_mcp"))
     if use_mcp:
         cmd += ["--mcp-config", str(MCP_SEARCH_CONFIG)]
-    cmd.append(prompt)
+    cmd += ["-p", prompt]
 
     proc = subprocess.Popen(
         cmd,
         stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
         stdin=subprocess.DEVNULL, text=True, cwd=str(BASE_DIR),
     )
-    _live_procs[key] = proc
+    with _live_procs_lock:
+        _live_procs[key] = proc
     mem.write_run(filename, [], False, project_slug=slug)
 
     def _reader():
@@ -343,7 +349,8 @@ def _spawn_agent_task(slug: str, filename: str, agent: str,
             # A non-zero exit or an explicit error result means failure
             failed = (exit_code != 0) or (not succeeded and exit_code == 0 and any("✗ Error" in l for l in lines))
             mem.write_run(filename, lines, True, project_slug=slug)
-            _live_procs.pop(key, None)
+            with _live_procs_lock:
+                _live_procs.pop(key, None)
 
             if failed:
                 # If MCP config caused the failure, retry without it
@@ -369,15 +376,18 @@ def _spawn_agent_task(slug: str, filename: str, agent: str,
                 reason = lines[-1] if lines else f"Process exited with code {exit_code}"
                 task_mgr.fail_task(filename, reason=reason, project_slug=slug)
                 task_mgr.cascade_fail(filename, project_slug=slug)
-                _retry_counts.pop(key, None)
+                with _retry_counts_lock:
+                    _retry_counts.pop(key, None)
                 _notify_n8n(slug, agent, filename, "failed")
                 return
 
             # Evaluation-based retry: if score < 7 and retries remaining, re-run
             if eval_score is not None and eval_score < 7:
-                current_retries = _retry_counts.get(key, 0)
+                with _retry_counts_lock:
+                    current_retries = _retry_counts.get(key, 0)
                 if current_retries < 2:
-                    _retry_counts[key] = current_retries + 1
+                    with _retry_counts_lock:
+                        _retry_counts[key] = current_retries + 1
                     msg = (f"⚡ Quality score {eval_score}/10 — retrying "
                            f"(attempt {current_retries + 2}/3): {eval_reason}")
                     lines.append(msg)
@@ -396,7 +406,8 @@ def _spawn_agent_task(slug: str, filename: str, agent: str,
                     lines.append(f"⚠ Score {eval_score}/10 after 3 attempts — accepting output")
                     mem.write_run(filename, lines, True, project_slug=slug)
 
-            _retry_counts.pop(key, None)
+            with _retry_counts_lock:
+                _retry_counts.pop(key, None)
             _notify_n8n(slug, agent, filename, "completed")
 
             # Check if this agent has a peer reviewer (and peer review is enabled)
@@ -432,6 +443,123 @@ def _notify_n8n(slug: str, agent: str, filename: str, status: str):
         urllib.request.urlopen(req, timeout=3)
     except Exception:
         pass  # Never block agent flow due to notification failure
+
+
+def _push_to_github(slug: str):
+    """Create a GitHub repo, push implementation output to ai-generated branch, open a PR.
+    Runs in a background thread. Stores PR URL in project_memory.json on success."""
+    if not GITHUB_TOKEN or not GITHUB_USERNAME:
+        return
+
+    impl_dir = BASE_DIR / "output" / slug / "implementation"
+    if not impl_dir.exists() or not any(impl_dir.iterdir()):
+        return
+
+    def _run():
+        import shutil
+        import tempfile
+        import urllib.error
+
+        repo_name = f"ai-office-{slug}"
+        api_base = "https://api.github.com"
+        headers = {
+            "Authorization": f"token {GITHUB_TOKEN}",
+            "Content-Type": "application/json",
+            "Accept": "application/vnd.github.v3+json",
+        }
+
+        def _gh(method, path, body=None):
+            data = json.dumps(body).encode() if body else None
+            req = urllib.request.Request(
+                f"{api_base}{path}", data=data, headers=headers, method=method
+            )
+            try:
+                resp = urllib.request.urlopen(req, timeout=15)
+                return json.loads(resp.read())
+            except urllib.error.HTTPError as e:
+                return json.loads(e.read())
+
+        # 1. Create repo (ignore if already exists)
+        repo = _gh("POST", "/user/repos", {
+            "name": repo_name,
+            "description": f"Generated by Pathless AI Office — {slug}",
+            "private": False,
+            "auto_init": True,
+        })
+        clone_url = repo.get("clone_url") or f"https://github.com/{GITHUB_USERNAME}/{repo_name}.git"
+        auth_url = clone_url.replace("https://", f"https://{GITHUB_USERNAME}:{GITHUB_TOKEN}@")
+
+        # 2. Clone, copy files, push branch
+        with tempfile.TemporaryDirectory() as tmpdir:
+            r = subprocess.run(["git", "clone", auth_url, tmpdir],
+                               capture_output=True, timeout=60)
+            if r.returncode != 0:
+                return
+
+            # Copy all implementation files into the repo
+            for item in impl_dir.iterdir():
+                dest = Path(tmpdir) / item.name
+                if item.is_dir():
+                    if dest.exists():
+                        shutil.rmtree(dest)
+                    shutil.copytree(item, dest)
+                else:
+                    shutil.copy2(item, dest)
+
+            env = {**os.environ,
+                   "GIT_AUTHOR_NAME": "AI Office",
+                   "GIT_AUTHOR_EMAIL": "ai@pathless.ai",
+                   "GIT_COMMITTER_NAME": "AI Office",
+                   "GIT_COMMITTER_EMAIL": "ai@pathless.ai"}
+
+            subprocess.run(["git", "checkout", "-b", "ai-generated"],
+                           cwd=tmpdir, capture_output=True, env=env)
+            subprocess.run(["git", "add", "."],
+                           cwd=tmpdir, capture_output=True, env=env)
+            subprocess.run(["git", "commit", "-m",
+                            f"feat: AI Office implementation for {slug}"],
+                           cwd=tmpdir, capture_output=True, env=env)
+            push = subprocess.run(["git", "push", auth_url, "ai-generated"],
+                                  cwd=tmpdir, capture_output=True, timeout=120, env=env)
+            if push.returncode != 0:
+                return
+
+        # 3. Open PR
+        pr = _gh("POST", f"/repos/{GITHUB_USERNAME}/{repo_name}/pulls", {
+            "title": f"AI Office: {slug} — initial implementation",
+            "body": (
+                f"## Generated by Pathless AI Office\n\n"
+                f"**Project:** {slug}\n\n"
+                "This PR contains the full implementation produced by the AI agent team:\n"
+                "- **Bjorn** — system architecture\n"
+                "- **Magnus** — GDPR/compliance\n"
+                "- **Dag** — infrastructure & Docker\n"
+                "- **Arve** — full-stack implementation\n\n"
+                "_Review the output files in this branch for details._"
+            ),
+            "head": "ai-generated",
+            "base": "main",
+        })
+
+        pr_url = pr.get("html_url")
+        if not pr_url:
+            return
+
+        # 4. Store PR URL in project memory
+        mem_path = BASE_DIR / "projects" / slug / "memory" / "project_memory.json"
+        if mem_path.exists():
+            try:
+                data = json.loads(mem_path.read_text(encoding="utf-8"))
+                data["github_pr"] = pr_url
+                data["github_repo"] = f"https://github.com/{GITHUB_USERNAME}/{repo_name}"
+                mem_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+            except Exception:
+                pass
+
+        _notify_n8n(slug, "system", "github-pr.md",
+                    f"GitHub PR opened: {pr_url}")
+
+    threading.Thread(target=_run, daemon=True).start()
 
 
 def _all_tasks_done(slug: str) -> bool:
@@ -583,11 +711,12 @@ def _dispatch_dependents(slug: str, filename: str):
             dep_agent = "orchestrator"
         _spawn_agent_task(slug, dep_filename, dep_agent)
 
-    # If no more tasks remain, trigger Docker verification
+    # If no more tasks remain, trigger Docker verification and GitHub push
     if not to_run and _all_tasks_done(slug):
         attempt = _docker_verify_attempts.get(slug, 0)
         _docker_verify_attempts[slug] = attempt
         _verify_docker_build(slug, attempt=attempt)
+        _push_to_github(slug)
 
 
 def _spawn_peer_review(slug: str, filename: str, original_agent: str,
@@ -823,6 +952,8 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
             self._handle_get_project_run_output(slug)
         elif rest == "run/status":
             self._json_response(mem.list_runs(project_slug=slug))
+        elif rest == "github":
+            self._handle_get_project_github(slug)
         else:
             # Return project info for /api/projects/{slug}
             try:
@@ -858,6 +989,8 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
             self._handle_post_project_run_all(slug)
         elif rest == "output/clear":
             self._handle_post_project_output_clear(slug)
+        elif rest == "delete":
+            self._handle_post_project_delete(slug)
         else:
             self._error(404, f"Not found: /api/projects/{sub}")
 
@@ -1182,6 +1315,28 @@ Reply with ONLY a JSON array, no markdown, no explanation:
                     f.unlink()
         self._json_response({"ok": True})
 
+    def _handle_post_project_delete(self, slug):
+        import shutil
+        for d in (BASE_DIR / "projects" / slug, BASE_DIR / "output" / slug,
+                  BASE_DIR / "runs" / slug):
+            if d.exists():
+                shutil.rmtree(d)
+        self._json_response({"ok": True})
+
+    def _handle_get_project_github(self, slug):
+        mem_path = BASE_DIR / "projects" / slug / "memory" / "project_memory.json"
+        if not mem_path.exists():
+            self._json_response({"pr_url": None, "repo_url": None})
+            return
+        try:
+            data = json.loads(mem_path.read_text(encoding="utf-8"))
+            self._json_response({
+                "pr_url": data.get("github_pr"),
+                "repo_url": data.get("github_repo"),
+            })
+        except Exception:
+            self._json_response({"pr_url": None, "repo_url": None})
+
     def _handle_get_project_output_list(self, slug):
         output_dir = BASE_DIR / "output" / slug
         if not output_dir.exists():
@@ -1381,7 +1536,8 @@ Reply with ONLY a JSON array, no markdown, no explanation:
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
             stdin=subprocess.DEVNULL, text=True, cwd=str(BASE_DIR),
         )
-        _live_procs[("global", filename)] = proc
+        with _live_procs_lock:
+            _live_procs[("global", filename)] = proc
         mem.write_run(filename, [], False)
 
         def _parse(line):
@@ -1418,7 +1574,8 @@ Reply with ONLY a JSON array, no markdown, no explanation:
                     except Exception: pass
             finally:
                 p.wait(); mem.write_run(fname, lines, True)
-                _live_procs.pop(("global", fname), None)
+                with _live_procs_lock:
+                    _live_procs.pop(("global", fname), None)
 
         threading.Thread(target=_reader, args=(filename, proc), daemon=True).start()
         self._json_response({"ok": True, "task_id": filename})

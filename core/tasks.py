@@ -182,11 +182,18 @@ def fail_task(filename: str, reason: str = "", project_slug: str = None) -> None
         return  # nothing to do
 
 
-def cascade_fail(failed_filename: str, project_slug: str = None) -> list:
+def cascade_fail(failed_filename: str, project_slug: str = None,
+                 _visited: set = None) -> list:
     """Mark all tasks that depend (directly or transitively) on failed_filename as failed.
 
     Returns list of filenames that were cascade-failed.
     """
+    if _visited is None:
+        _visited = set()
+    if failed_filename in _visited:
+        return []  # Cycle guard — stop recursion
+    _visited.add(failed_filename)
+
     dirs = _get_task_dirs(project_slug)
     cascaded = []
     reason = f"Blocked: dependency `{failed_filename}` failed."
@@ -202,8 +209,8 @@ def cascade_fail(failed_filename: str, project_slug: str = None) -> list:
                 if dep and dep == failed_filename:
                     fail_task(f.name, reason=reason, project_slug=project_slug)
                     cascaded.append(f.name)
-                    # Recurse for tasks that depend on this one
-                    cascaded.extend(cascade_fail(f.name, project_slug=project_slug))
+                    cascaded.extend(cascade_fail(f.name, project_slug=project_slug,
+                                                 _visited=_visited))
             except Exception:
                 pass
     return cascaded
