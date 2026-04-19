@@ -771,6 +771,30 @@ def _all_tasks_done(slug: str) -> bool:
     return True
 
 
+def _snapshot_output(slug: str) -> None:
+    """Copy current output/{slug}/ into output/{slug}/.runs/{timestamp}/ before a new run."""
+    import shutil
+    from datetime import datetime
+    output_dir = BASE_DIR / "output" / slug
+    if not output_dir.exists():
+        return
+    # Only snapshot if there are real output files (not just README)
+    real_files = [
+        f for f in output_dir.rglob("*")
+        if f.is_file() and f.name != "README.md" and ".runs" not in f.parts
+    ]
+    if not real_files:
+        return
+    ts = datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
+    snap_dir = output_dir / ".runs" / ts
+    snap_dir.mkdir(parents=True, exist_ok=True)
+    for f in real_files:
+        rel = f.relative_to(output_dir)
+        dest = snap_dir / rel
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(f, dest)
+
+
 def _do_kickoff(slug: str, description: str) -> tuple:
     """Run orchestrator to plan tasks for a project. Returns (created_list, error_str)."""
     prompt = f"""You are a project planner for an AI agent office. Your job is to assign every relevant agent a task.
@@ -1732,6 +1756,17 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
             self._handle_get_project_output_list(slug)
         elif rest.startswith("output/"):
             self._handle_get_project_output_file(slug, rest[len("output/"):])
+        elif rest == "runs":
+            self._handle_get_project_runs(slug)
+        elif rest.startswith("runs/"):
+            run_rest = rest[len("runs/"):]
+            run_parts = run_rest.split("/", 1)
+            run_id = run_parts[0]
+            run_sub = run_parts[1] if len(run_parts) > 1 else ""
+            if run_sub == "output":
+                self._handle_get_project_run_snapshot_list(slug, run_id)
+            elif run_sub.startswith("output/"):
+                self._handle_get_project_run_snapshot_file(slug, run_id, run_sub[len("output/"):])
         elif rest == "memory":
             self._handle_get_project_memory(slug)
         elif rest == "memory/decisions":
@@ -1982,6 +2017,7 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
             self._error(400, "description is required")
             return
 
+        _snapshot_output(slug)
         created, err = _do_kickoff(slug, description)
         if err:
             self._error(500, err)
@@ -2007,10 +2043,11 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
         self._json_response({"ok": True, "tasks": created})
 
     def _handle_post_project_output_clear(self, slug):
-        import shutil
         output_dir = BASE_DIR / "output" / slug
         if output_dir.exists():
             for f in output_dir.rglob("*"):
+                if ".runs" in f.parts:
+                    continue
                 if f.is_file() and f.name != "README.md":
                     f.unlink()
         self._json_response({"ok": True})
@@ -2048,6 +2085,76 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
         except Exception:
             self._json_response({"pr_url": None, "repo_url": None})
 
+    def _handle_get_project_runs(self, slug):
+        """List output snapshots for a project."""
+        runs_dir = BASE_DIR / "output" / slug / ".runs"
+        if not runs_dir.exists():
+            self._json_response([])
+            return
+        runs = []
+        for d in sorted(runs_dir.iterdir(), reverse=True):
+            if d.is_dir():
+                files = [f for f in d.rglob("*") if f.is_file()]
+                runs.append({
+                    "id": d.name,
+                    "file_count": len(files),
+                    "total_size": sum(f.stat().st_size for f in files),
+                })
+        self._json_response(runs)
+
+    def _handle_get_project_run_snapshot_list(self, slug, run_id):
+        """List files in a specific output snapshot."""
+        if ".." in run_id:
+            self._error(400, "Invalid run id")
+            return
+        snap_dir = BASE_DIR / "output" / slug / ".runs" / run_id
+        if not snap_dir.exists():
+            self._error(404, "Run not found")
+            return
+        files = []
+        for f in sorted(snap_dir.rglob("*")):
+            if f.is_file():
+                rel = str(f.relative_to(snap_dir))
+                stat = f.stat()
+                files.append({"path": rel, "size": stat.st_size, "modified": stat.st_mtime})
+        self._json_response(files)
+
+    def _handle_get_project_run_snapshot_file(self, slug, run_id, filepath):
+        """Serve a file from a specific output snapshot."""
+        import urllib.parse
+        if ".." in run_id:
+            self._error(400, "Invalid run id")
+            return
+        filepath = urllib.parse.unquote(filepath)
+        if ".." in filepath:
+            self._error(400, "Invalid path")
+            return
+        snap_dir = (BASE_DIR / "output" / slug / ".runs" / run_id).resolve()
+        target = (snap_dir / filepath).resolve()
+        try:
+            target.relative_to(snap_dir)
+        except ValueError:
+            self._error(400, "Invalid path")
+            return
+        if not target.exists() or not target.is_file():
+            self._error(404, "File not found")
+            return
+        qs = urllib.parse.parse_qs(self.path.split("?", 1)[1] if "?" in self.path else "")
+        content = target.read_bytes()
+        ct = "text/plain; charset=utf-8"
+        if target.suffix == ".md":
+            ct = "text/markdown; charset=utf-8"
+        elif target.suffix in (".json",):
+            ct = "application/json"
+        self.send_response(200)
+        self.send_header("Content-Type", ct)
+        self.send_header("Content-Length", str(len(content)))
+        if qs.get("download"):
+            self.send_header("Content-Disposition", f'attachment; filename="{target.name}"')
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.end_headers()
+        self.wfile.write(content)
+
     def _handle_get_project_output_list(self, slug):
         output_dir = BASE_DIR / "output" / slug
         if not output_dir.exists():
@@ -2055,6 +2162,9 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
             return
         files = []
         for f in sorted(output_dir.rglob("*")):
+            # Skip .runs/ snapshots and README
+            if ".runs" in f.parts:
+                continue
             if f.is_file() and f.name != "README.md":
                 rel = str(f.relative_to(output_dir))
                 stat = f.stat()

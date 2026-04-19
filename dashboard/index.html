@@ -664,6 +664,11 @@
         <button class="h-btn" onclick="clearProjectOutput()" style="font-size:10px;padding:3px 8px;color:var(--red);">Clear</button>
       </div>
     </div>
+    <div id="run-selector-row" style="padding:6px 10px;border-bottom:1px solid var(--border);display:none;">
+      <select id="run-selector" onchange="onRunSelected()" style="width:100%;font-size:11px;background:var(--surface-2);color:var(--tp);border:1px solid var(--border);border-radius:4px;padding:3px 6px;cursor:pointer;">
+        <option value="">Current run</option>
+      </select>
+    </div>
     <div id="output-sidebar-tabs">
       <div class="osb-tab active" id="osb-tab-files" onclick="switchOutputTab('files')">Output</div>
       <div class="osb-tab" id="osb-tab-memory" onclick="switchOutputTab('memory')">Memory</div>
@@ -1294,10 +1299,12 @@ function navigate(screen) {
     // Reset to files tab on navigation
     outputSidebarTab = 'files';
     selectedMemoryCategory = null;
+    selectedRunId = null;
     document.getElementById('osb-tab-files').classList.add('active');
     document.getElementById('osb-tab-memory').classList.remove('active');
     document.getElementById('output-file-list').classList.remove('hidden');
     document.getElementById('output-memory-list').classList.remove('visible');
+    loadRuns();
     loadOutput();
   }
 }
@@ -1385,6 +1392,7 @@ function openProject(slug) {
   currentProject = slug;
   Object.keys(taskContentCache).forEach(k => delete taskContentCache[k]);
   selectedOutputFile = null;
+  selectedRunId = null;
   outputFiles = [];
   document.getElementById('output-file-list').innerHTML = '<div id="output-file-list-empty">No output files yet.</div>';
   document.getElementById('output-viewer').innerHTML = '<div id="output-viewer-placeholder">Select a file to view its contents.</div>';
@@ -1554,6 +1562,7 @@ async function kickoffRunAll() {
 
 // ── OUTPUT ────────────────────────────────────────────────
 let outputFiles = [];
+let selectedRunId = null;
 let selectedOutputFile = null;
 let outputSidebarTab = 'files'; // 'files' | 'memory'
 let memoryCategories = [];
@@ -1641,9 +1650,40 @@ function refreshOutputSidebar() {
   }
 }
 
+async function loadRuns() {
+  if (!currentProject) return;
+  try {
+    const r = await fetch(`/api/projects/${currentProject}/runs`);
+    if (!r.ok) return;
+    const runs = await r.json();
+    const sel = document.getElementById('run-selector');
+    const row = document.getElementById('run-selector-row');
+    // Rebuild options
+    sel.innerHTML = '<option value="">Current run</option>';
+    for (const run of runs) {
+      const label = run.id.replace('T', ' ').replace(/-(\d{2})-(\d{2})-(\d{2})$', ' $1:$2:$3');
+      const opt = document.createElement('option');
+      opt.value = run.id;
+      opt.textContent = `Snapshot — ${label} (${run.file_count} files)`;
+      sel.appendChild(opt);
+    }
+    row.style.display = runs.length > 0 ? 'block' : 'none';
+  } catch (e) {}
+}
+
+async function onRunSelected() {
+  const sel = document.getElementById('run-selector');
+  selectedRunId = sel.value || null;
+  selectedOutputFile = null;
+  await loadOutput();
+}
+
 async function loadOutput() {
   try {
-    const r = await fetch(`/api/projects/${currentProject}/output`);
+    const url = selectedRunId
+      ? `/api/projects/${currentProject}/runs/${selectedRunId}/output`
+      : `/api/projects/${currentProject}/output`;
+    const r = await fetch(url);
     if (!r.ok) throw new Error();
     outputFiles = await r.json();
     renderOutputFileList();
@@ -1691,7 +1731,10 @@ async function viewOutputFile(path) {
   const viewer = document.getElementById('output-viewer');
   viewer.innerHTML = '<div style="color:var(--tt);font-size:12px;">Loading…</div>';
   try {
-    const r = await fetch(`/api/projects/${currentProject}/output/${encodeURIComponent(path)}`);
+    const base = selectedRunId
+      ? `/api/projects/${currentProject}/runs/${selectedRunId}/output`
+      : `/api/projects/${currentProject}/output`;
+    const r = await fetch(`${base}/${encodeURIComponent(path)}`);
     if (!r.ok) throw new Error();
     const text = await r.text();
     const ext  = path.split('.').pop().toLowerCase();
@@ -1706,8 +1749,11 @@ async function viewOutputFile(path) {
 
 function downloadOutputFile() {
   if (!selectedOutputFile || !currentProject) return;
+  const base = selectedRunId
+    ? `/api/projects/${currentProject}/runs/${selectedRunId}/output`
+    : `/api/projects/${currentProject}/output`;
   const a = document.createElement('a');
-  a.href = `/api/projects/${currentProject}/output/${encodeURIComponent(selectedOutputFile)}?download=1`;
+  a.href = `${base}/${encodeURIComponent(selectedOutputFile)}?download=1`;
   a.download = selectedOutputFile.split('/').pop();
   a.click();
 }
