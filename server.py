@@ -755,49 +755,58 @@ def _all_tasks_done(slug: str) -> bool:
 
 def _do_kickoff(slug: str, description: str) -> tuple:
     """Run orchestrator to plan tasks for a project. Returns (created_list, error_str)."""
-    prompt = f"""You are a project planner for an AI agent office.
+    prompt = f"""You are a project planner for an AI agent office. Your job is to assign every relevant agent a task.
 
-Project to plan: "{description}"
+Project: "{description}"
 
-Choose as many agents as genuinely needed (up to all of them for large projects). Available agents:
+AGENTS (assign all that are relevant — do not leave agents idle if they have work to do):
 - bjorn: system architecture, tech stack, data models, Mermaid diagrams
 - arve: writing code, scaffolding projects, implementing features
 - dag: DevOps, Docker, CI/CD pipelines, deployment config
-- else: research, market analysis, competitor landscape
-- frode: sprint planning, backlog breakdown, story points
-- nora: pricing model, revenue streams, unit economics
-- magnus: legal, compliance, GDPR, privacy policy
+- magnus: legal, compliance, GDPR, PCI, privacy policy
 - ingrid: UI/UX design, wireframes, user flows, component specs
+- else: research, market analysis, competitor landscape
 - jorunn: brand identity, naming, tone of voice, visual guidelines
 - halvard: growth strategy, acquisition channels, onboarding funnel
+- frode: sprint planning, backlog breakdown, story points
+- nora: pricing model, revenue streams, unit economics
 - guro: social media content, launch copywriting, tweet threads
 - knut: project milestones, timeline, progress tracking
 - laila: customer support docs, onboarding guides, FAQs
 - odd: API testing, endpoint validation, test suites
 - per: performance benchmarking, load testing, optimization analysis
 
-Rules:
-- For software projects: always include bjorn (architecture first), arve (code), dag (Docker/deployment), odd (API tests after arve), per (performance after arve)
-- For projects with user data or payments: always include magnus (compliance)
-- For projects going to market: include jorunn, halvard, guro, nora as relevant
-- Only skip an agent if they have genuinely nothing to contribute to this specific project
-- Order tasks logically: research/architecture first, implementation middle, testing last
-- Each description must be specific — what exactly to produce, what format, what decisions to make
-- Use the "depends_on" field to declare which task (by filename title) must complete before this one starts. Set to null if the task can start immediately.
-- arve depends on bjorn. odd and per depend on arve. dag depends on bjorn. nora depends on else (if else runs).
-- Set the "model" field based on task complexity:
-  - "claude-haiku-4-5-20251001" — simple tasks: research, writing, branding, content, social media, sprint planning, docs
-  - "claude-sonnet-4-6" — complex tasks: coding, architecture, system design, compliance, security, data models, DevOps
+MANDATORY INCLUSIONS:
+- Software projects MUST include: bjorn, arve, dag, odd, per
+- Projects with user data / payments MUST include: magnus
+- Products going to market MUST include: jorunn, halvard, guro, nora, laila
+- Projects with a roadmap MUST include: frode, knut
+- Projects researching a market MUST include: else
 
-Reply with ONLY a JSON array, no markdown, no explanation:
-[{{"agent":"bjorn","title":"System Architecture","description":"Design the full system...","depends_on":null,"model":"claude-sonnet-4-6"}},{{"agent":"arve","title":"Implementation","description":"...","depends_on":"System Architecture","model":"claude-sonnet-4-6"}}]"""
+DEPENDENCY RULES (use exact task title in depends_on field):
+- arve depends on bjorn's architecture task
+- dag depends on bjorn's architecture task
+- odd depends on arve's implementation task
+- per depends on arve's implementation task
+- nora depends on else's research task (if else runs)
+- jorunn, halvard, guro may depend on else's research (if relevant)
+- All other tasks: depends_on = null (run immediately in parallel)
+
+MODEL ASSIGNMENT:
+- "claude-sonnet-4-6": coding, architecture, system design, compliance, security, DevOps
+- "claude-haiku-4-5-20251001": research, writing, branding, social media, sprint planning, docs, pricing, milestones
+
+TASK DESCRIPTIONS must be specific: exactly what to produce, what format, what decisions to make, what to reference from other agents.
+
+Reply with ONLY a JSON array — no markdown, no explanation, no code fences:
+[{{"agent":"bjorn","title":"System Architecture","description":"...","depends_on":null,"model":"claude-sonnet-4-6"}},{{"agent":"arve","title":"Backend Implementation","description":"...","depends_on":"System Architecture","model":"claude-sonnet-4-6"}}]"""
 
     try:
         proc = subprocess.run(
             ["claude", "--print", "--dangerously-skip-permissions",
              "--output-format", "json", prompt],
             capture_output=True, text=True,
-            cwd=str(BASE_DIR), timeout=120,
+            cwd=str(BASE_DIR), timeout=300,
         )
     except subprocess.TimeoutExpired:
         return None, "Planning timed out"
