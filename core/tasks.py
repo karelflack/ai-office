@@ -111,18 +111,23 @@ def resolve_handoffs(completed_filename: str, project_slug: str = None) -> list:
         return []
 
     activated = []
-    for f in backlog_dir.glob("*.md"):
-        try:
-            content = f.read_text(encoding="utf-8")
-            dep = parse_depends_on(content)
-            if dep and dep == completed_filename:
-                # Parse the agent from the waiting task
-                m = re.search(r"^\*\*Agent:\*\*\s*(.+)$", content, re.MULTILINE)
-                agent = m.group(1).strip() if m else "orchestrator"
-                assign_task(f.name, agent, project_slug=project_slug)
-                activated.append(f.name)
-        except Exception:
-            pass
+    # Check both backlog and failed — a task may have failed due to token limits
+    # and should be retried once its dependency completes
+    for bucket_name in ("backlog", "failed"):
+        bucket_dir = dirs.get(bucket_name)
+        if not bucket_dir or not bucket_dir.exists():
+            continue
+        for f in bucket_dir.glob("*.md"):
+            try:
+                content = f.read_text(encoding="utf-8")
+                dep = parse_depends_on(content)
+                if dep and dep == completed_filename:
+                    m = re.search(r"^\*\*Agent:\*\*\s*(.+)$", content, re.MULTILINE)
+                    agent = m.group(1).strip() if m else "orchestrator"
+                    assign_task(f.name, agent, project_slug=project_slug)
+                    activated.append(f.name)
+            except Exception:
+                pass
     return activated
 
 
