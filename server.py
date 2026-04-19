@@ -162,7 +162,7 @@ def _record_token_usage(project, agent, task, input_tokens, output_tokens,
         pass
 
 # Agents that get web search via Perplexity MCP
-WEB_SEARCH_AGENTS = {"else", "halvard", "guro", "laila", "knut", "nora", "frode"}
+WEB_SEARCH_AGENTS = {"else", "halvard", "guro", "laila", "knut", "nora", "frode", "jorunn", "magnus"}
 
 MCP_SEARCH_CONFIG = BASE_DIR / "mcp_search.json"
 
@@ -398,14 +398,13 @@ def _spawn_agent_task(slug: str, filename: str, agent: str,
                                       retry_context=retry_context,
                                       skip_mcp=True)
                     return
-                # Mark task failed and cascade to dependents
+                # Trigger replan before cascading failure
                 reason = lines[-1] if lines else f"Process exited with code {exit_code}"
-                task_mgr.fail_task(filename, reason=reason, project_slug=slug)
-                task_mgr.cascade_fail(filename, project_slug=slug)
+                failure_context = f"Exit code {exit_code}. Reason: {reason}\n\n" + "\n".join(lines[-20:])
                 with _retry_counts_lock:
                     _retry_counts.pop(key, None)
-                _notify_n8n(slug, agent, filename, "failed")
                 _linear_update_issue(slug, filename, "Cancelled")
+                _replan_task(slug, filename, agent, failure_context)
                 return
 
             # Evaluation-based retry: if score < 7 and retries remaining, re-run
@@ -430,8 +429,11 @@ def _spawn_agent_task(slug: str, filename: str, agent: str,
                                       retry_context=f"Score {eval_score}/10 — {eval_reason}")
                     return
                 else:
-                    lines.append(f"⚠ Score {eval_score}/10 after 3 attempts — accepting output")
+                    lines.append(f"⚠ Score {eval_score}/10 after 3 attempts — triggering replan")
                     mem.write_run(filename, lines, True, project_slug=slug)
+                    failure_context = f"Quality score {eval_score}/10 after 3 attempts.\nReason: {eval_reason}\n\n" + "\n".join(lines[-20:])
+                    _replan_task(slug, filename, agent, failure_context)
+                    return
 
             with _retry_counts_lock:
                 _retry_counts.pop(key, None)
@@ -1003,6 +1005,162 @@ def _handle_docker_failure(slug: str, compose_file: Path, error_summary: str,
 
 _docker_verify_attempts: dict = {}
 _ci_test_attempts: dict = {}
+_replan_attempts: dict = {}  # (slug, filename) -> attempt count
+
+
+def _replan_task(slug: str, filename: str, agent: str, failure_context: str):
+    """Call orchestrator to replan a failed task. Max 1 replan per task."""
+    key = (slug, filename)
+    with _retry_counts_lock:
+        if _replan_attempts.get(key, 0) >= 1:
+            # Already replanned once — accept failure
+            task_mgr.fail_task(filename, reason="Failed after replan", project_slug=slug)
+            task_mgr.cascade_fail(filename, project_slug=slug)
+            _notify_n8n(slug, agent, filename, "failed — gave up after replan")
+            return
+        _replan_attempts[key] = 1
+
+    # Read task content
+    task_content = ""
+    for bucket in ("active", "failed", "backlog", "completed"):
+        p = BASE_DIR / "projects" / slug / "tasks" / bucket / filename
+        if p.exists():
+            try:
+                task_content = p.read_text(encoding="utf-8")
+            except Exception:
+                pass
+            break
+
+    # Read project strategy for context
+    strategy = ""
+    try:
+        sp = BASE_DIR / "projects" / slug / "memory" / "decisions" / "strategy.md"
+        if sp.exists():
+            strategy = sp.read_text(encoding="utf-8")[:1500]
+    except Exception:
+        pass
+
+    prompt = f"""You are the orchestrator for an AI agent office. A task has failed after multiple retries and needs replanning.
+
+Project: {slug}
+
+Failed task:
+{task_content[:2000]}
+
+Failure context:
+{failure_context[:1500]}
+
+Project brief:
+{strategy}
+
+Available agents: bjorn, arve, dag, else, frode, nora, magnus, ingrid, jorunn, halvard, knut, laila, odd, per
+
+Choose the best recovery. Reply with ONLY a JSON object, no markdown:
+
+Rewrite (same agent, clearer instructions):
+{{"action":"rewrite","agent":"{agent}","title":"...","description":"...","model":"claude-sonnet-4-6"}}
+
+Split into smaller tasks (sequential):
+{{"action":"split","tasks":[{{"agent":"...","title":"...","description":"...","model":"claude-sonnet-4-6"}}]}}
+
+Reroute to a better-suited agent:
+{{"action":"reroute","agent":"...","title":"...","description":"...","model":"claude-sonnet-4-6"}}
+
+Add a missing prerequisite first:
+{{"action":"prerequisite","pre":{{"agent":"...","title":"...","description":"...","model":"claude-sonnet-4-6"}},"then":{{"agent":"{agent}","title":"...","description":"...","model":"claude-sonnet-4-6"}}}}
+
+Accept failure (task is out of scope or impossible):
+{{"action":"accept"}}"""
+
+    def _run():
+        _notify_n8n(slug, "orchestrator", filename, "replanning")
+        try:
+            proc = subprocess.run(
+                ["claude", "--print", "--dangerously-skip-permissions",
+                 "--output-format", "json", prompt],
+                capture_output=True, text=True, cwd=str(BASE_DIR), timeout=90,
+            )
+            try:
+                text = json.loads(proc.stdout).get("result", "")
+            except (json.JSONDecodeError, AttributeError):
+                text = proc.stdout
+
+            match = re.search(r'\{[\s\S]*\}', text)
+            if not match:
+                task_mgr.fail_task(filename, reason="Replan parse failed", project_slug=slug)
+                task_mgr.cascade_fail(filename, project_slug=slug)
+                return
+
+            plan = json.loads(match.group())
+            action = plan.get("action", "accept")
+            _notify_n8n(slug, "orchestrator", filename, f"replan → {action}")
+
+            # Remove the original failed task file
+            def _remove_original():
+                for bucket in ("active", "failed", "backlog", "completed"):
+                    p = BASE_DIR / "projects" / slug / "tasks" / bucket / filename
+                    if p.exists():
+                        p.unlink()
+
+            if action == "accept":
+                task_mgr.fail_task(filename, reason="Accepted failure after replan", project_slug=slug)
+                task_mgr.cascade_fail(filename, project_slug=slug)
+
+            elif action in ("rewrite", "reroute"):
+                new_agent = plan.get("agent", agent)
+                new_fn = task_mgr.create_task(
+                    plan.get("title", "Replanned task"), new_agent,
+                    plan.get("description", ""), project_slug=slug,
+                    model=plan.get("model", "claude-sonnet-4-6"),
+                )
+                _remove_original()
+                task_mgr.assign_task(new_fn, new_agent, project_slug=slug)
+                _spawn_agent_task(slug, new_fn, new_agent, retry_context=f"Replan: {action}")
+
+            elif action == "split":
+                tasks = plan.get("tasks", [])
+                if not tasks:
+                    task_mgr.fail_task(filename, reason="Replan split had no tasks", project_slug=slug)
+                    return
+                _remove_original()
+                prev_fn = None
+                first_fn, first_agent = None, None
+                for t in tasks:
+                    t_agent = t.get("agent", agent)
+                    new_fn = task_mgr.create_task(
+                        t.get("title", "Split task"), t_agent,
+                        t.get("description", ""), project_slug=slug,
+                        depends_on=prev_fn, model=t.get("model", "claude-sonnet-4-6"),
+                    )
+                    if first_fn is None:
+                        first_fn, first_agent = new_fn, t_agent
+                    prev_fn = new_fn
+                task_mgr.assign_task(first_fn, first_agent, project_slug=slug)
+                _spawn_agent_task(slug, first_fn, first_agent, retry_context="Replan: split")
+
+            elif action == "prerequisite":
+                pre  = plan.get("pre",  {})
+                then = plan.get("then", {})
+                _remove_original()
+                pre_agent = pre.get("agent", agent)
+                pre_fn = task_mgr.create_task(
+                    pre.get("title", "Prerequisite"), pre_agent,
+                    pre.get("description", ""), project_slug=slug,
+                    model=pre.get("model", "claude-sonnet-4-6"),
+                )
+                task_mgr.create_task(
+                    then.get("title", "Main task"), then.get("agent", agent),
+                    then.get("description", ""), project_slug=slug,
+                    depends_on=pre_fn, model=then.get("model", "claude-sonnet-4-6"),
+                )
+                task_mgr.assign_task(pre_fn, pre_agent, project_slug=slug)
+                _spawn_agent_task(slug, pre_fn, pre_agent, retry_context="Replan: prerequisite")
+
+        except Exception:
+            task_mgr.fail_task(filename, reason="Replan error", project_slug=slug)
+            task_mgr.cascade_fail(filename, project_slug=slug)
+
+    threading.Thread(target=_run, daemon=True).start()
 
 
 def _detect_test_command(output_dir: Path) -> tuple:

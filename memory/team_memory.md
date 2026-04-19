@@ -19,7 +19,7 @@ The ai-office framework is fully operational. 16 specialized agents run as Claud
 - **Self-eval**: Agents score output 1–10. Server retries up to 2x if score is below 7.
 - **Peer review**: Togglable via dashboard (Review: ON/OFF). Assignments: arve→odd, bjorn→arve, dag→arve, jorunn↔ingrid, else↔halvard.
 - **Web search**: Agents with web access (else, halvard, guro, laila, knut, nora, frode, jorunn, magnus) use OpenAI `gpt-4o-search-preview` via MCP. Shown with orange indicator in dashboard.
-- **Phased execution**: Phase 1 (bjorn, dag, magnus) → Phase 2 (arve, ingrid, jorunn, else, frode) → Phase 3 (odd, per). Never run arve in parallel with magnus on user-data projects.
+- **Phased execution**: Phase 1 (bjorn, dag, magnus) → Phase 2 (arve, ingrid, jorunn, else, halvard, frode, nora, guro) → Phase 3 (odd, per). Never run arve in parallel with magnus on user-data projects.
 - **Task files**: `YYYY-MM-DD-<slug>.md` in `projects/{slug}/tasks/{bucket}/`
 - **Output**: All deliverables go to `output/{slug}/{category}/` — `output/` and `projects/` are gitignored
 - **MCP config**: `mcp_search.json` regenerated at server startup with real `OPENAI_API_KEY` — never commit it

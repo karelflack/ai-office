@@ -71,7 +71,7 @@ Every agent must list at the top of their completion doc which upstream output f
 
 **Phase 2 — runs after Phase 1 is complete:**
 - arve (implementation) — must reference bjorn's architecture output AND magnus's compliance output if magnus ran. Must implement any LAUNCH BLOCKER items from magnus in scope.
-- ingrid, jorunn, else, frode — may run in parallel with arve if their inputs are ready
+- ingrid, jorunn, else, halvard, frode, nora, guro — may run in parallel with arve if their inputs are ready
 
 **Phase 3 — runs after Phase 2:**
 - odd (API testing)
