@@ -133,7 +133,7 @@ def _init_tokens_db():
 def _read_claude_code_usage():
     """Parse token usage from Claude Code's local JSONL conversation files."""
     # Claude Code names the project dir by replacing / with - in the absolute path
-    project_key = str(BASE_DIR).replace("/", "-").lstrip("-")
+    project_key = str(BASE_DIR).replace("/", "-")
     claude_dir = Path.home() / ".claude" / "projects" / project_key
     totals = {"input_tokens": 0, "output_tokens": 0,
               "cache_read_tokens": 0, "cache_creation_tokens": 0}
