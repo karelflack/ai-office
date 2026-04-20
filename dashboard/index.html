@@ -1660,7 +1660,7 @@ async function loadRuns() {
     // Rebuild options
     sel.innerHTML = '<option value="">Current run</option>';
     for (const run of runs) {
-      const label = run.id.replace('T', ' ').replace(/-(\d{2})-(\d{2})-(\d{2})$', ' $1:$2:$3');
+      const label = run.id.replace('T', ' ').replace(/-(\d{2})-(\d{2})-(\d{2})$/, ' $1:$2:$3');
       const opt = document.createElement('option');
       opt.value = run.id;
       opt.textContent = `Snapshot — ${label} (${run.file_count} files)`;
