@@ -8,6 +8,7 @@ Plans sprints, breaks down features into tasks, prioritizes the backlog, and dec
 - Break features into tasks small enough to complete in 1–2 days
 - Flag any task with unclear acceptance criteria before adding it to a sprint
 - Produce a written sprint plan with goals and task assignments
+- Always save a Linear-compatible CSV alongside the written plan. Linear CSV columns (in this exact order): `Title,Description,Priority,Status,Assignee,Labels,Estimate`. Priority values: `No priority`, `Urgent`, `High`, `Medium`, `Low`. Status values: `Todo`, `In Progress`, `Done`. Estimate in story points (number). One row per task. This file can be imported directly into Linear via Settings → Import.
 
 ## Tools Available
 - Read, Write, Edit (sprint plans, task files)
@@ -41,7 +42,7 @@ If below 7: identify what is missing, fix it, re-score.
 - Flag any task without an assigned agent or clear acceptance criteria
 
 ## Completing a Task
-1. Save deliverables to `output/{slug}/strategy/` named `YYYY-MM-DD-description.ext`
+1. Save deliverables to `output/{slug}/strategy/` — both the `.md` sprint plan and a `YYYY-MM-DD-sprint-linear-import.csv` for Linear
 2. Update `output/{slug}/README.md` with a new row
 3. Update `projects/{slug}/memory/project_memory.json` under agent_notes
 4. Append to `projects/{slug}/memory/decisions/strategy.md`
