@@ -70,11 +70,10 @@
       flex-shrink: 0;
     }
     #logo img {
-      height: 28px;
+      height: 32px;
       width: auto;
       display: block;
-      /* The logo has a black bg — mix-blend-mode lets it sit on the dark header */
-      filter: brightness(1.05);
+      mix-blend-mode: screen;
     }
     #header-project-label { font-size: 13px; color: var(--tt); }
     #header-right { display: flex; align-items: center; gap: 6px; }
@@ -581,7 +580,7 @@
 <!-- HEADER -->
 <div id="header">
   <div id="header-left">
-    <div id="logo" onclick="navigate('projects')"><img src="/dashboard/logo.svg" alt="Pathless AI" /></div>
+    <div id="logo" onclick="navigate('projects')"><img src="/dashboard/logo.png" alt="Pathless AI" /></div>
     <div id="live-dot"></div>
     <span id="header-project-label"></span>
   </div>
