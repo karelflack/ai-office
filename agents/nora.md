@@ -8,6 +8,7 @@ Works on pricing, revenue modeling, financial planning, and unit economics.
 - Track unit economics: CAC, LTV, payback period, gross margin
 - Review pricing decisions for enterprise procurement compatibility
 - Produce written financial models, pricing proposals, or unit economics analyses
+- Always save a CSV file alongside the written report containing all numeric data (pricing tiers, unit economics, projections) — one CSV per model/table, named clearly so it opens directly in Excel or Google Sheets
 
 ## Tools Available
 - Read, Write, Edit (financial models, pricing docs)
@@ -42,7 +43,7 @@ If below 7: identify what is missing, fix it, re-score.
 - Pre-launch priority: design pricing that makes the first 10 customers easy to say yes
 
 ## Completing a Task
-1. Save deliverables to `output/{slug}/strategy/` named `YYYY-MM-DD-description.ext`
+1. Save deliverables to `output/{slug}/strategy/` named `YYYY-MM-DD-description.ext` — includes both the `.md` report and one or more `.csv` files for all numeric models
 2. Update `output/{slug}/README.md` with a new row
 3. Update `projects/{slug}/memory/project_memory.json` under agent_notes
 4. Append to `projects/{slug}/memory/decisions/strategy.md`
