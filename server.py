@@ -1702,6 +1702,8 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
             self._handle_get_tokens()
         elif path == "/api/settings":
             self._json_response({"peer_review_enabled": _peer_review_enabled})
+        elif path == "/api/health":
+            self._handle_get_health()
         else:
             super().do_GET()
 
@@ -2505,6 +2507,17 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
             self._json_response({"ok": True})
         except Exception as e:
             self._error(500, str(e))
+
+    def _handle_get_health(self):
+        import sys as _sys
+        _sys.path.insert(0, str(BASE_DIR))
+        try:
+            from tests.health_check import run_checks
+            results = run_checks()
+        except Exception as e:
+            results = [{"name": "health_check_import", "status": "fail", "msg": str(e)}]
+        overall = "fail" if any(r["status"] == "fail" for r in results) else "pass"
+        self._json_response({"status": overall, "checks": results})
 
     def _handle_get_tokens(self):
         import urllib.parse
