@@ -78,6 +78,8 @@ _peer_review_enabled: bool = True
 LINEAR_WEBHOOK_SECRET = os.environ.get("LINEAR_WEBHOOK_SECRET", "")
 JIRA_WEBHOOK_SECRET   = os.environ.get("JIRA_WEBHOOK_SECRET", "")
 WEBHOOK_TRIGGER_LABEL = os.environ.get("WEBHOOK_TRIGGER_LABEL", "ai-office")
+# Per-project spend ceiling in USD. 0 disables the guard.
+PROJECT_BUDGET_USD = float(os.environ.get("PROJECT_BUDGET_USD", "0") or 0)
 
 # Reviewer assignments — who reviews whose output
 REVIEWER_MAP = {
@@ -166,13 +168,49 @@ def _parse_stream_event(line: str):
     return None
 
 
+def _project_paused(slug: str) -> bool:
+    """Return True if the project's memory has paused=True set."""
+    mem_path = BASE_DIR / "projects" / slug / "memory" / "project_memory.json"
+    if not mem_path.exists():
+        return False
+    try:
+        data = json.loads(mem_path.read_text(encoding="utf-8"))
+        return bool(data.get("paused"))
+    except Exception:
+        return False
+
+
+def _enforce_budget(slug: str, filename: str) -> bool:
+    """Gate a spawn on the project's spend.
+    Returns True if the spawn may proceed. When the budget is first crossed,
+    pauses the project and fires an n8n notification."""
+    if _project_paused(slug):
+        return False
+    if PROJECT_BUDGET_USD <= 0:
+        return True
+    spent = token_tracker.project_total_usd(slug)
+    if spent < PROJECT_BUDGET_USD:
+        return True
+    _update_project_memory(slug, {
+        "paused": True,
+        "paused_reason": f"Token budget ${PROJECT_BUDGET_USD:.2f} exceeded (spent ${spent:.2f})",
+        "paused_at": int(time.time()),
+    })
+    _notify_n8n(slug, "system", filename,
+                f"⚠ Budget ${PROJECT_BUDGET_USD:.2f} exceeded (spent ${spent:.2f}) — project paused")
+    return False
+
+
 def _spawn_agent_task(slug: str, filename: str, agent: str,
                       retry_count: int = 0, retry_context: str = "", **kwargs) -> bool:
-    """Spawn a Claude subprocess for an active task. Returns False if already running."""
+    """Spawn a Claude subprocess for an active task. Returns False if already running,
+    paused, or over budget."""
     key = (slug, filename)
     with _live_procs_lock:
         if key in _live_procs:
             return False
+    if not _enforce_budget(slug, filename):
+        return False
 
     # Read model and title from task file, fall back to sonnet
     from datetime import date as _date
@@ -1087,6 +1125,8 @@ def _dispatch_dependents(slug: str, filename: str):
 def _spawn_peer_review(slug: str, filename: str, original_agent: str,
                        reviewer: str, parent_lines: list):
     """Spawn a reviewer subprocess. On approval dispatch dependents; on revision re-run original."""
+    if not _enforce_budget(slug, filename):
+        return
     output_subdir = AGENT_OUTPUT_DIR.get(original_agent, "strategy")
     output_path = f"output/{slug}/{output_subdir}"
 
@@ -1410,6 +1450,8 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
             self._handle_post_project_output_clear(slug)
         elif rest == "delete":
             self._handle_post_project_delete(slug)
+        elif rest == "resume":
+            self._handle_post_project_resume(slug)
         else:
             self._error(404, f"Not found: /api/projects/{sub}")
 
@@ -1657,6 +1699,16 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
             if d.exists():
                 shutil.rmtree(d)
         self._json_response({"ok": True})
+
+    def _handle_post_project_resume(self, slug):
+        """Clear the paused flag on a project. Does NOT re-dispatch tasks —
+        the caller runs /run/all if they want work to restart."""
+        _update_project_memory(slug, {
+            "paused": False,
+            "paused_reason": "",
+            "paused_at": 0,
+        })
+        self._json_response({"ok": True, "paused": False})
 
     def _handle_get_project_linear(self, slug):
         mem_path = BASE_DIR / "projects" / slug / "memory" / "project_memory.json"
@@ -2230,6 +2282,7 @@ if __name__ == "__main__":
     LINEAR_WEBHOOK_SECRET = os.environ.get("LINEAR_WEBHOOK_SECRET", "")
     JIRA_WEBHOOK_SECRET   = os.environ.get("JIRA_WEBHOOK_SECRET", "")
     WEBHOOK_TRIGGER_LABEL = os.environ.get("WEBHOOK_TRIGGER_LABEL", "ai-office")
+    PROJECT_BUDGET_USD    = float(os.environ.get("PROJECT_BUDGET_USD", "0") or 0)
     _write_mcp_config()
     _recover_stuck_tasks()
     os.chdir(BASE_DIR)

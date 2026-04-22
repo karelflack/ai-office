@@ -86,6 +86,20 @@ def record_usage(project: str, agent: str, task: str,
         pass
 
 
+def project_total_usd(slug: str) -> float:
+    """Return total cost_usd recorded for a project. 0.0 on error or empty."""
+    try:
+        con = sqlite3.connect(str(TOKENS_DB))
+        row = con.execute(
+            "SELECT COALESCE(SUM(cost_usd), 0) FROM token_usage WHERE project=?",
+            (slug,)
+        ).fetchone()
+        con.close()
+        return float(row[0]) if row and row[0] is not None else 0.0
+    except Exception:
+        return 0.0
+
+
 def query(project_filter: str | None = None) -> dict:
     """Return {runs, totals} for the dashboard tokens view. Caller adds claude_code usage."""
     con = sqlite3.connect(str(TOKENS_DB))
