@@ -1308,7 +1308,18 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
             return
 
         if path == "/api/projects":
-            self._json_response(project_mgr.list_projects())
+            projects = project_mgr.list_projects()
+            for p in projects:
+                mem_path = BASE_DIR / "projects" / p.get("slug", "") / "memory" / "project_memory.json"
+                if mem_path.exists():
+                    try:
+                        m = json.loads(mem_path.read_text(encoding="utf-8"))
+                        if m.get("paused"):
+                            p["paused"] = True
+                            p["paused_reason"] = m.get("paused_reason", "")
+                    except Exception:
+                        pass
+            self._json_response(projects)
         elif path.startswith("/api/projects/"):
             self._handle_project_get(path[len("/api/projects/"):])
         elif path == "/api/tasks":
