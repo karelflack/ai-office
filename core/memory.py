@@ -1,11 +1,35 @@
 """Team memory and persistent run state."""
 
 import json
+import threading
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 MEMORY_FILE = BASE_DIR / "memory" / "team_memory.json"
 RUNS_DIR = BASE_DIR / "runs"
+
+# Per-project locks for project_memory.json to prevent concurrent write corruption.
+_memory_locks: dict = {}
+_memory_locks_lock = threading.Lock()
+
+
+def get_memory_lock(slug: str) -> threading.Lock:
+    with _memory_locks_lock:
+        if slug not in _memory_locks:
+            _memory_locks[slug] = threading.Lock()
+        return _memory_locks[slug]
+
+
+def update_project_memory(slug: str, updates: dict) -> None:
+    """Thread-safe read-modify-write of project_memory.json."""
+    mem_path = BASE_DIR / "projects" / slug / "memory" / "project_memory.json"
+    with get_memory_lock(slug):
+        try:
+            data = json.loads(mem_path.read_text(encoding="utf-8")) if mem_path.exists() else {}
+        except (json.JSONDecodeError, OSError):
+            data = {}
+        data.update(updates)
+        mem_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
 
 
 def read_memory() -> dict:

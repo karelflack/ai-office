@@ -11,6 +11,7 @@ import http.server
 import json
 import os
 import re
+import secrets
 import sqlite3
 import subprocess
 import threading
@@ -32,6 +33,23 @@ from core import agents as agent_registry
 from core import memory as mem
 from core import tasks as task_mgr
 from core import projects as project_mgr
+from core.memory import update_project_memory as _update_project_memory
+from integrations import n8n as _n8n
+from integrations import github as _github
+from integrations import linear as _linear
+from integrations import notion as _notion
+
+# Back-compat aliases for callers inside server.py — the integration bodies
+# now live in integrations/*.py. Keep the old private names pointing at them
+# so the rest of this file reads the same.
+_notify_n8n            = _n8n.notify
+_push_to_github        = _github.push
+_linear_api            = _linear.api
+_get_linear_state_id   = _linear.get_state_id
+_linear_create_issues  = _linear.create_issues
+_linear_update_issue   = _linear.update_issue
+_linear_add_pr_comment = _linear.add_pr_comment
+_write_to_notion       = _notion.write_summary
 
 PORT = 8000
 BASE_DIR = Path(__file__).parent.resolve()
@@ -43,41 +61,20 @@ _live_procs_lock = threading.Lock()
 # Tracks retry counts keyed by (project_slug, filename).
 _retry_counts: dict = {}
 _retry_counts_lock = threading.Lock()
-# Per-project lock for project_memory.json to prevent concurrent write corruption
-_memory_locks: dict = {}
-_memory_locks_lock = threading.Lock()
+# In-memory session tokens — wiped on server restart (user re-logs in)
+_sessions: set = set()
+_sessions_lock = threading.Lock()
+SESSION_COOKIE = "office_session"
+# API paths that skip the session check. Webhooks are authed via HMAC; login
+# is how sessions are issued in the first place.
+_AUTH_EXEMPT_API = {"/api/login", "/api/webhook/linear", "/api/webhook/jira"}
 
-
-def _get_memory_lock(slug: str) -> threading.Lock:
-    with _memory_locks_lock:
-        if slug not in _memory_locks:
-            _memory_locks[slug] = threading.Lock()
-        return _memory_locks[slug]
-
-
-def _update_project_memory(slug: str, updates: dict) -> None:
-    """Thread-safe read-modify-write of project_memory.json."""
-    mem_path = BASE_DIR / "projects" / slug / "memory" / "project_memory.json"
-    with _get_memory_lock(slug):
-        try:
-            data = json.loads(mem_path.read_text(encoding="utf-8")) if mem_path.exists() else {}
-        except (json.JSONDecodeError, OSError):
-            data = {}
-        data.update(updates)
-        mem_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
 # Feature flags
 _peer_review_enabled: bool = True
-N8N_WEBHOOK_URL = os.environ.get("N8N_WEBHOOK_URL", "http://localhost:5678/webhook/agent-complete")
-GITHUB_TOKEN    = os.environ.get("GITHUB_TOKEN", "")
-GITHUB_USERNAME = os.environ.get("GITHUB_USERNAME", "")
-LINEAR_API_KEY        = os.environ.get("LINEAR_API_KEY", "")
-LINEAR_TEAM_ID        = os.environ.get("LINEAR_TEAM_ID", "")
+# Webhook handlers (still in this file) need their secrets at request time.
 LINEAR_WEBHOOK_SECRET = os.environ.get("LINEAR_WEBHOOK_SECRET", "")
 JIRA_WEBHOOK_SECRET   = os.environ.get("JIRA_WEBHOOK_SECRET", "")
 WEBHOOK_TRIGGER_LABEL = os.environ.get("WEBHOOK_TRIGGER_LABEL", "ai-office")
-NOTION_API_KEY        = os.environ.get("NOTION_API_KEY", "")
-NOTION_DATABASE_ID    = os.environ.get("NOTION_DATABASE_ID", "")
-_linear_states_cache: dict = {}  # team_id -> {name: state_id}
 
 # Reviewer assignments — who reviews whose output
 REVIEWER_MAP = {
@@ -473,292 +470,6 @@ def _spawn_agent_task(slug: str, filename: str, agent: str,
 
     threading.Thread(target=_reader, daemon=True).start()
     return True
-
-
-def _notify_n8n(slug: str, agent: str, filename: str, status: str):
-    """Fire n8n webhook when an agent finishes. Non-blocking, errors are silent."""
-    try:
-        task_title = filename.replace(".md", "").split("-", 3)[-1].replace("-", " ").title()
-        payload = json.dumps({
-            "project": slug,
-            "agent": agent.capitalize(),
-            "task": task_title,
-            "status": status,
-            "file": filename,
-        }).encode("utf-8")
-        req = urllib.request.Request(
-            N8N_WEBHOOK_URL,
-            data=payload,
-            headers={"Content-Type": "application/json"},
-            method="POST",
-        )
-        urllib.request.urlopen(req, timeout=3)
-    except Exception:
-        pass  # Never block agent flow due to notification failure
-
-
-def _push_to_github(slug: str):
-    """Create a GitHub repo, push implementation output to ai-generated branch, open a PR.
-    Runs in a background thread. Stores PR URL in project_memory.json on success."""
-    if not GITHUB_TOKEN or not GITHUB_USERNAME:
-        return
-
-    impl_dir = BASE_DIR / "output" / slug / "implementation"
-    if not impl_dir.exists() or not any(impl_dir.iterdir()):
-        return
-
-    def _run():
-        import shutil
-        import tempfile
-        import urllib.error
-
-        repo_name = slug
-        api_base = "https://api.github.com"
-        headers = {
-            "Authorization": f"token {GITHUB_TOKEN}",
-            "Content-Type": "application/json",
-            "Accept": "application/vnd.github.v3+json",
-        }
-
-        def _gh(method, path, body=None):
-            data = json.dumps(body).encode() if body else None
-            req = urllib.request.Request(
-                f"{api_base}{path}", data=data, headers=headers, method=method
-            )
-            try:
-                resp = urllib.request.urlopen(req, timeout=15)
-                return json.loads(resp.read())
-            except urllib.error.HTTPError as e:
-                return json.loads(e.read())
-
-        # 1. Create repo (ignore if already exists)
-        repo = _gh("POST", "/user/repos", {
-            "name": repo_name,
-            "description": f"Generated by Pathless AI Office — {slug}",
-            "private": False,
-            "auto_init": True,
-        })
-        clone_url = repo.get("clone_url") or f"https://github.com/{GITHUB_USERNAME}/{repo_name}.git"
-        auth_url = clone_url.replace("https://", f"https://{GITHUB_USERNAME}:{GITHUB_TOKEN}@")
-
-        # 2. Clone, copy files, push branch
-        with tempfile.TemporaryDirectory() as tmpdir:
-            r = subprocess.run(["git", "clone", auth_url, tmpdir],
-                               capture_output=True, timeout=60)
-            if r.returncode != 0:
-                return
-
-            # Copy all implementation files into the repo
-            for item in impl_dir.iterdir():
-                dest = Path(tmpdir) / item.name
-                if item.is_dir():
-                    if dest.exists():
-                        shutil.rmtree(dest)
-                    shutil.copytree(item, dest)
-                else:
-                    shutil.copy2(item, dest)
-
-            env = {**os.environ,
-                   "GIT_AUTHOR_NAME": "AI Office",
-                   "GIT_AUTHOR_EMAIL": "ai@pathless.ai",
-                   "GIT_COMMITTER_NAME": "AI Office",
-                   "GIT_COMMITTER_EMAIL": "ai@pathless.ai"}
-
-            # Checkout branch — switch to existing remote branch if already there
-            subprocess.run(["git", "checkout", "-b", "ai-generated"],
-                           cwd=tmpdir, capture_output=True, env=env)
-            subprocess.run(["git", "checkout", "ai-generated"],
-                           cwd=tmpdir, capture_output=True, env=env)
-            subprocess.run(["git", "add", "."],
-                           cwd=tmpdir, capture_output=True, env=env)
-            subprocess.run(["git", "commit", "-m",
-                            f"feat: AI Office implementation for {slug}"],
-                           cwd=tmpdir, capture_output=True, env=env)
-            push = subprocess.run(["git", "push", auth_url, "ai-generated", "--force"],
-                                  cwd=tmpdir, capture_output=True, timeout=120, env=env)
-            if push.returncode != 0:
-                return
-
-        # 3. Open PR
-        pr = _gh("POST", f"/repos/{GITHUB_USERNAME}/{repo_name}/pulls", {
-            "title": f"AI Office: {slug} — initial implementation",
-            "body": (
-                f"## Generated by Pathless AI Office\n\n"
-                f"**Project:** {slug}\n\n"
-                "This PR contains the full implementation produced by the AI agent team:\n"
-                "- **Bjorn** — system architecture\n"
-                "- **Magnus** — GDPR/compliance\n"
-                "- **Dag** — infrastructure & Docker\n"
-                "- **Arve** — full-stack implementation\n\n"
-                "_Review the output files in this branch for details._"
-            ),
-            "head": "ai-generated",
-            "base": "main",
-        })
-
-        pr_url = pr.get("html_url")
-        if not pr_url:
-            # PR may already exist — fetch it
-            existing = _gh("GET", f"/repos/{GITHUB_USERNAME}/{repo_name}/pulls?state=open&head={GITHUB_USERNAME}:ai-generated")
-            if isinstance(existing, list) and existing:
-                pr_url = existing[0].get("html_url")
-        if not pr_url:
-            return
-
-        # 4. Store PR URL in project memory
-        _update_project_memory(slug, {
-            "github_pr": pr_url,
-            "github_repo": f"https://github.com/{GITHUB_USERNAME}/{repo_name}",
-        })
-
-        _notify_n8n(slug, "system", "github-pr.md",
-                    f"GitHub PR opened: {pr_url}")
-
-    threading.Thread(target=_run, daemon=True).start()
-
-
-def _linear_api(query: str, variables: dict = None) -> dict:
-    """Execute a Linear GraphQL query. Returns data dict or {} on failure."""
-    if not LINEAR_API_KEY:
-        return {}
-    payload = json.dumps({"query": query, "variables": variables or {}}).encode()
-    req = urllib.request.Request(
-        "https://api.linear.app/graphql",
-        data=payload,
-        headers={"Authorization": LINEAR_API_KEY, "Content-Type": "application/json"},
-        method="POST",
-    )
-    try:
-        resp = urllib.request.urlopen(req, timeout=15)
-        return json.loads(resp.read()).get("data", {})
-    except Exception:
-        return {}
-
-
-def _get_linear_state_id(state_name: str) -> str | None:
-    """Return the workflow state ID for the given name in LINEAR_TEAM_ID, with caching."""
-    global _linear_states_cache
-    if LINEAR_TEAM_ID not in _linear_states_cache:
-        data = _linear_api(
-            """query($teamId: String!) {
-                workflowStates(filter: { team: { id: { eq: $teamId } } }) {
-                    nodes { id name }
-                }
-            }""",
-            {"teamId": LINEAR_TEAM_ID},
-        )
-        nodes = data.get("workflowStates", {}).get("nodes", [])
-        _linear_states_cache[LINEAR_TEAM_ID] = {n["name"]: n["id"] for n in nodes}
-    states = _linear_states_cache.get(LINEAR_TEAM_ID, {})
-    return states.get(state_name) or next(
-        (v for k, v in states.items() if k.lower() == state_name.lower()), None
-    )
-
-
-def _linear_create_issues(slug: str, tasks: list):
-    """Create one Linear issue per task at kickoff. Stores issue URLs in project memory."""
-    if not LINEAR_API_KEY or not LINEAR_TEAM_ID:
-        return
-
-    def _run():
-        issue_map = {}  # filename -> {id, url}
-        for task in tasks:
-            agent = task.get("agent", "")
-            title = task.get("title", "")
-            desc  = task.get("description", "")
-            filename = task.get("filename", "")
-
-            data = _linear_api(
-                """mutation($title: String!, $description: String!, $teamId: String!) {
-                    issueCreate(input: { title: $title, description: $description, teamId: $teamId }) {
-                        issue { id url }
-                    }
-                }""",
-                {
-                    "title": f"[{agent.upper()}] {title}",
-                    "description": f"**Project:** {slug}\n**Agent:** {agent}\n\n{desc}",
-                    "teamId": LINEAR_TEAM_ID,
-                },
-            )
-            issue = data.get("issueCreate", {}).get("issue", {})
-            if issue.get("id"):
-                issue_map[filename] = {"id": issue["id"], "url": issue["url"]}
-
-        if not issue_map:
-            return
-
-        _update_project_memory(slug, {"linear_issues": issue_map})
-
-    threading.Thread(target=_run, daemon=True).start()
-
-
-def _linear_update_issue(slug: str, filename: str, state_name: str, comment: str = ""):
-    """Move a Linear issue to a new state and optionally add a comment."""
-    if not LINEAR_API_KEY:
-        return
-
-    def _run():
-        mem_path = BASE_DIR / "projects" / slug / "memory" / "project_memory.json"
-        if not mem_path.exists():
-            return
-        try:
-            m = json.loads(mem_path.read_text(encoding="utf-8"))
-            issue_info = m.get("linear_issues", {}).get(filename)
-            if not issue_info:
-                return
-            issue_id = issue_info["id"]
-        except Exception:
-            return
-
-        state_id = _get_linear_state_id(state_name)
-        if state_id:
-            _linear_api(
-                """mutation($id: String!, $stateId: String!) {
-                    issueUpdate(id: $id, input: { stateId: $stateId }) { success }
-                }""",
-                {"id": issue_id, "stateId": state_id},
-            )
-
-        if comment:
-            _linear_api(
-                """mutation($issueId: String!, $body: String!) {
-                    commentCreate(input: { issueId: $issueId, body: $body }) { success }
-                }""",
-                {"issueId": issue_id, "body": comment},
-            )
-
-    threading.Thread(target=_run, daemon=True).start()
-
-
-def _linear_add_pr_comment(slug: str):
-    """After all tasks done, comment the GitHub PR URL on every Linear issue for this project."""
-    if not LINEAR_API_KEY:
-        return
-
-    def _run():
-        mem_path = BASE_DIR / "projects" / slug / "memory" / "project_memory.json"
-        if not mem_path.exists():
-            return
-        try:
-            m = json.loads(mem_path.read_text(encoding="utf-8"))
-        except Exception:
-            return
-
-        pr_url = m.get("github_pr", "")
-        issue_map = m.get("linear_issues", {})
-        if not issue_map:
-            return
-
-        comment = f"✅ All AI agents completed.\n\n{f'GitHub PR: {pr_url}' if pr_url else 'No GitHub PR (GITHUB_TOKEN not configured).'}"
-        for info in issue_map.values():
-            _linear_api(
-                """mutation($issueId: String!, $body: String!) {
-                    commentCreate(input: { issueId: $issueId, body: $body }) { success }
-                }""",
-                {"issueId": info["id"], "body": comment},
-            )
-
-    threading.Thread(target=_run, daemon=True).start()
 
 
 def _all_tasks_done(slug: str) -> bool:
@@ -1253,93 +964,6 @@ def _detect_test_command(output_dir: Path) -> tuple:
     return None, None
 
 
-def _write_to_notion(slug: str):
-    """Write a project summary page to Notion. No-op if NOTION_API_KEY not set."""
-    if not NOTION_API_KEY or not NOTION_DATABASE_ID:
-        return
-
-    # Load project info
-    try:
-        proj = project_mgr.get_project(slug)
-        project_name = proj.get("name", slug)
-        description  = proj.get("description", "")
-    except Exception:
-        project_name = slug
-        description  = ""
-
-    # Load decision memory categories
-    decisions_dir = BASE_DIR / "projects" / slug / "memory" / "decisions"
-    def _read_cat(cat: str) -> str:
-        p = decisions_dir / f"{cat}.md"
-        try:
-            return p.read_text(encoding="utf-8").strip() if p.exists() else ""
-        except Exception:
-            return ""
-
-    architecture   = _read_cat("architecture")
-    implementation = _read_cat("implementation")
-    strategy       = _read_cat("strategy")
-    compliance     = _read_cat("compliance")
-
-    # Load GitHub PR URL if available
-    mem_path = BASE_DIR / "projects" / slug / "memory" / "project_memory.json"
-    pr_url = ""
-    try:
-        m = json.loads(mem_path.read_text(encoding="utf-8"))
-        pr_url = m.get("pr_url", "")
-    except Exception:
-        pass
-
-    def _text_block(content: str, heading: str) -> list:
-        """Return a heading + paragraph block(s), chunked to Notion's 2000-char limit."""
-        if not content:
-            return []
-        blocks = [{"object": "block", "type": "heading_2",
-                   "heading_2": {"rich_text": [{"type": "text", "text": {"content": heading}}]}}]
-        for i in range(0, min(len(content), 10000), 1900):
-            chunk = content[i:i + 1900]
-            blocks.append({"object": "block", "type": "paragraph",
-                           "paragraph": {"rich_text": [{"type": "text", "text": {"content": chunk}}]}})
-        return blocks
-
-    children = []
-    if description:
-        children += [{"object": "block", "type": "paragraph",
-                      "paragraph": {"rich_text": [{"type": "text", "text": {"content": description}}]}}]
-    if pr_url:
-        children += [{"object": "block", "type": "paragraph",
-                      "paragraph": {"rich_text": [{"type": "text", "text": {"content": f"GitHub PR: {pr_url}",
-                                                   "link": {"url": pr_url}}}]}}]
-    children += _text_block(architecture,   "Architecture")
-    children += _text_block(strategy,       "Strategy")
-    children += _text_block(implementation, "Implementation")
-    children += _text_block(compliance,     "Compliance")
-
-    payload = json.dumps({
-        "parent": {"database_id": NOTION_DATABASE_ID},
-        "properties": {
-            "title": {"title": [{"type": "text", "text": {"content": project_name}}]}
-        },
-        "children": children[:100],  # Notion API limit: 100 blocks per request
-    }).encode("utf-8")
-
-    try:
-        req = urllib.request.Request(
-            "https://api.notion.com/v1/pages",
-            data=payload,
-            headers={
-                "Authorization": f"Bearer {NOTION_API_KEY}",
-                "Content-Type": "application/json",
-                "Notion-Version": "2022-06-28",
-            },
-            method="POST",
-        )
-        urllib.request.urlopen(req, timeout=30)
-        _notify_n8n(slug, "system", "notion-page-created.md", f"Notion page created for {project_name}")
-    except Exception:
-        pass
-
-
 def _after_ci_pass(slug: str):
     """Run Docker verify + GitHub push + Notion write after CI passes (or is skipped)."""
     attempt = _docker_verify_attempts.get(slug, 0)
@@ -1639,25 +1263,22 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
         return str(BASE_DIR / path.lstrip("/"))
 
     # ------------------------------------------------------------------
-    # CORS + response helpers
+    # Response helpers
     # ------------------------------------------------------------------
 
-    def _send_cors_headers(self):
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type")
-
     def do_OPTIONS(self):
+        # No CORS — the dashboard is same-origin. Respond 200 so preflight
+        # from the same origin still works for non-simple requests.
         self.send_response(200)
-        self._send_cors_headers()
         self.end_headers()
 
-    def _json_response(self, data, status=200):
+    def _json_response(self, data, status=200, extra_headers: list = None):
         body = json.dumps(data, indent=2).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))
-        self._send_cors_headers()
+        for k, v in (extra_headers or []):
+            self.send_header(k, v)
         self.end_headers()
         self.wfile.write(body)
 
@@ -1666,7 +1287,6 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
         self.send_response(status)
         self.send_header("Content-Type", "text/plain; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
-        self._send_cors_headers()
         self.end_headers()
         self.wfile.write(body)
 
@@ -1678,11 +1298,44 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
         return self.rfile.read(length)
 
     # ------------------------------------------------------------------
+    # Session auth
+    # ------------------------------------------------------------------
+
+    def _session_token(self) -> str | None:
+        raw = self.headers.get("Cookie", "")
+        for part in raw.split(";"):
+            k, _, v = part.strip().partition("=")
+            if k == SESSION_COOKIE:
+                return v
+        return None
+
+    def _is_authed(self) -> bool:
+        tok = self._session_token()
+        if not tok:
+            return False
+        with _sessions_lock:
+            return tok in _sessions
+
+    def _require_auth(self) -> bool:
+        """Return True if request may proceed. On failure, writes a 401 and returns False."""
+        path = self.path.split("?", 1)[0]
+        if not path.startswith("/api/"):
+            return True
+        if path in _AUTH_EXEMPT_API:
+            return True
+        if self._is_authed():
+            return True
+        self._error(401, "Not authenticated")
+        return False
+
+    # ------------------------------------------------------------------
     # Routing
     # ------------------------------------------------------------------
 
     def do_GET(self):
         path = self.path.split("?", 1)[0]
+        if not self._require_auth():
+            return
 
         if path == "/api/projects":
             self._json_response(project_mgr.list_projects())
@@ -1704,11 +1357,17 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
             self._json_response({"peer_review_enabled": _peer_review_enabled})
         elif path == "/api/health":
             self._handle_get_health()
+        elif path == "/" or path == "":
+            self.send_response(302)
+            self.send_header("Location", "/dashboard/index.html")
+            self.end_headers()
         else:
             super().do_GET()
 
     def do_POST(self):
         path = self.path.split("?", 1)[0]
+        if not self._require_auth():
+            return
 
         if path == "/api/login":
             self._handle_post_login()
@@ -1836,8 +1495,15 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
             return
         expected_user = os.environ.get("OFFICE_USER", "admin")
         expected_pass = os.environ.get("OFFICE_PASS", "admin")
-        if body.get("username") == expected_user and body.get("password") == expected_pass:
-            self._json_response({"ok": True})
+        u_match = hmac.compare_digest(str(body.get("username", "")), expected_user)
+        p_match = hmac.compare_digest(str(body.get("password", "")), expected_pass)
+        if u_match and p_match:
+            token = secrets.token_urlsafe(32)
+            with _sessions_lock:
+                _sessions.add(token)
+            cookie = (f"{SESSION_COOKIE}={token}; HttpOnly; SameSite=Strict; "
+                      f"Path=/; Max-Age=2592000")
+            self._json_response({"ok": True}, extra_headers=[("Set-Cookie", cookie)])
         else:
             self._json_response({"ok": False, "error": "Invalid credentials."}, status=401)
 
@@ -2153,7 +1819,6 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
         self.send_header("Content-Length", str(len(content)))
         if qs.get("download"):
             self.send_header("Content-Disposition", f'attachment; filename="{target.name}"')
-        self.send_header("Access-Control-Allow-Origin", "*")
         self.end_headers()
         self.wfile.write(content)
 
@@ -2197,7 +1862,6 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
             self.send_header("Content-Type", "application/octet-stream")
             self.send_header("Content-Disposition", f'attachment; filename="{filename}"')
             self.send_header("Content-Length", str(len(body)))
-            self._send_cors_headers()
             self.end_headers()
             self.wfile.write(body)
         else:
@@ -2455,6 +2119,14 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
 
     def _handle_webhook_jira(self):
         body = self._read_body()
+        if JIRA_WEBHOOK_SECRET:
+            sig = self.headers.get("x-hub-signature", "") or self.headers.get("x-hub-signature-256", "")
+            if sig.startswith("sha256="):
+                sig = sig[len("sha256="):]
+            expected = hmac.new(JIRA_WEBHOOK_SECRET.encode(), body, hashlib.sha256).hexdigest()
+            if not sig or not hmac.compare_digest(sig, expected):
+                self._error(401, "Invalid signature")
+                return
         try:
             payload = json.loads(body)
         except (json.JSONDecodeError, ValueError):
@@ -2650,16 +2322,9 @@ def _recover_stuck_tasks():
 if __name__ == "__main__":
     _load_env()
     # Re-read env-backed globals now that .env is loaded into os.environ
-    GITHUB_TOKEN    = os.environ.get("GITHUB_TOKEN", "")
-    GITHUB_USERNAME = os.environ.get("GITHUB_USERNAME", "")
-    LINEAR_API_KEY        = os.environ.get("LINEAR_API_KEY", "")
-    LINEAR_TEAM_ID        = os.environ.get("LINEAR_TEAM_ID", "")
     LINEAR_WEBHOOK_SECRET = os.environ.get("LINEAR_WEBHOOK_SECRET", "")
     JIRA_WEBHOOK_SECRET   = os.environ.get("JIRA_WEBHOOK_SECRET", "")
     WEBHOOK_TRIGGER_LABEL = os.environ.get("WEBHOOK_TRIGGER_LABEL", "ai-office")
-    NOTION_API_KEY        = os.environ.get("NOTION_API_KEY", "")
-    NOTION_DATABASE_ID    = os.environ.get("NOTION_DATABASE_ID", "")
-    N8N_WEBHOOK_URL = os.environ.get("N8N_WEBHOOK_URL", "http://localhost:5678/webhook/agent-complete")
     _write_mcp_config()
     _recover_stuck_tasks()
     os.chdir(BASE_DIR)
