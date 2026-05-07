@@ -233,6 +233,13 @@ def _spawn_agent_task(slug: str, filename: str, agent: str,
     except Exception:
         model = "claude-sonnet-4-6"
         task_title = filename
+    # If the user has locked this agent to a specific model, that wins —
+    # regardless of what the orchestrator wrote into the task file or what the
+    # replan/Docker-fix paths assigned. This is the single chokepoint where
+    # every spawn passes through, so we enforce here.
+    _locked = agent_registry.get_model(agent)
+    if _locked and _locked != agent_registry.DEFAULT_MODEL:
+        model = _locked
     today_str = _date.today().isoformat()
 
     output_subdir = AGENT_OUTPUT_DIR.get(agent, "strategy")
@@ -527,6 +534,27 @@ def _team_for_project(slug: str) -> dict | None:
         return None
 
 
+def _build_locked_models_block(agent_ids: list) -> str:
+    """Return a prompt block describing every agent on this run that has a
+    locked Claude model. Empty string when no overrides exist — the
+    orchestrator falls back to its default auto rules."""
+    locked = []
+    for a in agent_ids:
+        m = agent_registry.get_model(a)
+        if m and m != agent_registry.DEFAULT_MODEL:
+            locked.append((a, m))
+    if not locked:
+        return ""
+    rows = "\n".join(f"- {a}: must use \"{m}\"" for a, m in locked)
+    return (
+        "\n\nLOCKED MODELS — these agents have a fixed Claude model assigned by "
+        "the user. The user has decided how powerful each agent should be; "
+        "respect their choice and do not override.\n"
+        f"{rows}\n"
+        "For agents NOT listed here, use the model assignment rules below."
+    )
+
+
 def _build_skills_blocks(team: dict) -> tuple:
     """Return (library_block, attachments_block, has_skills) used inside the
     team-scoped kickoff prompt. The library lists every skill the user has
@@ -557,6 +585,8 @@ def _build_kickoff_prompt(description: str, team: dict | None) -> str:
     to the team's phased agents. Custom agents are described by reading their
     .md. Phase ordering replaces the canon dependency rules when team is set."""
     if team is None:
+        # No team → all 16 built-ins are in scope for the locked-model lookup.
+        locked_block = _build_locked_models_block(sorted(agent_registry.BUILTIN_AGENTS))
         return f"""You are a project planner for an AI agent office. Your job is to assign every relevant agent a task.
 
 Project: "{description}"
@@ -596,7 +626,7 @@ DEPENDENCY RULES (use exact task title in depends_on field):
 
 MODEL ASSIGNMENT:
 - "claude-sonnet-4-6": coding, architecture, system design, compliance, security, DevOps
-- "claude-haiku-4-5-20251001": research, writing, branding, social media, sprint planning, docs, pricing, milestones
+- "claude-haiku-4-5-20251001": research, writing, branding, social media, sprint planning, docs, pricing, milestones{locked_block}
 
 TASK DESCRIPTIONS must be specific: exactly what to produce, what format, what decisions to make, what to reference from other agents.
 
@@ -612,6 +642,7 @@ Reply with ONLY a JSON array — no markdown, no explanation, no code fences:
     deputies_block = "\n".join(deputy_lines) if deputy_lines else "(no deputies — only the canon team is available)"
     team_name = team.get("name") or team.get("slug")
     skills_lib_block, skills_attached_block, has_skills = _build_skills_blocks(team)
+    locked_block = _build_locked_models_block(team_mgr.all_agents_in_team(team))
 
     skills_section = f"""
 
@@ -656,7 +687,7 @@ OUTPUT FORMAT — every task object MUST include "phase" (1, 2, or 3):
 
 MODEL ASSIGNMENT:
 - "claude-sonnet-4-6": coding, architecture, system design, compliance, security, DevOps
-- "claude-haiku-4-5-20251001": research, writing, branding, social media, sprint planning, docs, pricing, milestones
+- "claude-haiku-4-5-20251001": research, writing, branding, social media, sprint planning, docs, pricing, milestones{locked_block}
 
 TASK DESCRIPTIONS must be specific: exactly what to produce, what format, what decisions to make, what to reference from other agents.
 
@@ -744,6 +775,13 @@ def _do_kickoff(slug: str, description: str) -> tuple:
         # Canon agents have a known phase if the orchestrator forgot to set one.
         if not phase and agent in team_mgr.CANON_PHASE:
             phase = int(team_mgr.CANON_PHASE[agent])
+        # Locked-model enforcement: if the user has pinned a model for this
+        # agent, override the orchestrator's pick. The prompt asks the model
+        # to respect locks, but we enforce server-side too so a slip can't
+        # silently route to the wrong model.
+        locked = agent_registry.get_model(agent)
+        if locked and locked != agent_registry.DEFAULT_MODEL:
+            model = locked
         parsed.append({"agent": agent, "title": title, "desc": desc,
                        "raw_dep": raw_dep, "model": model, "phase": phase})
 
@@ -1640,6 +1678,8 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
             return
         if path.startswith("/api/teams/"):
             self._handle_patch_team(path[len("/api/teams/"):])
+        elif path.startswith("/api/agents/"):
+            self._handle_patch_agent(path[len("/api/agents/"):])
         else:
             self.send_error(404, "Not found")
 
@@ -1850,6 +1890,32 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
         target.write_text(md_body, encoding="utf-8")
         self._json_response({"id": agent_id, "builtin": False, "exists": True})
 
+    def _handle_patch_agent(self, agent_id: str):
+        """Update an agent's runtime config. Currently only `model` is
+        supported. Body shape: {"model": "claude-opus-4-7"} or {"model":"auto"}."""
+        agent_id = agent_id.strip().lower()
+        if not agent_registry.is_valid(agent_id):
+            self._error(404, f"Agent not found: {agent_id}")
+            return
+        try:
+            body = json.loads(self._read_body())
+        except (json.JSONDecodeError, ValueError):
+            self._error(400, "Invalid JSON")
+            return
+        if "model" not in body:
+            self._error(400, "model is required")
+            return
+        model = str(body.get("model") or "").strip()
+        if not agent_registry.is_valid_model(model):
+            self._error(400, f"Unknown model: {model}")
+            return
+        try:
+            saved = agent_registry.set_model(agent_id, model)
+        except ValueError as e:
+            self._error(400, str(e))
+            return
+        self._json_response({"id": agent_id, "model": saved})
+
     def _handle_delete_agent(self, agent_id: str):
         agent_id = agent_id.strip().lower()
         if agent_id in agent_registry.BUILTIN_AGENTS:
@@ -1863,6 +1929,10 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
             self._error(404, f"Agent not found: {agent_id}")
             return
         target.unlink()
+        # Drop any per-agent config that lived alongside the role file.
+        cfg = agent_registry.AGENTS_DIR / f"{agent_id}.config.json"
+        if cfg.exists():
+            cfg.unlink()
         self._json_response({"ok": True})
 
     def _handle_get_team(self, slug: str):

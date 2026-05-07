@@ -97,6 +97,39 @@
       flex-shrink: 0; margin-top: 2px;
     }
     .agent-tag.custom { background: rgba(0,122,255,0.10); color: var(--blue); }
+    .agent-model {
+      font-size: 10px; padding: 2px 7px; border-radius: 999px;
+      background: rgba(34,211,238,0.10); color: #0e8ca0;
+      letter-spacing: 0.3px; font-weight: 600;
+      flex-shrink: 0; margin-top: 2px;
+    }
+    .agent-model.auto { background: rgba(0,0,0,0.04); color: var(--ts); }
+
+    .model-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 14px;
+      background: rgba(34,211,238,0.06);
+      border: 1px solid rgba(34,211,238,0.22);
+      border-radius: var(--radius);
+      margin-bottom: 1.25rem;
+    }
+    .model-row label {
+      font-size: 11px; color: #0e8ca0;
+      text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;
+      margin-right: 4px;
+    }
+    .model-row select {
+      flex: 1; appearance: none; -webkit-appearance: none;
+      background: #fff; border: 1px solid var(--hairline-strong);
+      border-radius: 8px; padding: 7px 28px 7px 12px;
+      font-family: var(--font); font-size: 13px; color: var(--tp);
+      cursor: pointer;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path fill='none' stroke='%235b6479' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round' d='M1 1.5l5 5 5-5'/></svg>");
+      background-repeat: no-repeat;
+      background-position: right 0.7rem center;
+    }
+    .model-row select:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px rgba(0,122,255,0.18); }
+    .model-row .hint { font-size: 11px; color: var(--ts); }
 
     #main { overflow-y: auto; padding: 2rem 2.5rem; }
 
@@ -201,6 +234,15 @@
       <div id="view-pane" style="display:none;">
         <h2 id="view-name"></h2>
         <div class="meta"><span id="view-tag"></span></div>
+
+        <div class="model-row">
+          <label>Model</label>
+          <select id="view-model" onchange="saveModel()">
+            <!-- options populated from MODELS constant -->
+          </select>
+          <span class="hint">Lock this agent to a model, or pick Auto to let the orchestrator choose per task.</span>
+        </div>
+
         <pre id="view-body"></pre>
         <div class="form-actions" style="margin-top:1.25rem;">
           <button class="btn danger" id="delete-btn" onclick="deleteAgent()" style="display:none;">Delete</button>
@@ -247,6 +289,19 @@
       };
     })();
 
+    // Keep this list aligned with core.agents.MODELS.
+    const MODELS = [
+      { id: 'auto',                       label: 'Auto (orchestrator picks)' },
+      { id: 'claude-opus-4-7',            label: 'Opus 4.7' },
+      { id: 'claude-opus-4-6',            label: 'Opus 4.6' },
+      { id: 'claude-sonnet-4-6',          label: 'Sonnet 4.6' },
+      { id: 'claude-haiku-4-5-20251001',  label: 'Haiku 4.5' },
+    ];
+    function modelLabel(id) {
+      const m = MODELS.find(x => x.id === id);
+      return m ? m.label : id;
+    }
+
     let currentAgent = null;
     let agentsList = [];
 
@@ -266,12 +321,19 @@
         const row = document.createElement('div');
         row.className = 'agent-row' + (currentAgent === a.id ? ' active' : '');
         const role = a.role || '';
+        const model = a.model || 'auto';
+        const modelChip = model === 'auto'
+          ? '<span class="agent-model auto">auto</span>'
+          : `<span class="agent-model">${modelLabel(model)}</span>`;
         row.innerHTML =
           `<div class="meta">
              <div class="agent-name">${a.id}</div>
              ${role ? `<div class="agent-role">${role}</div>` : ''}
            </div>
-           <span class="agent-tag ${a.builtin ? '' : 'custom'}">${a.builtin ? 'built-in' : 'custom'}</span>`;
+           <div style="display:flex;flex-direction:column;gap:3px;align-items:flex-end;">
+             <span class="agent-tag ${a.builtin ? '' : 'custom'}">${a.builtin ? 'built-in' : 'custom'}</span>
+             ${modelChip}
+           </div>`;
         row.onclick = () => viewAgent(a.id);
         list.appendChild(row);
       });
@@ -287,7 +349,29 @@
       document.getElementById('view-tag').textContent = a && a.builtin ? 'Built-in agent' : 'Custom agent';
       document.getElementById('view-body').textContent = body;
       document.getElementById('delete-btn').style.display = (a && a.builtin) ? 'none' : 'inline-block';
+
+      // Populate model picker with the agent's current pick
+      const sel = document.getElementById('view-model');
+      sel.innerHTML = MODELS.map(m =>
+        `<option value="${m.id}"${(a && a.model === m.id) ? ' selected' : ''}>${m.label}</option>`
+      ).join('');
+
       show('view-pane');
+      loadAgents();
+    }
+
+    async function saveModel() {
+      if (!currentAgent) return;
+      const model = document.getElementById('view-model').value;
+      const r = await fetch('/api/agents/' + currentAgent, {
+        method: 'PATCH',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ model }),
+      });
+      if (!r.ok) { toast('Could not save model', true); return; }
+      const data = await r.json();
+      toast('Model: ' + modelLabel(data.model));
+      // Refresh list so the chip updates
       loadAgents();
     }
 
