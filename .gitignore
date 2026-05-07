@@ -43,6 +43,16 @@ teams/*
 !teams/.gitkeep
 skills/*
 !skills/.gitkeep
+!skills/api-design-rest.md
+!skills/no-sycophancy.md
+!skills/production-ready-docker.md
+!skills/research-rigor.md
+!skills/root-cause-first.md
+!skills/show-assumptions.md
+!skills/systematic-debugging.md
+!skills/tdd-enforcement.md
+!skills/threat-model-stride.md
+!skills/verify-before-done.md
 agents/*
 !agents/orchestrator.md
 !agents/arve.md
