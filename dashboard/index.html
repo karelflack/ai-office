@@ -232,6 +232,24 @@
       font-size: 11px; font-weight: 600; letter-spacing: 0.8px;
       text-transform: uppercase; color: var(--tt); margin-bottom: 1rem;
     }
+    #kickoff-advisories { display: flex; flex-direction: column; gap: 8px; margin-bottom: 1rem; }
+    #kickoff-advisories:empty { display: none; }
+    .advisory-chip {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 0.7rem 0.95rem;
+      background: rgba(34,211,238,0.10);
+      border: 1px solid rgba(34,211,238,0.32);
+      border-radius: 10px;
+      color: #0a0e1a;
+      font-size: 12.5px; line-height: 1.45;
+    }
+    .advisory-chip .advisory-icon {
+      font-size: 13px; color: #0e8ca0; flex-shrink: 0; margin-top: 1px;
+    }
+    .advisory-chip .advisory-label {
+      font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.6px;
+      color: #0e8ca0; font-weight: 700; margin-bottom: 2px;
+    }
     #kickoff-task-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 1.5rem; }
     .kickoff-task-card {
       background: var(--surface-2); border: 1px solid var(--border);
@@ -690,6 +708,7 @@
     <div id="kickoff-status"></div>
     <div id="kickoff-result">
       <h3>Plan Created</h3>
+      <div id="kickoff-advisories"></div>
       <div id="kickoff-task-list"></div>
       <div id="kickoff-actions">
         <button id="kickoff-run-btn" onclick="kickoffRunAll()">&#9654;&nbsp; Run All Agents</button>
@@ -1783,7 +1802,7 @@ async function handleKickoff() {
     if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
     clearInterval(interval);
     statEl.textContent = '';
-    showKickoffResult(data.tasks);
+    showKickoffResult(data.tasks, data.advisories || []);
   } catch (e) {
     clearInterval(interval);
     statEl.textContent = '';
@@ -1793,7 +1812,17 @@ async function handleKickoff() {
   }
 }
 
-function showKickoffResult(tasks) {
+function showKickoffResult(tasks, advisories) {
+  const advRoot = document.getElementById('kickoff-advisories');
+  advRoot.innerHTML = (advisories || []).map(msg =>
+    `<div class="advisory-chip">
+       <span class="advisory-icon">⚑</span>
+       <div>
+         <div class="advisory-label">Skill suggestion</div>
+         <div>${escHtml(msg)}</div>
+       </div>
+     </div>`
+  ).join('');
   const list = document.getElementById('kickoff-task-list');
   list.innerHTML = tasks.map((t,i) => {
     const col   = AGENT_COLORS[t.agent];
@@ -1819,6 +1848,7 @@ function resetKickoff() {
   document.getElementById('kickoff-result').style.display = 'none';
   document.getElementById('kickoff-error').textContent = '';
   document.getElementById('kickoff-status').textContent = '';
+  document.getElementById('kickoff-advisories').innerHTML = '';
   document.getElementById('kickoff-input').focus();
 }
 

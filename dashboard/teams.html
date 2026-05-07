@@ -154,6 +154,87 @@
       text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;
     }
     .skeleton-divider { border-top: 1px dashed rgba(34,211,238,0.25); margin: 0.5rem 0; }
+    .skeleton-row { flex-wrap: wrap; }
+    .skill-row {
+      width: 100%;
+      display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+      padding-left: 122px; margin-top: -2px; margin-bottom: 2px;
+      min-height: 26px;
+    }
+    .skill-row.empty { padding-left: 122px; }
+    .skill-chip {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: rgba(34,211,238,0.10);
+      border: 1px solid rgba(34,211,238,0.30);
+      color: #0e8ca0;
+      border-radius: 999px; padding: 2px 4px 2px 10px;
+      font-size: 11px; font-weight: 600;
+    }
+    .skill-chip .x {
+      width: 14px; height: 14px; border-radius: 50%;
+      background: rgba(0,0,0,0.06); color: var(--ts);
+      display: inline-flex; align-items: center; justify-content: center;
+      cursor: pointer; font-size: 9px; font-weight: 700;
+    }
+    .skill-chip .x:hover { background: var(--red); color: #fff; }
+    .skill-add {
+      display: inline-flex; align-items: center; gap: 3px;
+      background: rgba(255,255,255,0.6);
+      border: 1px dashed var(--hairline-strong);
+      color: var(--ts);
+      border-radius: 999px; padding: 2px 8px;
+      font-size: 11px; font-weight: 500; cursor: pointer;
+      transition: background 0.12s, color 0.12s, border-color 0.12s;
+    }
+    .skill-add:hover { background: #fff; color: var(--blue); border-color: var(--blue); border-style: solid; }
+    .skill-empty-hint { color: var(--tt); font-size: 11px; font-style: italic; }
+    /* Inline skill chips on deputy pills — sit underneath the pill name */
+    .deputy-pill { flex-direction: column; align-items: stretch; padding: 0.45rem 0.7rem 0.45rem 0.95rem; border-radius: 12px; }
+    .deputy-pill .pill-head { display: flex; align-items: center; gap: 6px; }
+    .deputy-pill .pill-skills { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+    .deputy-pill .pill-skills:empty { display: none; }
+
+    /* Picker modal */
+    .picker-overlay {
+      position: fixed; inset: 0; background: rgba(15,23,42,0.45);
+      backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+      display: none; align-items: center; justify-content: center; z-index: 100;
+    }
+    .picker-overlay.show { display: flex; }
+    .picker {
+      background: #fff; border-radius: var(--radius-lg);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.18), 0 24px 48px rgba(15,23,42,0.20);
+      width: 380px; max-width: calc(100vw - 2rem); max-height: 70vh;
+      display: flex; flex-direction: column; overflow: hidden;
+    }
+    .picker-header {
+      padding: 1.1rem 1.25rem 0.6rem;
+      font-size: 14px; font-weight: 600; color: var(--tp);
+      border-bottom: 1px solid var(--hairline);
+    }
+    .picker-header .pick-sub { font-size: 12px; color: var(--ts); font-weight: 400; margin-top: 3px; }
+    .picker-body { padding: 0.4rem 0; overflow-y: auto; flex: 1; }
+    .picker-row {
+      padding: 0.65rem 1.25rem; cursor: pointer;
+      display: flex; align-items: flex-start; gap: 10px;
+      transition: background 0.1s;
+    }
+    .picker-row:hover { background: rgba(0,122,255,0.06); }
+    .picker-row.disabled { opacity: 0.4; cursor: not-allowed; }
+    .picker-row.disabled:hover { background: transparent; }
+    .picker-row .pn { font-size: 13px; font-weight: 600; color: var(--tp); }
+    .picker-row .pd { font-size: 11.5px; color: var(--ts); margin-top: 2px; line-height: 1.35; }
+    .picker-empty { color: var(--tt); font-size: 13px; padding: 1.5rem 1.25rem; text-align: center; font-style: italic; }
+    .picker-foot {
+      padding: 0.7rem 1.25rem; border-top: 1px solid var(--hairline);
+      display: flex; justify-content: flex-end;
+    }
+    .picker-foot button {
+      background: rgba(255,255,255,0.6); border: 1px solid var(--hairline-strong);
+      border-radius: 8px; color: var(--ts); padding: 6px 14px;
+      font-family: var(--font); font-size: 12.5px; font-weight: 500; cursor: pointer;
+    }
+    .picker-foot button:hover { background: #f5f7fb; color: var(--tp); }
 
     .deputy-zone {
       background: rgba(255,255,255,0.55);
@@ -269,22 +350,26 @@
           <span class="skeleton-name">orchestrator</span>
           <span class="skeleton-role"></span>
         </div>
+        <div class="skill-row" data-agent="orchestrator"></div>
         <div class="skeleton-divider"></div>
         <div class="skeleton-row" id="sk-bjorn">
           <span class="skeleton-name">bjorn</span>
           <span class="skeleton-role"></span>
           <span class="skeleton-phase">Phase 1</span>
         </div>
+        <div class="skill-row" data-agent="bjorn"></div>
         <div class="skeleton-row" id="sk-arve">
           <span class="skeleton-name">arve</span>
           <span class="skeleton-role"></span>
           <span class="skeleton-phase">Phase 2</span>
         </div>
+        <div class="skill-row" data-agent="arve"></div>
         <div class="skeleton-row" id="sk-odd">
           <span class="skeleton-name">odd</span>
           <span class="skeleton-role"></span>
           <span class="skeleton-phase">Phase 3</span>
         </div>
+        <div class="skill-row" data-agent="odd"></div>
       </div>
 
       <label>Deputies</label>
@@ -307,6 +392,17 @@
 
   <div id="toast" class="toast"></div>
 
+  <div id="picker-overlay" class="picker-overlay" onclick="closePicker(event)">
+    <div class="picker" onclick="event.stopPropagation()">
+      <div class="picker-header">
+        Attach a skill to <span id="picker-agent" style="color:var(--blue)"></span>
+        <div class="pick-sub">Pick from your skill library. Upload more on the Skills page.</div>
+      </div>
+      <div id="picker-body" class="picker-body"></div>
+      <div class="picker-foot"><button onclick="closePicker()">Cancel</button></div>
+    </div>
+  </div>
+
   <script>
     if (!sessionStorage.getItem('authenticated')) {
       window.location.replace('/dashboard/login.html?cb=' + Date.now());
@@ -328,7 +424,11 @@
     const CANON = ['orchestrator', 'bjorn', 'arve', 'odd'];
 
     let allAgents = [];
+    let allSkills = [];           // [{name, size}, ...]
     let deputies = [];
+    let skillMap = {};            // {agent_id: [skill_name, ...]}
+    let editingSlug = null;       // when editing an existing team
+    let pickerAgent = null;
 
     function toast(msg, isError) {
       const t = document.getElementById('toast');
@@ -338,11 +438,16 @@
     }
 
     async function loadAgents() {
-      const r = await fetch('/api/agents');
-      allAgents = await r.json();
+      const [ag, sk] = await Promise.all([
+        fetch('/api/agents').then(r => r.json()),
+        fetch('/api/skills').then(r => r.json()),
+      ]);
+      allAgents = ag;
+      allSkills = sk;
       renderSkeleton();
       renderPalette();
       renderDeputies();
+      renderAllSkillRows();
     }
 
     function renderSkeleton() {
@@ -396,17 +501,97 @@
         pill.draggable = true;
         pill.dataset.agent = id;
         pill.innerHTML =
-          `<span class="pill-name">${id}</span>` +
+          `<div class="pill-head">
+             <span class="pill-name">${id}</span>` +
           (role ? `<span class="pill-role">${role}</span>` : '') +
-          `<span class="x" title="Remove">×</span>`;
+          `  <span class="x" title="Remove">×</span>
+           </div>
+           <div class="pill-skills" data-skill-host="${id}"></div>`;
         pill.querySelector('.x').addEventListener('click', e => {
           e.stopPropagation();
           deputies = deputies.filter(d => d !== id);
-          renderPalette(); renderDeputies();
+          delete skillMap[id];
+          renderPalette(); renderDeputies(); renderAllSkillRows();
         });
         grid.appendChild(pill);
       });
+      // After deputies are mounted, paint their skill chips
+      deputies.forEach(id => paintSkillsFor(id));
     }
+
+    // ── Skill chips (canon rows + deputy pills) ──────────────
+    function renderAllSkillRows() {
+      // Canon rows in the skeleton block
+      ['orchestrator', 'bjorn', 'arve', 'odd'].forEach(paintSkillsFor);
+      // Deputy pills
+      deputies.forEach(paintSkillsFor);
+    }
+
+    function paintSkillsFor(agentId) {
+      // Find the host element — either a .skill-row[data-agent] (canon) or
+      // a .pill-skills[data-skill-host] (deputy).
+      const host =
+        document.querySelector(`.skill-row[data-agent="${agentId}"]`) ||
+        document.querySelector(`.pill-skills[data-skill-host="${agentId}"]`);
+      if (!host) return;
+      host.innerHTML = '';
+      const attached = skillMap[agentId] || [];
+      attached.forEach(name => {
+        const chip = document.createElement('span');
+        chip.className = 'skill-chip';
+        chip.innerHTML = `<span>${name}</span><span class="x" title="Detach">×</span>`;
+        chip.querySelector('.x').addEventListener('click', e => {
+          e.stopPropagation();
+          skillMap[agentId] = (skillMap[agentId] || []).filter(s => s !== name);
+          if (skillMap[agentId].length === 0) delete skillMap[agentId];
+          paintSkillsFor(agentId);
+        });
+        host.appendChild(chip);
+      });
+      const add = document.createElement('span');
+      add.className = 'skill-add';
+      add.textContent = attached.length ? '+ skill' : '+ attach skill';
+      add.addEventListener('click', e => {
+        e.stopPropagation();
+        openPicker(agentId);
+      });
+      host.appendChild(add);
+    }
+
+    // ── Picker modal ─────────────────────────────────────────
+    function openPicker(agentId) {
+      pickerAgent = agentId;
+      document.getElementById('picker-agent').textContent = agentId;
+      const body = document.getElementById('picker-body');
+      body.innerHTML = '';
+      if (allSkills.length === 0) {
+        body.innerHTML = '<div class="picker-empty">No skills uploaded yet — go to Skills to add some.</div>';
+      } else {
+        const attached = new Set(skillMap[agentId] || []);
+        allSkills.forEach(s => {
+          const row = document.createElement('div');
+          row.className = 'picker-row' + (attached.has(s.name) ? ' disabled' : '');
+          row.innerHTML = `<div><div class="pn">${s.name}</div></div>`;
+          if (!attached.has(s.name)) {
+            row.addEventListener('click', () => {
+              skillMap[agentId] = (skillMap[agentId] || []).concat([s.name]);
+              paintSkillsFor(agentId);
+              closePicker();
+            });
+          }
+          body.appendChild(row);
+        });
+      }
+      document.getElementById('picker-overlay').classList.add('show');
+    }
+    function closePicker(e) {
+      if (e && e.target.id !== 'picker-overlay') return;
+      document.getElementById('picker-overlay').classList.remove('show');
+      pickerAgent = null;
+    }
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') closePicker();
+    });
 
     function onDragStart(e) {
       e.target.classList.add('dragging');
@@ -440,20 +625,31 @@
       document.getElementById('team-name').value = '';
       document.getElementById('team-desc').value = '';
       deputies = [];
-      renderPalette(); renderDeputies();
+      skillMap = {};
+      editingSlug = null;
+      document.getElementById('builder').querySelector('h1').textContent = 'New team';
+      renderPalette(); renderDeputies(); renderAllSkillRows();
     }
 
     async function saveTeam() {
       const name = document.getElementById('team-name').value.trim();
       const description = document.getElementById('team-desc').value.trim();
       if (!name) { toast('Team name required', true); return; }
-      const r = await fetch('/api/teams', {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ name, description, deputies })
-      });
+      const payload = { name, description, deputies, skills: skillMap };
+      let r;
+      if (editingSlug) {
+        r = await fetch('/api/teams/' + editingSlug, {
+          method: 'PATCH', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify(payload),
+        });
+      } else {
+        r = await fetch('/api/teams', {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify(payload),
+        });
+      }
       if (!r.ok) { toast(await r.text() || 'Save failed', true); return; }
-      toast('Team saved');
+      toast(editingSlug ? 'Team updated' : 'Team saved');
       resetForm();
       loadTeams();
     }
@@ -489,12 +685,18 @@
     }
 
     function loadTeamIntoBuilder(t) {
-      document.getElementById('team-name').value = t.name + ' (copy)';
+      document.getElementById('team-name').value = t.name;
       document.getElementById('team-desc').value = t.description || '';
       deputies = (t.deputies || []).slice();
-      renderPalette(); renderDeputies();
+      // Deep-copy skills map so edits don't mutate the saved-list state
+      skillMap = {};
+      const src = t.skills || {};
+      Object.keys(src).forEach(k => { skillMap[k] = (src[k] || []).slice(); });
+      editingSlug = t.slug;
+      document.getElementById('builder').querySelector('h1').textContent = 'Edit team — ' + t.name;
+      renderPalette(); renderDeputies(); renderAllSkillRows();
       window.scrollTo(0, 0);
-      toast('Loaded — rename to save as new team');
+      toast('Editing "' + t.name + '"');
     }
 
     loadAgents();

@@ -40,6 +40,24 @@ def read_skill(name: str) -> str:
     return p.read_text(encoding="utf-8")
 
 
+def read_skill_summary(name: str) -> str:
+    """One-line summary for the orchestrator prompt — first non-heading line.
+    Falls back to the skill name if the body has nothing usable."""
+    try:
+        text = read_skill(name)
+    except FileNotFoundError:
+        return ""
+    for line in text.splitlines():
+        s = line.strip()
+        if s and not s.startswith("#") and not s.startswith("---"):
+            return s[:160]
+    return name
+
+
+def exists(name: str) -> bool:
+    return bool(SKILL_NAME_RE.match(name or "")) and _skill_file(name).exists()
+
+
 def create_skill(name: str, body: str) -> dict:
     name = (name or "").strip().lower()
     if not SKILL_NAME_RE.match(name):

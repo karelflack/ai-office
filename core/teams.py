@@ -28,6 +28,7 @@ from datetime import date
 from pathlib import Path
 
 from core import agents as agent_registry
+from core import skills as skill_registry
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 TEAMS_DIR = BASE_DIR / "teams"
@@ -72,8 +73,13 @@ def get_team(slug: str) -> dict:
     return json.loads(p.read_text(encoding="utf-8"))
 
 
-def create_team(name: str, description: str = "", deputies: list = None) -> dict:
-    """Create a new team file. Returns the saved dict."""
+def create_team(name: str, description: str = "", deputies: list = None,
+                skills: dict = None) -> dict:
+    """Create a new team file. Returns the saved dict.
+
+    `skills` is an optional `{agent_id: [skill_name, ...]}` map. Entries pointing
+    at agents not in the team or skills not in the library are dropped silently
+    — same self-healing model as deputies."""
     name = (name or "").strip()
     if not name:
         raise ValueError("Team name is required")
@@ -97,15 +103,76 @@ def create_team(name: str, description: str = "", deputies: list = None) -> dict
             cleaned.append(a)
             seen.add(a)
 
+    members = set(CANON_AGENTS) | set(cleaned)
+    cleaned_skills = _clean_skills_map(skills, members)
+
     data = {
         "slug": slug,
         "name": name,
         "description": (description or "").strip(),
         "deputies": cleaned,
+        "skills": cleaned_skills,
         "created": date.today().isoformat(),
     }
     _team_file(slug).write_text(json.dumps(data, indent=2), encoding="utf-8")
     return data
+
+
+def update_team(slug: str, name: str = None, description: str = None,
+                deputies: list = None, skills: dict = None) -> dict:
+    """Patch an existing team in place. Any field passed as None is left alone."""
+    data = get_team(slug)
+    if name is not None:
+        nm = name.strip()
+        if not nm:
+            raise ValueError("Team name cannot be empty")
+        data["name"] = nm
+    if description is not None:
+        data["description"] = description.strip()
+    if deputies is not None:
+        cleaned = []
+        seen = set()
+        for a in deputies:
+            a = str(a).strip().lower()
+            if a in CANON_AGENTS or not a or not agent_registry.is_valid(a):
+                continue
+            if a not in seen:
+                cleaned.append(a); seen.add(a)
+        data["deputies"] = cleaned
+    members = set(CANON_AGENTS) | set(data.get("deputies") or [])
+    if skills is not None:
+        data["skills"] = _clean_skills_map(skills, members)
+    else:
+        # Re-clean stored skills against current member set so a removed deputy
+        # also drops their skill assignments.
+        data["skills"] = _clean_skills_map(data.get("skills") or {}, members)
+    _team_file(slug).write_text(json.dumps(data, indent=2), encoding="utf-8")
+    return data
+
+
+def _clean_skills_map(skills: dict, members: set) -> dict:
+    """Drop unknown agents and unknown skills. Preserve order."""
+    out: dict = {}
+    if not isinstance(skills, dict):
+        return out
+    for agent_id, skill_list in skills.items():
+        agent_id = str(agent_id).strip().lower()
+        if agent_id not in members:
+            continue
+        if not isinstance(skill_list, list):
+            continue
+        cleaned = []
+        seen = set()
+        for s in skill_list:
+            s = str(s).strip().lower()
+            if not s or s in seen:
+                continue
+            if not skill_registry.exists(s):
+                continue
+            cleaned.append(s); seen.add(s)
+        if cleaned:
+            out[agent_id] = cleaned
+    return out
 
 
 def delete_team(slug: str) -> None:
@@ -123,3 +190,24 @@ def deputies_in_team(team: dict) -> list:
 def all_agents_in_team(team: dict) -> list:
     """Canon (always) + live deputies."""
     return list(CANON_AGENTS) + deputies_in_team(team)
+
+
+def skills_for_agent(team: dict, agent_id: str) -> list:
+    """Return the live skill names attached to `agent_id` on this team.
+    Skills whose .md has been deleted are filtered out — never silent ghosts."""
+    raw = (team.get("skills") or {}).get(agent_id) or []
+    return [s for s in raw if skill_registry.exists(s)]
+
+
+def all_attached_skills(team: dict) -> dict:
+    """Self-healed `{agent_id: [skill_name, ...]}` for the whole team —
+    only agents currently in the team, only skills currently on disk."""
+    members = set(all_agents_in_team(team))
+    out: dict = {}
+    for agent_id, names in (team.get("skills") or {}).items():
+        if agent_id not in members:
+            continue
+        live = [s for s in (names or []) if skill_registry.exists(s)]
+        if live:
+            out[agent_id] = live
+    return out

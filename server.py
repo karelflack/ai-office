@@ -283,9 +283,26 @@ def _spawn_agent_task(slug: str, filename: str, agent: str,
             "pricing benchmarks, trends. Prefer real data over assumptions.\n\n"
         )
 
+    # Skills attached to this agent on the project's bound team. Agent reads
+    # the markdown body itself — keeps the prompt small and lets the agent
+    # quote the relevant section. Empty when project has no team or no
+    # skills attached.
+    skills_note = ""
+    _team_for_skills = _team_for_project(slug)
+    if _team_for_skills is not None:
+        attached = team_mgr.skills_for_agent(_team_for_skills, agent)
+        if attached:
+            skill_paths = "\n".join(f"   - skills/{name}.md" for name in attached)
+            skills_note = (
+                "You have skills attached to you on this team — read each one before starting "
+                "and apply the guidance to your task:\n"
+                f"{skill_paths}\n\n"
+            )
+
     prompt = (
         f"You are the {agent} agent in the ai-office multi-agent framework.\n\n"
         f"You are working on project: '{slug}'\n\n"
+        f"{skills_note}"
         f"{search_note}"
         "Steps to follow:\n"
         "1. Read CLAUDE.md for session protocol\n"
@@ -510,6 +527,31 @@ def _team_for_project(slug: str) -> dict | None:
         return None
 
 
+def _build_skills_blocks(team: dict) -> tuple:
+    """Return (library_block, attachments_block, has_skills) used inside the
+    team-scoped kickoff prompt. The library lists every skill the user has
+    uploaded so the orchestrator can suggest unattached ones. Attachments tell
+    the orchestrator which agent on this team is allowed to use which skill."""
+    lib = skill_mgr.list_skills()
+    attached = team_mgr.all_attached_skills(team)
+    has = bool(lib) or bool(attached)
+    if not lib:
+        library_block = "(no skills uploaded yet)"
+    else:
+        rows = []
+        for s in lib:
+            summary = skill_mgr.read_skill_summary(s["name"])
+            rows.append(f"- {s['name']}: {summary}" if summary else f"- {s['name']}")
+        library_block = "\n".join(rows)
+    if not attached:
+        attach_block = "(no skills attached to any agent on this team)"
+    else:
+        attach_block = "\n".join(
+            f"- {agent}: {', '.join(names)}" for agent, names in attached.items()
+        )
+    return library_block, attach_block, has
+
+
 def _build_kickoff_prompt(description: str, team: dict | None) -> str:
     """Build the orchestrator prompt — full 16 if no team, otherwise restricted
     to the team's phased agents. Custom agents are described by reading their
@@ -569,6 +611,20 @@ Reply with ONLY a JSON array — no markdown, no explanation, no code fences:
         deputy_lines.append(f"- {d}: {_agent_short_desc(d)}")
     deputies_block = "\n".join(deputy_lines) if deputy_lines else "(no deputies — only the canon team is available)"
     team_name = team.get("name") or team.get("slug")
+    skills_lib_block, skills_attached_block, has_skills = _build_skills_blocks(team)
+
+    skills_section = f"""
+
+SKILLS LIBRARY — every skill the user has uploaded:
+{skills_lib_block}
+
+SKILLS ATTACHED ON THIS TEAM (which agent is allowed to use which skill):
+{skills_attached_block}
+
+SKILL ROUTING RULES — strict:
+- A task that needs skill X may ONLY be assigned to an agent who has X listed under SKILLS ATTACHED.
+- If a project would benefit from a skill in the LIBRARY but no agent on this team has it attached, do NOT route the task to a non-attached agent. Instead, emit an entry in the "advisories" array suggesting which agent should have it attached and why.
+- Advisories are suggestions for the human — they do not change which tasks you create. Create tasks normally with the agents who do have the right skills.""" if has_skills else ""
 
     return f"""You are a project planner for an AI agent office. Your job is to assign each relevant agent a task. Skip agents the project does not need.
 
@@ -582,7 +638,7 @@ CANON (fixed skeleton, always available — fire only when the project needs the
 - odd    (Phase 3 — verify):     {_agent_short_desc('odd')}
 
 DEPUTIES (specialists for this team — you decide which fire and which phase each fits in):
-{deputies_block}
+{deputies_block}{skills_section}
 
 PHASE MEANING:
 - Phase 1 — foundation, planning, research, requirements. No prerequisites.
@@ -604,12 +660,18 @@ MODEL ASSIGNMENT:
 
 TASK DESCRIPTIONS must be specific: exactly what to produce, what format, what decisions to make, what to reference from other agents.
 
-Reply with ONLY a JSON array — no markdown, no explanation, no code fences:
-[{{"agent":"bjorn","phase":1,"title":"System Architecture","description":"...","depends_on":null,"model":"claude-sonnet-4-6"}},{{"agent":"jorunn","phase":2,"title":"Brand Guidelines","description":"...","depends_on":"System Architecture","model":"claude-haiku-4-5-20251001"}}]"""
+Reply with ONLY a JSON object — no markdown, no explanation, no code fences. Shape:
+{{"tasks": [<task objects>], "advisories": [<advisory strings>]}}
+
+Example:
+{{"tasks":[{{"agent":"bjorn","phase":1,"title":"System Architecture","description":"...","depends_on":null,"model":"claude-sonnet-4-6"}},{{"agent":"jorunn","phase":2,"title":"Brand Guidelines","description":"...","depends_on":"System Architecture","model":"claude-haiku-4-5-20251001"}}],"advisories":["Project would benefit from the 'docker-best-practices' skill — consider attaching it to dag."]}}
+
+If you have no advisories, return "advisories": []."""
 
 
 def _do_kickoff(slug: str, description: str) -> tuple:
-    """Run orchestrator to plan tasks for a project. Returns (created_list, error_str)."""
+    """Run orchestrator to plan tasks for a project.
+    Returns (created_list, advisories_list, error_str)."""
     team = _team_for_project(slug)
     prompt = _build_kickoff_prompt(description, team)
 
@@ -621,9 +683,9 @@ def _do_kickoff(slug: str, description: str) -> tuple:
             cwd=str(BASE_DIR), timeout=300,
         )
     except subprocess.TimeoutExpired:
-        return None, "Planning timed out"
+        return None, [], "Planning timed out"
     except FileNotFoundError:
-        return None, "claude CLI not found"
+        return None, [], "claude CLI not found"
 
     try:
         outer = json.loads(proc.stdout)
@@ -631,14 +693,32 @@ def _do_kickoff(slug: str, description: str) -> tuple:
     except (json.JSONDecodeError, AttributeError):
         text = proc.stdout
 
-    match = re.search(r'\[[\s\S]*\]', text)
-    if not match:
-        return None, "Could not parse plan from orchestrator"
-
-    try:
-        plan = json.loads(match.group())
-    except json.JSONDecodeError:
-        return None, "Orchestrator returned malformed plan"
+    # Team-scoped responses come back as {"tasks": [...], "advisories": [...]}.
+    # No-team responses are still a bare array. Try the object shape first;
+    # if that fails, fall back to the array regex.
+    plan = None
+    advisories: list = []
+    obj_match = re.search(r'\{[\s\S]*\}', text)
+    if obj_match:
+        try:
+            obj = json.loads(obj_match.group())
+            if isinstance(obj, dict) and "tasks" in obj:
+                plan = obj.get("tasks") or []
+                raw_adv = obj.get("advisories") or []
+                if isinstance(raw_adv, list):
+                    advisories = [str(a).strip() for a in raw_adv if str(a).strip()]
+        except json.JSONDecodeError:
+            plan = None
+    if plan is None:
+        arr_match = re.search(r'\[[\s\S]*\]', text)
+        if not arr_match:
+            return None, [], "Could not parse plan from orchestrator"
+        try:
+            plan = json.loads(arr_match.group())
+        except json.JSONDecodeError:
+            return None, [], "Orchestrator returned malformed plan"
+    if not isinstance(plan, list):
+        return None, [], "Orchestrator returned malformed plan"
 
     # Hard-restrict: when a team is set, drop any task assigned to an agent
     # not in the team (canon + deputies). The team is a whitelist.
@@ -695,10 +775,13 @@ def _do_kickoff(slug: str, description: str) -> tuple:
         created.append({"filename": filename, "agent": p["agent"], "title": p["title"],
                         "description": p["desc"], "depends_on": depends_on})
 
-    _update_project_memory(slug, {
+    mem_update = {
         "kickoff_description": description,
         "kickoff_plan": [{"agent": t["agent"], "title": t["title"]} for t in created],
-    })
+    }
+    if advisories:
+        mem_update["kickoff_advisories"] = advisories
+    _update_project_memory(slug, mem_update)
 
     from datetime import date as _date
     decisions_dir = BASE_DIR / "projects" / slug / "memory" / "decisions"
@@ -720,7 +803,7 @@ def _do_kickoff(slug: str, description: str) -> tuple:
         strategy_seed.write_text(existing + "\n" + seed_content, encoding="utf-8")
 
     _linear_create_issues(slug, created)
-    return created, None
+    return created, advisories, None
 
 
 def _run_webhook_project(name: str, description: str):
@@ -730,7 +813,7 @@ def _run_webhook_project(name: str, description: str):
     except ValueError:
         slug = project_mgr.create_project(f"{name}-{int(time.time())}", description)
 
-    created, err = _do_kickoff(slug, description)
+    created, _advisories, err = _do_kickoff(slug, description)
     if err or not created:
         return
 
@@ -1551,6 +1634,15 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
         else:
             self.send_error(404, "Not found")
 
+    def do_PATCH(self):
+        path = self.path.split("?", 1)[0]
+        if not self._require_auth():
+            return
+        if path.startswith("/api/teams/"):
+            self._handle_patch_team(path[len("/api/teams/"):])
+        else:
+            self.send_error(404, "Not found")
+
     # ------------------------------------------------------------------
     # Project routing helpers
     # ------------------------------------------------------------------
@@ -1789,12 +1881,45 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
         name = (body.get("name") or "").strip()
         description = (body.get("description") or "").strip()
         deputies = body.get("deputies") or []
+        skills = body.get("skills") or {}
         if not isinstance(deputies, list):
             self._error(400, "deputies must be a list")
             return
+        if not isinstance(skills, dict):
+            self._error(400, "skills must be an object")
+            return
         try:
-            data = team_mgr.create_team(name, description, deputies)
+            data = team_mgr.create_team(name, description, deputies, skills)
             self._json_response(data)
+        except ValueError as e:
+            self._error(400, str(e))
+
+    def _handle_patch_team(self, slug: str):
+        slug = slug.strip().lower()
+        if not team_mgr.TEAM_SLUG_RE.match(slug):
+            self._error(400, "Invalid team slug")
+            return
+        try:
+            body = json.loads(self._read_body())
+        except (json.JSONDecodeError, ValueError):
+            self._error(400, "Invalid JSON")
+            return
+        kwargs = {}
+        if "name" in body:        kwargs["name"] = body["name"]
+        if "description" in body: kwargs["description"] = body["description"]
+        if "deputies" in body:
+            if not isinstance(body["deputies"], list):
+                self._error(400, "deputies must be a list"); return
+            kwargs["deputies"] = body["deputies"]
+        if "skills" in body:
+            if not isinstance(body["skills"], dict):
+                self._error(400, "skills must be an object"); return
+            kwargs["skills"] = body["skills"]
+        try:
+            data = team_mgr.update_team(slug, **kwargs)
+            self._json_response(data)
+        except FileNotFoundError:
+            self._error(404, f"Team not found: {slug}")
         except ValueError as e:
             self._error(400, str(e))
 
@@ -2059,7 +2184,7 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
             return
 
         _snapshot_output(slug)
-        created, err = _do_kickoff(slug, description)
+        created, advisories, err = _do_kickoff(slug, description)
         if err:
             self._error(500, err)
             return
@@ -2081,7 +2206,7 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
             except Exception:
                 pass
 
-        self._json_response({"ok": True, "tasks": created})
+        self._json_response({"ok": True, "tasks": created, "advisories": advisories})
 
     def _handle_post_project_output_clear(self, slug):
         output_dir = BASE_DIR / "output" / slug
