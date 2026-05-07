@@ -32,6 +32,8 @@ from core import agents as agent_registry
 from core import memory as mem
 from core import tasks as task_mgr
 from core import projects as project_mgr
+from core import teams as team_mgr
+from core import skills as skill_mgr
 from core import tokens as token_tracker
 from core.memory import update_project_memory as _update_project_memory
 from integrations import n8n as _n8n
@@ -70,7 +72,7 @@ _sessions_lock = threading.Lock()
 SESSION_COOKIE = "office_session"
 # API paths that skip the session check. Webhooks are authed via HMAC; login
 # is how sessions are issued in the first place.
-_AUTH_EXEMPT_API = {"/api/login", "/api/webhook/linear", "/api/webhook/jira"}
+_AUTH_EXEMPT_API = {"/api/login", "/api/logout", "/api/webhook/linear", "/api/webhook/jira"}
 
 # Feature flags
 _peer_review_enabled: bool = True
@@ -80,6 +82,14 @@ JIRA_WEBHOOK_SECRET   = os.environ.get("JIRA_WEBHOOK_SECRET", "")
 WEBHOOK_TRIGGER_LABEL = os.environ.get("WEBHOOK_TRIGGER_LABEL", "ai-office")
 # Per-project spend ceiling in USD. 0 disables the guard.
 PROJECT_BUDGET_USD = float(os.environ.get("PROJECT_BUDGET_USD", "0") or 0)
+
+# Project slug validation — URL-safe characters only. Blocks path traversal via
+# ".." or "/" in any /api/projects/{slug}/... route.
+_SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,99}$")
+
+
+def _valid_slug(slug: str) -> bool:
+    return bool(_SLUG_RE.match(slug or ""))
 
 # Reviewer assignments — who reviews whose output
 REVIEWER_MAP = {
@@ -427,8 +437,14 @@ def _spawn_agent_task(slug: str, filename: str, agent: str,
             _notify_n8n(slug, agent, filename, "completed")
             _linear_update_issue(slug, filename, "Done")
 
-            # Check if this agent has a peer reviewer (and peer review is enabled)
+            # Check if this agent has a peer reviewer (and peer review is enabled).
+            # If the project is bound to a team, only review when the reviewer
+            # is also a team member — otherwise hard-restrict means no review.
             reviewer = REVIEWER_MAP.get(agent)
+            if reviewer:
+                _team = _team_for_project(slug)
+                if _team is not None and reviewer not in team_mgr.all_agents_in_team(_team):
+                    reviewer = None
             if reviewer and _peer_review_enabled:
                 lines.append(f"👁 Sending to {reviewer} for peer review…")
                 mem.write_run(filename, lines, False, project_slug=slug)
@@ -474,9 +490,32 @@ def _snapshot_output(slug: str) -> None:
         shutil.copy2(f, dest)
 
 
-def _do_kickoff(slug: str, description: str) -> tuple:
-    """Run orchestrator to plan tasks for a project. Returns (created_list, error_str)."""
-    prompt = f"""You are a project planner for an AI agent office. Your job is to assign every relevant agent a task.
+def _agent_short_desc(agent_id: str) -> str:
+    """Backwards-compat shim — delegates to core.agents.role()."""
+    return agent_registry.role(agent_id) or "(custom agent)"
+
+
+def _team_for_project(slug: str) -> dict | None:
+    """Return the team dict bound to this project, or None if no team set."""
+    pj = BASE_DIR / "projects" / slug / "project.json"
+    try:
+        team_slug = json.loads(pj.read_text(encoding="utf-8")).get("team")
+    except Exception:
+        return None
+    if not team_slug:
+        return None
+    try:
+        return team_mgr.get_team(team_slug)
+    except FileNotFoundError:
+        return None
+
+
+def _build_kickoff_prompt(description: str, team: dict | None) -> str:
+    """Build the orchestrator prompt — full 16 if no team, otherwise restricted
+    to the team's phased agents. Custom agents are described by reading their
+    .md. Phase ordering replaces the canon dependency rules when team is set."""
+    if team is None:
+        return f"""You are a project planner for an AI agent office. Your job is to assign every relevant agent a task.
 
 Project: "{description}"
 
@@ -522,6 +561,58 @@ TASK DESCRIPTIONS must be specific: exactly what to produce, what format, what d
 Reply with ONLY a JSON array — no markdown, no explanation, no code fences:
 [{{"agent":"bjorn","title":"System Architecture","description":"...","depends_on":null,"model":"claude-sonnet-4-6"}},{{"agent":"arve","title":"Backend Implementation","description":"...","depends_on":"System Architecture","model":"claude-sonnet-4-6"}}]"""
 
+    # Team-scoped: a fixed canon skeleton (orchestrator + bjorn/arve/odd) plus
+    # a flat list of deputies. The orchestrator decides which canon agents and
+    # deputies fire and which phase each fires in — no fixed phase per deputy.
+    deputy_lines = []
+    for d in team_mgr.deputies_in_team(team):
+        deputy_lines.append(f"- {d}: {_agent_short_desc(d)}")
+    deputies_block = "\n".join(deputy_lines) if deputy_lines else "(no deputies — only the canon team is available)"
+    team_name = team.get("name") or team.get("slug")
+
+    return f"""You are a project planner for an AI agent office. Your job is to assign each relevant agent a task. Skip agents the project does not need.
+
+Project: "{description}"
+
+TEAM: "{team_name}".
+
+CANON (fixed skeleton, always available — fire only when the project needs them):
+- bjorn  (Phase 1 — foundation): {_agent_short_desc('bjorn')}
+- arve   (Phase 2 — build):      {_agent_short_desc('arve')}
+- odd    (Phase 3 — verify):     {_agent_short_desc('odd')}
+
+DEPUTIES (specialists for this team — you decide which fire and which phase each fits in):
+{deputies_block}
+
+PHASE MEANING:
+- Phase 1 — foundation, planning, research, requirements. No prerequisites.
+- Phase 2 — building deliverables. Depends on Phase 1 outputs.
+- Phase 3 — verification, testing, validation. Depends on Phase 2 outputs.
+
+Place each deputy you assign into the phase that makes sense for THIS project. The same deputy can land in different phases on different projects.
+
+DEPENDENCY RULES — strict:
+- Phase 1 tasks: depends_on = null
+- Phase 2 tasks: depends_on = exact title of a Phase 1 task (or null only if no Phase 1 task exists)
+- Phase 3 tasks: depends_on = exact title of a Phase 2 task (or null only if no Phase 2 task exists)
+
+OUTPUT FORMAT — every task object MUST include "phase" (1, 2, or 3):
+
+MODEL ASSIGNMENT:
+- "claude-sonnet-4-6": coding, architecture, system design, compliance, security, DevOps
+- "claude-haiku-4-5-20251001": research, writing, branding, social media, sprint planning, docs, pricing, milestones
+
+TASK DESCRIPTIONS must be specific: exactly what to produce, what format, what decisions to make, what to reference from other agents.
+
+Reply with ONLY a JSON array — no markdown, no explanation, no code fences:
+[{{"agent":"bjorn","phase":1,"title":"System Architecture","description":"...","depends_on":null,"model":"claude-sonnet-4-6"}},{{"agent":"jorunn","phase":2,"title":"Brand Guidelines","description":"...","depends_on":"System Architecture","model":"claude-haiku-4-5-20251001"}}]"""
+
+
+def _do_kickoff(slug: str, description: str) -> tuple:
+    """Run orchestrator to plan tasks for a project. Returns (created_list, error_str)."""
+    team = _team_for_project(slug)
+    prompt = _build_kickoff_prompt(description, team)
+
     try:
         proc = subprocess.run(
             ["claude", "--print", "--dangerously-skip-permissions",
@@ -549,21 +640,60 @@ Reply with ONLY a JSON array — no markdown, no explanation, no code fences:
     except json.JSONDecodeError:
         return None, "Orchestrator returned malformed plan"
 
-    created = []
-    valid_agents = agent_registry.VALID_AGENTS
-    title_to_filename: dict = {}
+    # Hard-restrict: when a team is set, drop any task assigned to an agent
+    # not in the team (canon + deputies). The team is a whitelist.
+    team_member_ids = set(team_mgr.all_agents_in_team(team)) if team else None
+
+    # First pass: validate + collect with phase info so we can patch missing
+    # depends_on after we know which titles belong to which phase.
+    parsed = []
     for item in plan:
         agent = str(item.get("agent", "orchestrator")).strip().lower()
         title = str(item.get("title", "Untitled")).strip()
         desc  = str(item.get("description", "")).strip()
         raw_dep = item.get("depends_on")
         model = str(item.get("model", "claude-sonnet-4-6")).strip() or "claude-sonnet-4-6"
-        if agent not in valid_agents:
+        try:
+            phase = int(item.get("phase") or 0) or None
+        except (TypeError, ValueError):
+            phase = None
+        if not agent_registry.is_valid(agent):
             agent = "orchestrator"
-        depends_on = title_to_filename.get(raw_dep) if raw_dep else None
-        filename = task_mgr.create_task(title, agent, desc, project_slug=slug, depends_on=depends_on, model=model)
-        title_to_filename[title] = filename
-        created.append({"filename": filename, "agent": agent, "title": title, "description": desc, "depends_on": depends_on})
+        if team_member_ids is not None and agent not in team_member_ids:
+            continue  # off-team — drop
+        # Canon agents have a known phase if the orchestrator forgot to set one.
+        if not phase and agent in team_mgr.CANON_PHASE:
+            phase = int(team_mgr.CANON_PHASE[agent])
+        parsed.append({"agent": agent, "title": title, "desc": desc,
+                       "raw_dep": raw_dep, "model": model, "phase": phase})
+
+    # Phase-ordering safety net (only when a team is set): a Phase 2 task whose
+    # depends_on doesn't point at a Phase 1 title gets force-attached to one;
+    # same for Phase 3 → Phase 2. The orchestrator can slip on this field, and
+    # without enforcement the task would auto-start in the wrong order.
+    if team is not None:
+        title_phase = {p["title"]: p["phase"] for p in parsed if p["phase"]}
+        phase1_titles = [p["title"] for p in parsed if p["phase"] == 1]
+        phase2_titles = [p["title"] for p in parsed if p["phase"] == 2]
+        for p in parsed:
+            if p["phase"] == 2:
+                dep_phase = title_phase.get(p["raw_dep"]) if p["raw_dep"] else None
+                if dep_phase != 1 and phase1_titles:
+                    p["raw_dep"] = phase1_titles[0]
+            elif p["phase"] == 3:
+                dep_phase = title_phase.get(p["raw_dep"]) if p["raw_dep"] else None
+                if dep_phase != 2:
+                    p["raw_dep"] = phase2_titles[0] if phase2_titles else (phase1_titles[0] if phase1_titles else None)
+
+    created = []
+    title_to_filename: dict = {}
+    for p in parsed:
+        depends_on = title_to_filename.get(p["raw_dep"]) if p["raw_dep"] else None
+        filename = task_mgr.create_task(p["title"], p["agent"], p["desc"],
+                                        project_slug=slug, depends_on=depends_on, model=p["model"])
+        title_to_filename[p["title"]] = filename
+        created.append({"filename": filename, "agent": p["agent"], "title": p["title"],
+                        "description": p["desc"], "depends_on": depends_on})
 
     _update_project_memory(slug, {
         "kickoff_description": description,
@@ -613,7 +743,7 @@ def _run_webhook_project(name: str, description: str):
                 continue
             m = re.search(r'^\*\*Agent:\*\*\s*(.+)$', content, re.MULTILINE)
             agent = m.group(1).strip() if m else "orchestrator"
-            if agent not in agent_registry.VALID_AGENTS:
+            if not agent_registry.is_valid(agent):
                 agent = "orchestrator"
             task_mgr.assign_task(task_file.name, agent, project_slug=slug)
             _spawn_agent_task(slug, task_file.name, agent)
@@ -1112,7 +1242,7 @@ def _dispatch_dependents(slug: str, filename: str):
         dep_content = dep_path.read_text(encoding="utf-8") if dep_path.exists() else ""
         m = re.search(r'^\*\*Agent:\*\*\s*(.+)$', dep_content, re.MULTILINE)
         dep_agent = m.group(1).strip() if m else "orchestrator"
-        if dep_agent not in agent_registry.VALID_AGENTS:
+        if not agent_registry.is_valid(dep_agent):
             dep_agent = "orchestrator"
         _spawn_agent_task(slug, dep_filename, dep_agent)
 
@@ -1232,6 +1362,17 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
         path = os.path.normpath(path)
         return str(BASE_DIR / path.lstrip("/"))
 
+    def end_headers(self):
+        # Disable caching for HTML so dashboard edits show up on next reload
+        # without users having to hard-refresh. Static assets (PNG, SVG, etc.)
+        # keep default caching.
+        bare = self.path.split("?", 1)[0].split("#", 1)[0]
+        if bare.endswith(".html") or bare in ("/", "/dashboard/"):
+            self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
+            self.send_header("Pragma", "no-cache")
+            self.send_header("Expires", "0")
+        super().end_headers()
+
     # ------------------------------------------------------------------
     # Response helpers
     # ------------------------------------------------------------------
@@ -1338,9 +1479,21 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
             self._json_response({"peer_review_enabled": _peer_review_enabled})
         elif path == "/api/health":
             self._handle_get_health()
+        elif path == "/api/agents":
+            self._json_response(agent_registry.list_all())
+        elif path.startswith("/api/agents/"):
+            self._handle_get_agent(path[len("/api/agents/"):])
+        elif path == "/api/teams":
+            self._json_response(team_mgr.list_teams())
+        elif path.startswith("/api/teams/"):
+            self._handle_get_team(path[len("/api/teams/"):])
+        elif path == "/api/skills":
+            self._json_response(skill_mgr.list_skills())
+        elif path.startswith("/api/skills/"):
+            self._handle_get_skill(path[len("/api/skills/"):])
         elif path == "/" or path == "":
             self.send_response(302)
-            self.send_header("Location", "/dashboard/index.html")
+            self.send_header("Location", "/dashboard/menu.html")
             self.end_headers()
         else:
             super().do_GET()
@@ -1352,6 +1505,8 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
 
         if path == "/api/login":
             self._handle_post_login()
+        elif path == "/api/logout":
+            self._handle_post_logout()
         elif path == "/api/projects":
             self._handle_post_project_create()
         elif path.startswith("/api/projects/"):
@@ -1372,6 +1527,27 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
             self._handle_webhook_linear()
         elif path == "/api/webhook/jira":
             self._handle_webhook_jira()
+        elif path == "/api/agents":
+            self._handle_post_agent_create()
+        elif path == "/api/teams":
+            self._handle_post_team_create()
+        elif path == "/api/skills":
+            self._handle_post_skill_create()
+        elif path == "/api/sandbox/run":
+            self._handle_post_sandbox_run()
+        else:
+            self.send_error(404, "Not found")
+
+    def do_DELETE(self):
+        path = self.path.split("?", 1)[0]
+        if not self._require_auth():
+            return
+        if path.startswith("/api/agents/"):
+            self._handle_delete_agent(path[len("/api/agents/"):])
+        elif path.startswith("/api/teams/"):
+            self._handle_delete_team(path[len("/api/teams/"):])
+        elif path.startswith("/api/skills/"):
+            self._handle_delete_skill(path[len("/api/skills/"):])
         else:
             self.send_error(404, "Not found")
 
@@ -1387,6 +1563,9 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
 
         if not slug:
             self._error(400, "Missing project slug")
+            return
+        if not _valid_slug(slug):
+            self._error(400, "Invalid project slug")
             return
 
         if rest == "tasks":
@@ -1440,6 +1619,9 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
         if not slug:
             self._error(400, "Missing project slug")
             return
+        if not _valid_slug(slug):
+            self._error(400, "Invalid project slug")
+            return
 
         if rest == "tasks":
             self._handle_post_project_task(slug)
@@ -1477,7 +1659,12 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
             self._error(400, "Invalid JSON")
             return
         expected_user = os.environ.get("OFFICE_USER", "admin")
-        expected_pass = os.environ.get("OFFICE_PASS", "admin")
+        expected_pass = os.environ.get("OFFICE_PASS", "")
+        if not expected_pass:
+            self._json_response(
+                {"ok": False, "error": "Server misconfigured: OFFICE_PASS not set."},
+                status=500)
+            return
         u_match = hmac.compare_digest(str(body.get("username", "")), expected_user)
         p_match = hmac.compare_digest(str(body.get("password", "")), expected_pass)
         if u_match and p_match:
@@ -1489,6 +1676,16 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
             self._json_response({"ok": True}, extra_headers=[("Set-Cookie", cookie)])
         else:
             self._json_response({"ok": False, "error": "Invalid credentials."}, status=401)
+
+    def _handle_post_logout(self):
+        """Invalidate the caller's session cookie. Safe to call when not logged in."""
+        token = self._session_token()
+        if token:
+            with _sessions_lock:
+                _sessions.discard(token)
+        # Expire the cookie on the client too.
+        cookie = f"{SESSION_COOKIE}=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0"
+        self._json_response({"ok": True}, extra_headers=[("Set-Cookie", cookie)])
 
     # ------------------------------------------------------------------
     # Project CRUD
@@ -1502,14 +1699,207 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
             return
         name = (body.get("name") or "").strip()
         description = (body.get("description") or "").strip()
+        team = (body.get("team") or "").strip().lower()
         if not name:
             self._error(400, "name is required")
             return
+        if team:
+            try:
+                team_mgr.get_team(team)
+            except FileNotFoundError:
+                self._error(400, f"Team not found: {team}")
+                return
         try:
             slug = project_mgr.create_project(name, description)
-            self._json_response({"slug": slug})
         except ValueError as e:
             self._error(409, str(e))
+            return
+        if team:
+            # Persist the team binding on the project so kickoff can read it.
+            pj = BASE_DIR / "projects" / slug / "project.json"
+            data = json.loads(pj.read_text(encoding="utf-8"))
+            data["team"] = team
+            pj.write_text(json.dumps(data, indent=2), encoding="utf-8")
+        self._json_response({"slug": slug})
+
+    # ------------------------------------------------------------------
+    # Agents / teams / skills handlers
+    # ------------------------------------------------------------------
+
+    def _handle_get_agent(self, agent_id: str):
+        agent_id = agent_id.strip().lower()
+        if not agent_registry.is_valid(agent_id):
+            self._error(404, f"Agent not found: {agent_id}")
+            return
+        try:
+            self._text_response(agent_registry.read_agent(agent_id))
+        except FileNotFoundError:
+            self._error(404, f"Agent file missing: {agent_id}")
+
+    def _handle_post_agent_create(self):
+        try:
+            body = json.loads(self._read_body())
+        except (json.JSONDecodeError, ValueError):
+            self._error(400, "Invalid JSON")
+            return
+        agent_id = (body.get("id") or "").strip().lower()
+        md_body = body.get("body") or ""
+        if not agent_registry.AGENT_ID_RE.match(agent_id):
+            self._error(400, "id must be lowercase letters/digits/dashes (start with a letter)")
+            return
+        if not md_body.strip():
+            self._error(400, "body is required")
+            return
+        target = agent_registry.AGENTS_DIR / f"{agent_id}.md"
+        if target.exists():
+            self._error(409, f"Agent already exists: {agent_id}")
+            return
+        agent_registry.AGENTS_DIR.mkdir(parents=True, exist_ok=True)
+        target.write_text(md_body, encoding="utf-8")
+        self._json_response({"id": agent_id, "builtin": False, "exists": True})
+
+    def _handle_delete_agent(self, agent_id: str):
+        agent_id = agent_id.strip().lower()
+        if agent_id in agent_registry.BUILTIN_AGENTS:
+            self._error(403, "Built-in agents cannot be deleted")
+            return
+        if not agent_registry.AGENT_ID_RE.match(agent_id):
+            self._error(400, "Invalid agent id")
+            return
+        target = agent_registry.AGENTS_DIR / f"{agent_id}.md"
+        if not target.exists():
+            self._error(404, f"Agent not found: {agent_id}")
+            return
+        target.unlink()
+        self._json_response({"ok": True})
+
+    def _handle_get_team(self, slug: str):
+        slug = slug.strip().lower()
+        try:
+            self._json_response(team_mgr.get_team(slug))
+        except FileNotFoundError:
+            self._error(404, f"Team not found: {slug}")
+
+    def _handle_post_team_create(self):
+        try:
+            body = json.loads(self._read_body())
+        except (json.JSONDecodeError, ValueError):
+            self._error(400, "Invalid JSON")
+            return
+        name = (body.get("name") or "").strip()
+        description = (body.get("description") or "").strip()
+        deputies = body.get("deputies") or []
+        if not isinstance(deputies, list):
+            self._error(400, "deputies must be a list")
+            return
+        try:
+            data = team_mgr.create_team(name, description, deputies)
+            self._json_response(data)
+        except ValueError as e:
+            self._error(400, str(e))
+
+    def _handle_delete_team(self, slug: str):
+        slug = slug.strip().lower()
+        if not team_mgr.TEAM_SLUG_RE.match(slug):
+            self._error(400, "Invalid team slug")
+            return
+        team_mgr.delete_team(slug)
+        self._json_response({"ok": True})
+
+    def _handle_get_skill(self, name: str):
+        name = name.strip().lower()
+        try:
+            self._text_response(skill_mgr.read_skill(name))
+        except FileNotFoundError:
+            self._error(404, f"Skill not found: {name}")
+
+    def _handle_post_skill_create(self):
+        try:
+            body = json.loads(self._read_body())
+        except (json.JSONDecodeError, ValueError):
+            self._error(400, "Invalid JSON")
+            return
+        name = (body.get("name") or "").strip().lower()
+        md_body = body.get("body") or ""
+        try:
+            data = skill_mgr.create_skill(name, md_body)
+            self._json_response(data)
+        except ValueError as e:
+            self._error(400, str(e))
+
+    def _handle_delete_skill(self, name: str):
+        name = name.strip().lower()
+        if not skill_mgr.SKILL_NAME_RE.match(name):
+            self._error(400, "Invalid skill name")
+            return
+        skill_mgr.delete_skill(name)
+        self._json_response({"ok": True})
+
+    # ------------------------------------------------------------------
+    # Sandbox — run a single agent ad-hoc, no project state, no memory
+    # ------------------------------------------------------------------
+
+    def _handle_post_sandbox_run(self):
+        try:
+            body = json.loads(self._read_body())
+        except (json.JSONDecodeError, ValueError):
+            self._error(400, "Invalid JSON")
+            return
+        agent = (body.get("agent") or "").strip().lower()
+        task  = (body.get("task") or "").strip()
+        if not agent_registry.is_valid(agent):
+            self._error(400, f"Unknown agent: {agent}")
+            return
+        if not task:
+            self._error(400, "Task is required")
+            return
+        try:
+            role_md = agent_registry.read_agent(agent)
+        except FileNotFoundError:
+            self._error(404, f"Agent file missing: {agent}")
+            return
+
+        prompt = (
+            f"You are {agent}. Your role definition follows — read it fully and act in that role.\n\n"
+            f"--- ROLE ---\n{role_md}\n--- END ROLE ---\n\n"
+            f"This is a SANDBOX run — no project context, no other agents, no memory writes. "
+            f"Just produce the deliverable for the task below.\n\n"
+            f"TASK:\n{task}\n"
+        )
+        model = "claude-sonnet-4-6"
+        start = time.time()
+        try:
+            proc = subprocess.run(
+                ["claude", "--print", "--dangerously-skip-permissions",
+                 "--output-format", "json", "--model", model, "-p", prompt],
+                capture_output=True, text=True,
+                cwd=str(BASE_DIR), timeout=300,
+            )
+        except subprocess.TimeoutExpired:
+            self._error(504, "Agent run timed out (5 min)")
+            return
+        except FileNotFoundError:
+            self._error(500, "claude CLI not found on this server")
+            return
+        elapsed_ms = int((time.time() - start) * 1000)
+
+        text = proc.stdout
+        cost = None
+        try:
+            outer = json.loads(proc.stdout)
+            text = outer.get("result", proc.stdout) or proc.stdout
+            cost = outer.get("total_cost_usd")
+        except (json.JSONDecodeError, AttributeError):
+            pass
+
+        self._json_response({
+            "agent": agent,
+            "model": model,
+            "output": text,
+            "cost_usd": cost,
+            "duration_ms": elapsed_ms,
+            "stderr": (proc.stderr or "")[:2000],
+        })
 
     # ------------------------------------------------------------------
     # Project-scoped task handlers
@@ -1594,7 +1984,7 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
             dep_content = dep_path.read_text(encoding="utf-8") if dep_path.exists() else ""
             m = re.search(r'^\*\*Agent:\*\*\s*(.+)$', dep_content, re.MULTILINE)
             dep_agent = m.group(1).strip() if m else "orchestrator"
-            if dep_agent not in agent_registry.VALID_AGENTS:
+            if not agent_registry.is_valid(dep_agent):
                 dep_agent = "orchestrator"
             _spawn_agent_task(slug, dep_filename, dep_agent)
         self._json_response({"ok": True, "activated": list(to_run)})
@@ -1649,7 +2039,7 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
             content = task_file.read_text(encoding="utf-8")
             match = re.search(r'^\*\*Agent:\*\*\s*(.+)$', content, re.MULTILINE)
             agent = match.group(1).strip() if match else "orchestrator"
-            if agent not in agent_registry.VALID_AGENTS:
+            if not agent_registry.is_valid(agent):
                 agent = "orchestrator"
             if _spawn_agent_task(slug, filename, agent):
                 started.append({"filename": filename, "agent": agent})
@@ -1684,7 +2074,7 @@ class AIOfficeHandler(http.server.SimpleHTTPRequestHandler):
                     continue
                 m = re.search(r'^\*\*Agent:\*\*\s*(.+)$', content, re.MULTILINE)
                 agent = m.group(1).strip() if m else "orchestrator"
-                if agent not in agent_registry.VALID_AGENTS:
+                if not agent_registry.is_valid(agent):
                     agent = "orchestrator"
                 task_mgr.assign_task(task_file.name, agent, project_slug=slug)
                 _spawn_agent_task(slug, task_file.name, agent)
@@ -2294,6 +2684,18 @@ if __name__ == "__main__":
     JIRA_WEBHOOK_SECRET   = os.environ.get("JIRA_WEBHOOK_SECRET", "")
     WEBHOOK_TRIGGER_LABEL = os.environ.get("WEBHOOK_TRIGGER_LABEL", "ai-office")
     PROJECT_BUDGET_USD    = float(os.environ.get("PROJECT_BUDGET_USD", "0") or 0)
+
+    # If no OFFICE_PASS configured, mint an ephemeral one and print it so the
+    # dashboard is never wide-open with a known default credential.
+    if not os.environ.get("OFFICE_PASS"):
+        _tmp_pass = secrets.token_urlsafe(16)
+        os.environ["OFFICE_PASS"] = _tmp_pass
+        _tmp_user = os.environ.get("OFFICE_USER", "admin")
+        print("⚠ OFFICE_PASS not set — generated for this session:")
+        print(f"    username: {_tmp_user}")
+        print(f"    password: {_tmp_pass}")
+        print("  Add OFFICE_PASS=<value> to .env to keep it across restarts.\n")
+
     _write_mcp_config()
     _recover_stuck_tasks()
     os.chdir(BASE_DIR)

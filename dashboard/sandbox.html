@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sandbox · Pathless</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --tp:#0a0e1a; --ts:#5b6479; --tt:#9ca3af;
+      --cyan:#22d3ee; --blue:#007aff; --red:#ff3b30;
+      --hairline:rgba(0,0,0,0.06); --hairline-strong:rgba(0,0,0,0.14);
+      --radius:10px; --radius-lg:16px;
+      --font:-apple-system,BlinkMacSystemFont,'SF Pro Display','SF Pro Text','Inter','Segoe UI',sans-serif;
+      --mono:'SF Mono','Fira Code',ui-monospace,monospace;
+    }
+    body {
+      font-family: var(--font); color: var(--tp);
+      min-height: 100vh; overflow: hidden;
+      background:
+        radial-gradient(circle at 18% 12%, rgba(34,211,238,0.18), transparent 42%),
+        radial-gradient(circle at 82% 88%, rgba(0,122,255,0.15), transparent 50%),
+        linear-gradient(180deg, #f8fbff 0%, #eef2f8 100%);
+      background-attachment: fixed;
+    }
+
+    #header {
+      height: 56px;
+      background: rgba(255,255,255,0.65);
+      backdrop-filter: blur(40px) saturate(180%);
+      -webkit-backdrop-filter: blur(40px) saturate(180%);
+      border-bottom: 1px solid var(--hairline);
+      padding: 0 1.5rem;
+      display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 10;
+    }
+    #header-left { display: flex; align-items: center; gap: 14px; }
+    .menu-back {
+      display: inline-flex; align-items: center; gap: 4px;
+      color: var(--tp);
+      font-size: 13px; font-weight: 500;
+      text-decoration: none;
+      padding: 6px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--hairline-strong);
+      background: rgba(255,255,255,0.6);
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+      cursor: pointer;
+    }
+    .menu-back:hover { background: #fff; color: var(--blue); border-color: rgba(0,122,255,0.4); }
+    #title { font-size: 14px; font-weight: 600; color: var(--ts); }
+
+    #layout {
+      display: grid; grid-template-columns: 400px 1fr;
+      height: calc(100vh - 56px);
+    }
+
+    #left {
+      border-right: 1px solid var(--hairline);
+      background: rgba(255,255,255,0.55);
+      backdrop-filter: blur(30px) saturate(160%);
+      -webkit-backdrop-filter: blur(30px) saturate(160%);
+      padding: 2rem 1.75rem;
+      overflow-y: auto;
+    }
+    h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.4px; margin-bottom: 6px; }
+    .sub { color: var(--ts); font-size: 13px; margin-bottom: 1.75rem; line-height: 1.5; }
+
+    label {
+      display: block; font-size: 11px; color: var(--ts);
+      text-transform: uppercase; letter-spacing: 0.4px; font-weight: 600;
+      margin-bottom: 8px;
+    }
+    select, textarea {
+      width: 100%;
+      background: rgba(255,255,255,0.7);
+      border: 1px solid var(--hairline-strong);
+      border-radius: var(--radius);
+      padding: 11px 14px;
+      color: var(--tp);
+      font-family: var(--font); font-size: 14px;
+      margin-bottom: 1.25rem;
+      transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+    }
+    textarea {
+      font-size: 13px; min-height: 220px; resize: vertical; line-height: 1.5;
+      font-family: var(--mono);
+    }
+    select:focus, textarea:focus {
+      outline: none; background: #fff;
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(0,122,255,0.18);
+    }
+    select {
+      appearance: none; -webkit-appearance: none; -moz-appearance: none;
+      cursor: pointer;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path fill='none' stroke='%235b6479' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round' d='M1 1.5l5 5 5-5'/></svg>");
+      background-repeat: no-repeat;
+      background-position: right 0.95rem center;
+      padding-right: 2.5rem;
+    }
+
+    .agent-meta {
+      margin-top: -0.85rem; margin-bottom: 1.25rem;
+      padding: 10px 12px;
+      background: rgba(34,211,238,0.07);
+      border: 1px solid rgba(34,211,238,0.22);
+      border-radius: var(--radius);
+      font-size: 12px; color: var(--ts); line-height: 1.45;
+      min-height: 38px;
+    }
+    .agent-meta strong { color: var(--tp); }
+
+    .form-actions { display: flex; gap: 8px; margin-top: 0.5rem; }
+    .btn {
+      background: var(--blue);
+      border: none; color: #fff;
+      border-radius: 11px;
+      padding: 11px 22px;
+      font-family: var(--font);
+      font-size: 14px; font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+      box-shadow: 0 1px 2px rgba(0,122,255,0.2), 0 8px 24px rgba(0,122,255,0.20);
+    }
+    .btn:hover { background: #0066d6; }
+    .btn:active { transform: scale(0.985); }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .btn.ghost {
+      background: rgba(255,255,255,0.6);
+      color: var(--ts);
+      border: 1px solid var(--hairline-strong);
+      box-shadow: none;
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    }
+    .btn.ghost:hover { background: #fff; color: var(--tp); }
+
+    #right {
+      padding: 2rem 2.5rem;
+      overflow-y: auto;
+    }
+    .right-header {
+      display: flex; align-items: center; gap: 1rem; margin-bottom: 1.25rem;
+    }
+    .right-header h2 { font-size: 18px; font-weight: 600; letter-spacing: -0.2px; }
+    .stats { color: var(--ts); font-size: 12px; }
+    .stats span { margin-right: 14px; }
+    .stats strong { color: var(--tp); font-weight: 600; }
+
+    #status-line { color: var(--ts); font-size: 13px; min-height: 22px; }
+    #status-line.error { color: var(--red); }
+    .spinner {
+      display: inline-block;
+      width: 12px; height: 12px;
+      border: 2px solid rgba(0,0,0,0.08);
+      border-top-color: var(--blue);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    pre#output {
+      background: rgba(255,255,255,0.72);
+      backdrop-filter: blur(40px) saturate(180%);
+      -webkit-backdrop-filter: blur(40px) saturate(180%);
+      border: 1px solid rgba(255,255,255,0.6);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+      font-family: var(--mono); font-size: 13px; line-height: 1.6;
+      white-space: pre-wrap; word-wrap: break-word;
+      max-height: calc(100vh - 200px); overflow-y: auto;
+      color: var(--tp);
+      min-height: 240px;
+      box-shadow:
+        0 1px 2px rgba(0,0,0,0.03),
+        0 8px 24px rgba(15,23,42,0.06);
+    }
+    pre#output.empty {
+      color: var(--tt); font-style: italic; font-family: var(--font);
+    }
+  </style>
+</head>
+<body>
+  <div id="header">
+    <div id="header-left">
+      <a class="menu-back" href="javascript:void(0)" onclick="goMenu()">← Menu</a>
+      <span id="title">Sandbox</span>
+    </div>
+  </div>
+
+  <div id="layout">
+    <aside id="left">
+      <h1>Test an agent</h1>
+      <p class="sub">Pick an agent, give them a task, and see what they produce. Throwaway run — no project files, no memory, no other agents.</p>
+
+      <label for="agent">Agent</label>
+      <select id="agent" onchange="updateAgentMeta()">
+        <option value="">— pick one —</option>
+      </select>
+      <div id="agent-meta" class="agent-meta">Pick an agent to see their role.</div>
+
+      <label for="task">Task</label>
+      <textarea id="task" placeholder="What do you want this agent to do? Be specific about the output format and any constraints."></textarea>
+
+      <div class="form-actions">
+        <button id="run-btn" class="btn" onclick="runAgent()">Run agent</button>
+        <button class="btn ghost" onclick="resetForm()">Reset</button>
+      </div>
+    </aside>
+
+    <main id="right">
+      <div class="right-header">
+        <h2>Output</h2>
+        <div id="stats" class="stats"></div>
+      </div>
+      <div id="status-line"></div>
+      <pre id="output" class="empty">No output yet.</pre>
+    </main>
+  </div>
+
+  <script>
+    if (!sessionStorage.getItem('authenticated')) {
+      window.location.replace('/dashboard/login.html?cb=' + Date.now());
+    }
+    function goMenu() { location.href = '/dashboard/menu.html?cb=' + Date.now(); }
+    (function() {
+      const f = window.fetch;
+      window.fetch = function(input, init) {
+        return f(input, init).then(r => {
+          if (r.status === 401) {
+            sessionStorage.removeItem('authenticated');
+            window.location.replace('/dashboard/login.html?cb=' + Date.now());
+          }
+          return r;
+        });
+      };
+    })();
+
+    let agents = [];
+
+    async function loadAgents() {
+      const r = await fetch('/api/agents');
+      agents = await r.json();
+      const sel = document.getElementById('agent');
+      agents.filter(a => a.id !== 'orchestrator').forEach(a => {
+        const opt = document.createElement('option');
+        opt.value = a.id;
+        opt.textContent = a.id + (a.role ? ' — ' + a.role : '');
+        sel.appendChild(opt);
+      });
+    }
+
+    function updateAgentMeta() {
+      const id = document.getElementById('agent').value;
+      const meta = document.getElementById('agent-meta');
+      if (!id) { meta.textContent = 'Pick an agent to see their role.'; return; }
+      const a = agents.find(x => x.id === id);
+      if (!a) { meta.textContent = ''; return; }
+      const tag = a.builtin ? 'built-in' : 'custom';
+      meta.innerHTML = `<strong>${a.id}</strong> · ${tag}<br>${a.role || ''}`;
+    }
+
+    function resetForm() {
+      document.getElementById('agent').value = '';
+      document.getElementById('task').value = '';
+      updateAgentMeta();
+      const out = document.getElementById('output');
+      out.textContent = 'No output yet.';
+      out.className = 'empty';
+      document.getElementById('status-line').textContent = '';
+      document.getElementById('stats').innerHTML = '';
+    }
+
+    async function runAgent() {
+      const agent = document.getElementById('agent').value;
+      const task = document.getElementById('task').value.trim();
+      const status = document.getElementById('status-line');
+      const stats = document.getElementById('stats');
+      const out = document.getElementById('output');
+      const btn = document.getElementById('run-btn');
+
+      stats.innerHTML = '';
+      if (!agent) { status.textContent = 'Pick an agent first.'; status.className = 'error'; return; }
+      if (!task)  { status.textContent = 'Write a task first.'; status.className = 'error'; return; }
+
+      btn.disabled = true;
+      out.textContent = ''; out.className = '';
+      status.className = '';
+      status.innerHTML = `<span class="spinner"></span>${agent} is working…`;
+
+      const t0 = Date.now();
+      try {
+        const r = await fetch('/api/sandbox/run', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ agent, task }),
+        });
+        if (!r.ok) {
+          const err = await r.text();
+          throw new Error(err || `HTTP ${r.status}`);
+        }
+        const data = await r.json();
+        const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
+        out.textContent = data.output || '(empty response)';
+        out.className = '';
+        status.textContent = '';
+        const cost = (data.cost_usd != null) ? `$${Number(data.cost_usd).toFixed(4)}` : '—';
+        stats.innerHTML =
+          `<span><strong>${data.model}</strong></span>` +
+          `<span>cost <strong>${cost}</strong></span>` +
+          `<span>time <strong>${elapsed}s</strong></span>`;
+      } catch (e) {
+        status.textContent = `Error: ${e.message}`;
+        status.className = 'error';
+        out.textContent = 'No output.'; out.className = 'empty';
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    loadAgents();
+  </script>
+</body>
+</html>

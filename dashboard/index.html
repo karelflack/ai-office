@@ -8,54 +8,47 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg:        #0c1209;
-      --surface:   #131a0f;
-      --surface-2: #192114;
-      --surface-3: #1f2a1a;
-      --border:    rgba(44,61,36,0.45);
-      --borderb:   rgba(44,61,36,0.7);
-      --tp:        #dfebd5;
-      --ts:        #7d9c6e;
-      --tt:        #4a6240;
-      --blue:      #c4944a;
-      --cyan:      #d4734a;
-      --green:     #4f9040;
-      --red:       #c4503c;
-      --radius:    8px;
-      --radius-lg: 14px;
-      --font:      -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+      /* Light "Liquid Glass" palette */
+      --bg:        #f8fbff;
+      --surface:   rgba(255,255,255,0.7);
+      --surface-2: rgba(255,255,255,0.82);
+      --surface-3: #ffffff;
+      --border:    rgba(0,0,0,0.06);
+      --borderb:   rgba(0,0,0,0.14);
+      --tp:        #0a0e1a;
+      --ts:        #5b6479;
+      --tt:        #9ca3af;
+      --blue:      #007aff;
+      --cyan:      #22d3ee;
+      --green:     #34c759;
+      --red:       #ff3b30;
+      --radius:    10px;
+      --radius-lg: 16px;
+      --font:      -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Inter', 'Segoe UI', sans-serif;
       --mono:      'SF Mono', 'Fira Code', ui-monospace, monospace;
     }
 
     body {
-      background: var(--bg);
       color: var(--tp);
       font-family: var(--font);
       min-height: 100vh;
       overflow: hidden;
       position: relative;
-    }
-
-    body::before {
-      content: '';
-      position: fixed;
-      inset: -20px;
-      z-index: 0;
-      pointer-events: none;
-      background-image: url('/dashboard/jungle-bg.png');
-      background-size: cover;
-      background-position: center;
-      opacity: 0.18;
-      filter: blur(1.5px);
+      background:
+        radial-gradient(circle at 18% 12%, rgba(34,211,238,0.18), transparent 42%),
+        radial-gradient(circle at 82% 88%, rgba(0,122,255,0.15), transparent 50%),
+        linear-gradient(180deg, #f8fbff 0%, #eef2f8 100%);
+      background-attachment: fixed;
     }
 
     body > * { position: relative; z-index: 1; }
 
     /* ─── HEADER ─────────────────────────────── */
     #header {
-      height: 52px;
-      background: rgba(12,18,9,0.95);
-      backdrop-filter: blur(20px);
+      height: 56px;
+      background: rgba(255,255,255,0.65);
+      backdrop-filter: blur(40px) saturate(180%);
+      -webkit-backdrop-filter: blur(40px) saturate(180%);
       border-bottom: 1px solid var(--border);
       padding: 0 1.5rem;
       display: flex;
@@ -66,17 +59,17 @@
       z-index: 100;
       flex-shrink: 0;
     }
-    #header-left { display: flex; align-items: center; gap: 10px; }
+    #header-left { display: flex; align-items: center; gap: 12px; }
     #live-dot {
-      width: 7px; height: 7px; border-radius: 50%;
+      width: 8px; height: 8px; border-radius: 50%;
       background: var(--cyan);
-      box-shadow: 0 0 6px var(--cyan);
+      box-shadow: 0 0 8px var(--cyan), 0 0 24px rgba(34,211,238,0.5);
       animation: livePulse 2s ease-in-out infinite;
       flex-shrink: 0;
     }
     @keyframes livePulse {
-      0%,100% { opacity:1; box-shadow: 0 0 6px var(--cyan); }
-      50%     { opacity:.7; box-shadow: 0 0 14px var(--cyan); }
+      0%,100% { box-shadow: 0 0 8px var(--cyan), 0 0 24px rgba(34,211,238,0.5); }
+      50%     { box-shadow: 0 0 12px var(--cyan), 0 0 36px rgba(34,211,238,0.7); }
     }
     #logo {
       cursor: pointer; user-select: none;
@@ -84,26 +77,44 @@
       flex-shrink: 0;
     }
     #logo img {
-      height: 32px;
+      height: 30px;
       width: auto;
       display: block;
-      mix-blend-mode: screen;
     }
-    #header-project-label { font-size: 13px; color: var(--tt); }
+    #header-project-label { font-size: 13px; color: var(--ts); }
     #header-right { display: flex; align-items: center; gap: 6px; }
     .h-btn {
-      background: var(--surface-2); border: 1px solid var(--border);
-      border-radius: 6px; color: var(--ts);
+      background: rgba(255,255,255,0.6);
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--borderb);
+      border-radius: 8px; color: var(--ts);
       font-family: var(--font); font-size: 12px; font-weight: 500;
-      padding: 5px 12px; cursor: pointer;
+      padding: 6px 12px; cursor: pointer;
       transition: background 0.13s, color 0.13s, border-color 0.13s;
     }
-    .h-btn:hover { background: var(--surface-3); color: var(--tp); border-color: var(--borderb); }
-    .h-btn.active { background: var(--surface-3); color: var(--tp); border-color: var(--borderb); }
+    .h-btn:hover { background: #fff; color: var(--tp); border-color: rgba(0,0,0,0.2); }
+    .h-btn.active { background: #fff; color: var(--tp); border-color: rgba(0,0,0,0.2); }
     .h-btn.accent {
-      background: rgba(34,197,94,0.14); border-color: rgba(34,197,94,0.3); color: var(--blue);
+      background: var(--blue); border-color: transparent; color: #fff;
+      box-shadow: 0 1px 2px rgba(0,122,255,0.2), 0 4px 16px rgba(0,122,255,0.20);
     }
-    .h-btn.accent:hover { background: rgba(34,197,94,0.24); }
+    .h-btn.accent:hover { background: #0066d6; color: #fff; }
+
+    /* Unified back-to-menu button */
+    .menu-back {
+      display: inline-flex; align-items: center; gap: 4px;
+      color: var(--tp);
+      font-size: 13px; font-weight: 500;
+      text-decoration: none;
+      padding: 6px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--borderb);
+      background: rgba(255,255,255,0.6);
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+      cursor: pointer;
+    }
+    .menu-back:hover { background: #fff; color: var(--blue); border-color: rgba(0,122,255,0.4); }
 
     /* ─── SCREENS ────────────────────────────── */
     .screen { display: none; }
@@ -126,29 +137,39 @@
       max-width: 1200px;
     }
     .project-card {
-      background: var(--surface-2); border: 1px solid var(--border);
+      background: rgba(255,255,255,0.72);
+      backdrop-filter: blur(40px) saturate(180%);
+      -webkit-backdrop-filter: blur(40px) saturate(180%);
+      border: 1px solid rgba(255,255,255,0.6);
       border-radius: var(--radius-lg); padding: 1.5rem;
-      cursor: pointer; transition: background 0.15s, border-color 0.15s, transform 0.12s;
+      cursor: pointer;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.03), 0 8px 24px rgba(15,23,42,0.06);
+      transition: transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.18s, border-color 0.18s;
     }
-    .project-card:hover { background: var(--surface-3); border-color: var(--borderb); transform: translateY(-2px); }
+    .project-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(34,211,238,0.4);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 16px 36px rgba(15,23,42,0.12), 0 0 0 4px rgba(34,211,238,0.08);
+    }
     .project-card-accent {
       width: 10px; height: 10px; border-radius: 50%; margin-bottom: 1rem;
     }
-    .project-card-name { font-size: 16px; font-weight: 600; color: var(--tp); margin-bottom: 6px; }
-    .project-card-desc { font-size: 12px; color: var(--ts); line-height: 1.5; margin-bottom: 10px; }
+    .project-card-name { font-size: 16px; font-weight: 600; color: var(--tp); margin-bottom: 6px; letter-spacing: -0.2px; }
+    .project-card-desc { font-size: 12.5px; color: var(--ts); line-height: 1.5; margin-bottom: 10px; }
     .project-card-date { font-size: 11px; color: var(--tt); margin-bottom: 1.25rem; }
     .project-card-actions { display: flex; gap: 8px; }
     .pc-btn {
-      flex: 1; background: var(--surface-3); border: 1px solid var(--border);
-      border-radius: 6px; color: var(--ts); font-family: var(--font);
-      font-size: 12px; font-weight: 500; padding: 6px 10px; cursor: pointer; text-align: center;
-      transition: background 0.13s, color 0.13s;
+      flex: 1; background: rgba(255,255,255,0.6); border: 1px solid var(--borderb);
+      border-radius: 8px; color: var(--ts); font-family: var(--font);
+      font-size: 12px; font-weight: 500; padding: 7px 10px; cursor: pointer; text-align: center;
+      transition: background 0.13s, color 0.13s, border-color 0.13s;
     }
-    .pc-btn:hover { background: var(--borderb); color: var(--tp); }
+    .pc-btn:hover { background: #fff; color: var(--tp); }
     .pc-btn.primary {
-      background: rgba(34,197,94,0.14); border-color: rgba(34,197,94,0.25); color: var(--blue);
+      background: var(--blue); border-color: transparent; color: #fff;
+      box-shadow: 0 1px 2px rgba(0,122,255,0.2), 0 4px 12px rgba(0,122,255,0.18);
     }
-    .pc-btn.primary:hover { background: rgba(34,197,94,0.24); }
+    .pc-btn.primary:hover { background: #0066d6; color: #fff; }
     .pc-btn.danger { background: rgba(239,68,68,0.08); border-color: rgba(239,68,68,0.2); color: #ef4444; }
     .pc-btn.danger:hover { background: rgba(239,68,68,0.18); }
     .project-card-paused {
@@ -159,14 +180,14 @@
     .project-card-paused-label { font-weight: 600; letter-spacing: 0.5px; }
     .project-card-paused-reason { color: var(--ts); margin-top: 2px; word-break: break-word; }
     .project-card-new {
-      background: rgba(34,197,94,0.04); border: 1px dashed rgba(34,197,94,0.3);
+      background: rgba(0,122,255,0.04); border: 1px dashed rgba(0,122,255,0.3);
       border-radius: var(--radius-lg); padding: 1.5rem; cursor: pointer;
       display: flex; flex-direction: column; align-items: center; justify-content: center;
       min-height: 180px; gap: 12px;
       transition: background 0.15s, border-color 0.15s;
       color: var(--blue); font-size: 13px; font-weight: 500;
     }
-    .project-card-new:hover { background: rgba(34,197,94,0.1); border-color: rgba(34,197,94,0.5); }
+    .project-card-new:hover { background: rgba(0,122,255,0.1); border-color: rgba(0,122,255,0.5); }
     .project-card-new-icon { font-size: 30px; opacity: 0.6; }
 
     /* ─── SCREEN: KICKOFF ────────────────────── */
@@ -192,14 +213,14 @@
       font-size: 14px; line-height: 1.65; padding: 14px 16px; resize: none; min-height: 110px;
       margin-bottom: 1rem; transition: border-color 0.15s, box-shadow 0.15s;
     }
-    #kickoff-input:focus { outline: none; border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(74,222,128,0.14); }
+    #kickoff-input:focus { outline: none; border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(0,122,255,0.14); }
     #kickoff-input::placeholder { color: var(--tt); }
     #kickoff-btn {
       background: linear-gradient(135deg, var(--blue), var(--cyan)); border: none;
       border-radius: 7px; color: #fff; font-family: var(--font); font-size: 14px; font-weight: 600;
       padding: 10px 24px; cursor: pointer; display: inline-flex; align-items: center; gap: 7px;
       transition: opacity 0.15s, transform 0.1s;
-      box-shadow: 0 0 24px rgba(34,197,94,0.35);
+      box-shadow: 0 0 24px rgba(0,122,255,0.35);
     }
     #kickoff-btn:hover { opacity: .9; }
     #kickoff-btn:active { transform: scale(.98); }
@@ -351,10 +372,10 @@
     .ar-fail-reason { font-size: 9px; color: var(--red); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; opacity: 0.85; margin-bottom: 2px; }
     .ar-meta { display: flex; align-items: center; gap: 6px; }
     .ar-status { font-size: 9px; font-weight: 600; letter-spacing: 0.4px; text-transform: uppercase; padding: 1px 5px; border-radius: 3px; }
-    .ar-s-active  { background: rgba(34,197,94,0.12); color: var(--blue); }
+    .ar-s-active  { background: rgba(0,122,255,0.12); color: var(--blue); }
     .ar-s-failed  { background: rgba(244,63,94,0.12); color: var(--red); }
     .ar-s-done    { background: rgba(16,185,129,0.12); color: var(--green); }
-    .ar-s-queued  { background: rgba(255,255,255,0.05); color: var(--ts); }
+    .ar-s-queued  { background: rgba(0,0,0,0.05); color: var(--ts); }
     .ar-s-blocked { background: transparent; color: var(--tt); }
     .ar-done-count { font-size: 9px; color: var(--tt); }
     .ar-right { flex-shrink: 0; display: flex; align-items: center; gap: 4px; }
@@ -371,9 +392,9 @@
     }
     .tbtn:hover { background: var(--borderb); color: var(--tp); }
     .tbtn.run-t {
-      background: rgba(34,197,94,0.1); border-color: rgba(34,197,94,0.2); color: var(--blue);
+      background: rgba(0,122,255,0.1); border-color: rgba(0,122,255,0.2); color: var(--blue);
     }
-    .tbtn.run-t:hover { background: rgba(34,197,94,0.2); }
+    .tbtn.run-t:hover { background: rgba(0,122,255,0.2); }
     .tbtn.retry-t {
       background: rgba(244,63,94,0.1); border-color: rgba(244,63,94,0.2); color: var(--red);
     }
@@ -445,7 +466,7 @@
     .work-window {
       background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; overflow: hidden;
     }
-    .work-window.running { border-color: rgba(34,197,94,0.3); }
+    .work-window.running { border-color: rgba(0,122,255,0.3); }
     .work-window.done    { border-color: rgba(16,185,129,0.3); }
     .work-window-header {
       display: flex; align-items: center; gap: 7px; padding: 5px 10px;
@@ -523,10 +544,10 @@
     .output-file-item {
       padding: 8px 14px; cursor: pointer;
       display: flex; align-items: center; gap: 7px;
-      border-bottom: 1px solid rgba(255,255,255,0.03); transition: background 0.1s;
+      border-bottom: 1px solid rgba(0,0,0,0.05); transition: background 0.1s;
     }
     .output-file-item:hover { background: var(--surface-2); }
-    .output-file-item.selected { background: rgba(34,197,94,0.1); }
+    .output-file-item.selected { background: rgba(0,122,255,0.1); }
     .output-ext-badge {
       font-size: 8px; font-weight: 700; text-transform: uppercase;
       padding: 2px 5px; border-radius: 3px; background: var(--surface-3);
@@ -578,10 +599,10 @@
     .memory-cat-item {
       padding: 10px 14px; cursor: pointer;
       display: flex; align-items: center; gap: 8px;
-      border-bottom: 1px solid rgba(255,255,255,0.03); transition: background 0.1s;
+      border-bottom: 1px solid rgba(0,0,0,0.05); transition: background 0.1s;
     }
     .memory-cat-item:hover { background: var(--surface-2); }
-    .memory-cat-item.selected { background: rgba(34,197,94,0.1); }
+    .memory-cat-item.selected { background: rgba(0,122,255,0.1); }
     .memory-cat-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
     .memory-cat-name { font-size: 12px; color: var(--tp); flex: 1; }
     .memory-cat-size { font-size: 10px; color: var(--tt); }
@@ -597,7 +618,7 @@
     #modal-card {
       background: var(--surface-2); border: 1px solid var(--borderb);
       border-radius: 16px; padding: 2rem; width: 360px;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.6), inset 0 1px 0 rgba(0,0,0,0.05);
     }
     #modal-card h3 { font-size: 16px; font-weight: 600; color: var(--tp); margin-bottom: 1.25rem; }
     .modal-field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 0.875rem; }
@@ -609,7 +630,7 @@
       transition: border-color 0.15s, box-shadow 0.15s;
     }
     .modal-field textarea { resize: vertical; min-height: 70px; }
-    .modal-field input:focus, .modal-field textarea:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px rgba(34,197,94,0.15); }
+    .modal-field input:focus, .modal-field textarea:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px rgba(0,122,255,0.15); }
     .modal-field input::placeholder, .modal-field textarea::placeholder { color: var(--tt); }
     .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 1.25rem; }
     .modal-btn-cancel {
@@ -640,12 +661,14 @@
 <!-- HEADER -->
 <div id="header">
   <div id="header-left">
-    <div id="logo" onclick="navigate('projects')"><img src="/dashboard/logo.png" alt="Pathless AI" /></div>
+    <a class="menu-back" href="javascript:void(0)" onclick="goMenu()">← Menu</a>
+    <div id="logo" onclick="navigate('projects')"><img src="/dashboard/logo.png?v=2" alt="Pathless AI" /></div>
     <div id="live-dot"></div>
     <span id="header-project-label"></span>
   </div>
   <div id="header-right"></div>
 </div>
+<script>function goMenu() { location.href = '/dashboard/menu.html?cb=' + Date.now(); }</script>
 
 <!-- SCREEN: PROJECTS -->
 <div id="screen-projects" class="screen">
@@ -673,7 +696,7 @@
         <button id="kickoff-again" onclick="resetKickoff()">Plan again</button>
       </div>
     </div>
-    <div id="webhook-info" style="margin-top:2rem;padding:1rem 1.2rem;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;">
+    <div id="webhook-info" style="margin-top:2rem;padding:1rem 1.2rem;background:rgba(0,0,0,0.03);border:1px solid rgba(0,0,0,0.08);border-radius:8px;">
       <div style="font-size:.75rem;color:var(--tt);opacity:.6;margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.05em;">Auto-trigger via webhook</div>
       <div style="display:flex;gap:.5rem;align-items:center;margin-bottom:.4rem;">
         <span style="font-size:.7rem;color:var(--tt);opacity:.5;min-width:3.5rem;">Linear</span>
@@ -788,7 +811,7 @@
     </div>
   </div>
   <div id="output-main">
-    <div id="github-banner" style="display:none;padding:8px 14px;border-bottom:1px solid var(--border);background:rgba(34,197,94,0.06);align-items:center;gap:10px;flex-shrink:0;">
+    <div id="github-banner" style="display:none;padding:8px 14px;border-bottom:1px solid var(--border);background:rgba(0,122,255,0.06);align-items:center;gap:10px;flex-shrink:0;">
       <span style="font-size:12px;color:var(--ts);">GitHub</span>
       <a id="github-pr-link" href="#" target="_blank" style="font-size:12px;color:var(--blue);text-decoration:none;flex:1;">View Pull Request →</a>
       <a id="github-repo-link" href="#" target="_blank" style="font-size:11px;color:var(--tt);text-decoration:none;">Repo</a>
@@ -815,6 +838,15 @@
       <label>Description <span style="font-weight:400;text-transform:none;">(optional)</span></label>
       <textarea id="modal-desc" placeholder="What is this project?"></textarea>
     </div>
+    <div class="modal-field">
+      <label>Team</label>
+      <select id="modal-team" style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:0.55rem 0.8rem;color:var(--tp);font-family:inherit;font-size:14px;">
+        <option value="">(no team — orchestrator picks from all 16)</option>
+      </select>
+      <div style="margin-top:6px;">
+        <a href="/dashboard/teams.html" style="font-size:11px;color:var(--ts);text-decoration:none;">→ Build a custom team</a>
+      </div>
+    </div>
     <div id="modal-error"></div>
     <div class="modal-actions">
       <button class="modal-btn-cancel" onclick="closeNewProjectModal()">Cancel</button>
@@ -830,7 +862,7 @@
 // The real check is the HttpOnly session cookie on the server. sessionStorage
 // is just a hint to avoid a flash of dashboard before the first API call.
 if (!sessionStorage.getItem('authenticated')) {
-  window.location.replace('/dashboard/login.html');
+  window.location.replace('/dashboard/login.html?cb=' + Date.now());
 }
 // Redirect to login if any API call comes back 401 (cookie expired/cleared).
 (function() {
@@ -839,7 +871,7 @@ if (!sessionStorage.getItem('authenticated')) {
     return origFetch(input, init).then(function(r) {
       if (r.status === 401) {
         sessionStorage.removeItem('authenticated');
-        window.location.replace('/dashboard/login.html');
+        window.location.replace('/dashboard/login.html?cb=' + Date.now());
       }
       return r;
     });
@@ -1028,17 +1060,18 @@ canvas.style.height = 'auto';
 ctx.scale(DPR, DPR);
 
 // Colors — jungle theme
-const FLOOR_A    = '#18120a';
-const FLOOR_B    = '#1e1710';
-const FLOOR_EDGE = 'rgba(44,61,36,0.06)';
-const WALL_DARK  = '#0e1a0b';
-const WALL_MID   = '#111e0e';
-const DESK_TOP   = '#523018';
-const DESK_FRONT = '#3d2214';
-const DESK_SIDE  = '#2e1a0e';
-const TABLE_TOP  = '#5c3820';
-const TABLE_FRONT= '#442816';
-const TABLE_SIDE = '#382010';
+// Light "Liquid Glass" theme — pale floor, clean white walls, soft shadows.
+const FLOOR_A    = '#f1f5fb';
+const FLOOR_B    = '#e7edf6';
+const FLOOR_EDGE = 'rgba(15,23,42,0.06)';
+const WALL_DARK  = '#dde4ee';
+const WALL_MID   = '#e6ecf4';
+const DESK_TOP   = '#ffffff';
+const DESK_FRONT = '#e8eef6';
+const DESK_SIDE  = '#d4dde9';
+const TABLE_TOP  = '#ffffff';
+const TABLE_FRONT= '#e8eef6';
+const TABLE_SIDE = '#d4dde9';
 
 // Per-frame agent head positions for hit testing
 let agentHeadPos = {};
@@ -1087,15 +1120,15 @@ function drawBackWalls() {
     fillPoly([
       isoPoint(tx, 0, H), isoPoint(tx+1, 0, H),
       isoPoint(tx+1, 0, 0), isoPoint(tx, 0, 0),
-    ], isWin ? '#0c0e1e' : WALL_MID);
+    ], isWin ? '#cfdbeb' : WALL_MID);
     if (isWin) {
-      // window glass
+      // window glass — soft cyan sky
       fillPoly([
         isoPoint(tx+0.12, 0, H*0.22), isoPoint(tx+0.88, 0, H*0.22),
         isoPoint(tx+0.88, 0, H*0.88), isoPoint(tx+0.12, 0, H*0.88),
-      ], 'rgba(143,170,106,0.13)');
+      ], 'rgba(34,211,238,0.18)');
       // window frame edge
-      ctx.strokeStyle = 'rgba(143,170,106,0.22)';
+      ctx.strokeStyle = 'rgba(34,211,238,0.45)';
       ctx.lineWidth = 0.75;
       const wpts = [
         isoPoint(tx+0.12, 0, H*0.22), isoPoint(tx+0.88, 0, H*0.22),
@@ -1113,13 +1146,13 @@ function drawBackWalls() {
     fillPoly([
       isoPoint(0, ty, H), isoPoint(0, ty+1, H),
       isoPoint(0, ty+1, 0), isoPoint(0, ty, 0),
-    ], isWin ? '#0c0e1e' : WALL_DARK);
+    ], isWin ? '#cfdbeb' : WALL_DARK);
     if (isWin) {
       fillPoly([
         isoPoint(0, ty+0.12, H*0.22), isoPoint(0, ty+0.88, H*0.22),
         isoPoint(0, ty+0.88, H*0.88), isoPoint(0, ty+0.12, H*0.88),
-      ], 'rgba(143,170,106,0.10)');
-      ctx.strokeStyle = 'rgba(143,170,106,0.18)';
+      ], 'rgba(34,211,238,0.14)');
+      ctx.strokeStyle = 'rgba(34,211,238,0.4)';
       ctx.lineWidth = 0.75;
       const wpts = [
         isoPoint(0, ty+0.12, H*0.22), isoPoint(0, ty+0.88, H*0.22),
@@ -1134,10 +1167,10 @@ function drawBackWalls() {
   // Ceiling cap where walls meet
   fillPoly([
     isoPoint(0,0,H), isoPoint(12,0,H), isoPoint(12,0,H+0.08), isoPoint(0,0,H+0.08),
-  ], '#07080f');
+  ], '#9eb1c7');
   fillPoly([
     isoPoint(0,0,H), isoPoint(0,12,H), isoPoint(0,12,H+0.08), isoPoint(0,0,H+0.08),
-  ], '#07080f');
+  ], '#9eb1c7');
 }
 
 function drawDesk(tx, ty, agentId) {
@@ -1161,9 +1194,9 @@ function drawDesk(tx, ty, agentId) {
     isoPoint(DX+DW, DY+DD, DH), isoPoint(DX, DY+DD, DH),
   ], `rgba(${r},${g},${b},0.16)`);
 
-  // Monitor
+  // Monitor — light bezel with dark screen face
   const MX = DX+0.2, MY = DY+0.04, MW = DW-0.4, MD = 0.16, MH = 0.52;
-  drawIsoBox(MX, MY, DH, MW, MD, MH, '#08090e', '#060709', '#07080b');
+  drawIsoBox(MX, MY, DH, MW, MD, MH, '#cfd6df', '#1a2030', '#9aa3b1');
 
   // Screen glow
   fillPoly([
@@ -1178,7 +1211,7 @@ function drawMeetingTable() {
   const TX = 3.8, TY = 5.2, TW = 4.4, TD = 1.2, TH = 0.36;
   drawIsoBox(TX, TY, 0, TW, TD, TH, TABLE_TOP, TABLE_FRONT, TABLE_SIDE);
   // Edge highlight
-  ctx.strokeStyle = 'rgba(255,255,255,0.045)';
+  ctx.strokeStyle = 'rgba(15,23,42,0.12)';
   ctx.lineWidth = 0.75;
   const te = [
     isoPoint(TX,TY,TH), isoPoint(TX+TW,TY,TH),
@@ -1202,19 +1235,19 @@ function drawPlant(tx, ty) {
   ctx.beginPath(); ctx.ellipse(cx, cy+4, 11, 5, 0, 0, Math.PI*2); ctx.fill();
   ctx.fillStyle = '#7d3d1e';
   ctx.beginPath(); ctx.ellipse(cx, cy+2, 9, 4, 0, 0, Math.PI*2); ctx.fill();
-  // Foliage — wild jungle layers
-  ctx.fillStyle = '#0e2e0c';
+  // Foliage — soft layered greens, brighter for the light theme
+  ctx.fillStyle = '#3d7d35';
   ctx.beginPath(); ctx.arc(cx-7, cy-5, 13, 0, Math.PI*2); ctx.fill();
-  ctx.fillStyle = '#1c4a18';
-  ctx.beginPath(); ctx.arc(cx+6, cy-8, 12, 0, Math.PI*2); ctx.fill();
-  ctx.fillStyle = '#2f6a28';
-  ctx.beginPath(); ctx.arc(cx-3, cy-14, 11, 0, Math.PI*2); ctx.fill();
   ctx.fillStyle = '#4f9040';
-  ctx.beginPath(); ctx.arc(cx+2, cy-18, 9, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx+6, cy-8, 12, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#65a854';
+  ctx.beginPath(); ctx.arc(cx-3, cy-14, 11, 0, Math.PI*2); ctx.fill();
   ctx.fillStyle = '#7cc464';
+  ctx.beginPath(); ctx.arc(cx+2, cy-18, 9, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#a4dc92';
   ctx.beginPath(); ctx.arc(cx-1, cy-22, 7, 0, Math.PI*2); ctx.fill();
   // Top highlight
-  ctx.fillStyle = 'rgba(255,255,255,0.12)';
+  ctx.fillStyle = 'rgba(255,255,255,0.45)';
   ctx.beginPath(); ctx.arc(cx-2, cy-24, 3, 0, Math.PI*2); ctx.fill();
 }
 
@@ -1294,8 +1327,8 @@ function drawAgentChar(agent) {
   }
 
   // Name label
-  ctx.fillStyle = 'rgba(210,220,240,0.5)';
-  ctx.font = '8px -apple-system, sans-serif';
+  ctx.fillStyle = 'rgba(15,23,42,0.65)';
+  ctx.font = '600 9px -apple-system, sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
   ctx.fillText(col.name, gndPos.x, gndPos.y + ISO_TH*0.5 + 3);
@@ -1328,27 +1361,34 @@ function drawBubble(anchorX, anchorY, text) {
   const clampedX = Math.max(2, Math.min(CANVAS_W-bw-2, anchorX-Math.floor(bw/2)));
   const clampedY = Math.max(2, bubbleTopY);
 
-  ctx.fillStyle = 'rgba(0,0,0,0.4)';
+  // Drop shadow
+  ctx.fillStyle = 'rgba(15,23,42,0.18)';
   ctx.fillRect(clampedX+2, clampedY+3, bw, bh);
-  ctx.fillStyle = 'rgba(12,14,28,0.96)';
+  // White bubble body
+  ctx.fillStyle = 'rgba(255,255,255,0.96)';
   ctx.fillRect(clampedX, clampedY, bw, bh);
-  ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+  ctx.strokeStyle = 'rgba(15,23,42,0.12)';
   ctx.lineWidth = 1;
   ctx.strokeRect(clampedX+0.5, clampedY+0.5, bw-1, bh-1);
-  ctx.fillStyle = 'rgba(12,14,28,0.96)';
+  // Tail (matches body fill)
+  ctx.fillStyle = 'rgba(255,255,255,0.96)';
   ctx.beginPath();
   ctx.moveTo(Math.max(clampedX+4, anchorX-4), bubbleBottomY);
   ctx.lineTo(Math.min(clampedX+bw-4, anchorX+4), bubbleBottomY);
   ctx.lineTo(anchorX, bubbleBottomY+7);
   ctx.closePath(); ctx.fill();
-  ctx.fillStyle = '#e8eaf6';
+  ctx.fillStyle = '#0a0e1a';
   ctx.font = `500 ${FONT_SIZE}px -apple-system, sans-serif`;
   ctx.textBaseline = 'top'; ctx.textAlign = 'left';
   for (let i=0; i<lines.length; i++) ctx.fillText(lines[i], clampedX+PAD_X, clampedY+PAD_Y+i*LINE_H);
 }
 
 function draw() {
-  ctx.fillStyle = '#040a05';
+  // Canvas backdrop — soft cool gradient, matches the dashboard bg
+  const grad = ctx.createLinearGradient(0, 0, 0, CANVAS_H);
+  grad.addColorStop(0, '#f8fbff');
+  grad.addColorStop(1, '#eaf0f8');
+  ctx.fillStyle = grad;
   ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 
   // Back walls first (always behind everything)
@@ -1658,9 +1698,28 @@ async function resumeProject(slug) {
 }
 
 // ── NEW PROJECT MODAL ─────────────────────────────────────
+async function loadTeamOptions() {
+  const sel = document.getElementById('modal-team');
+  if (!sel) return;
+  // Reset to default option then re-fill from /api/teams.
+  sel.innerHTML = '<option value="">(no team — orchestrator picks from all 16)</option>';
+  try {
+    const r = await fetch('/api/teams');
+    const teams = await r.json();
+    teams.forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t.slug;
+      const total = ['1','2','3'].reduce((s,p) => s + ((t.phases||{})[p]||[]).length, 0);
+      opt.textContent = `${t.name} (${total} agent${total === 1 ? '' : 's'})`;
+      sel.appendChild(opt);
+    });
+  } catch (e) { /* leave default option */ }
+}
+
 function openNewProjectModal() {
   document.getElementById('modal-name').value = '';
   document.getElementById('modal-desc').value = '';
+  loadTeamOptions();
   document.getElementById('modal-error').textContent = '';
   document.getElementById('modal-overlay').classList.add('open');
   setTimeout(() => document.getElementById('modal-name').focus(), 50);
@@ -1674,13 +1733,15 @@ function handleModalOverlayClick(e) {
 async function handleCreateProject() {
   const name = document.getElementById('modal-name').value.trim();
   const desc = document.getElementById('modal-desc').value.trim();
+  const teamSel = document.getElementById('modal-team');
+  const team = teamSel ? teamSel.value : '';
   const errEl = document.getElementById('modal-error');
   errEl.textContent = '';
   if (!name) { errEl.textContent = 'Name is required.'; return; }
   try {
     const r = await fetch('/api/projects', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, description: desc }),
+      body: JSON.stringify({ name, description: desc, team }),
     });
     const data = await r.json();
     if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
@@ -2504,7 +2565,18 @@ async function runTask(filename, agent) {
 }
 
 // ── INIT ──────────────────────────────────────────────────
-navigate('projects');
+// If new-project.html redirected us here with ?project=SLUG, land directly
+// on the kickoff screen for that project — no projects-grid flash.
+(function() {
+  const params = new URLSearchParams(window.location.search);
+  const fromCreate = params.get('project');
+  if (fromCreate) {
+    currentProject = fromCreate;
+    loadProjects().then(() => navigate('kickoff'));
+  } else {
+    navigate('projects');
+  }
+})();
 pollRunStatus();
 requestAnimationFrame(gameLoop);
 loadPeerReviewState();

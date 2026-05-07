@@ -37,8 +37,28 @@ mcp_search.json
 
 # Runtime data — not source code
 runs/
-projects/*/tasks/
-projects/*/memory/
-projects/*/output/
+projects/*
+!projects/.gitkeep
+teams/*
+!teams/.gitkeep
+skills/*
+!skills/.gitkeep
+agents/*
+!agents/orchestrator.md
+!agents/arve.md
+!agents/bjorn.md
+!agents/dag.md
+!agents/else.md
+!agents/frode.md
+!agents/halvard.md
+!agents/guro.md
+!agents/jorunn.md
+!agents/ingrid.md
+!agents/knut.md
+!agents/laila.md
+!agents/magnus.md
+!agents/nora.md
+!agents/odd.md
+!agents/per.md
 output/
 tokens.db

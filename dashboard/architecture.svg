@@ -1,169 +1,300 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg width="1200" height="820" viewBox="0 0 1200 820" xmlns="http://www.w3.org/2000/svg" font-family="'SF Mono', 'Fira Code', monospace">
+<svg width="1400" height="840" viewBox="0 0 1400 840" xmlns="http://www.w3.org/2000/svg"
+     font-family="'SF Pro Display', 'Helvetica Neue', Arial, sans-serif">
   <defs>
-    <marker id="arrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-      <polygon points="0 0, 10 3.5, 0 7" fill="#555"/>
-    </marker>
-    <marker id="arrow-blue" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-      <polygon points="0 0, 10 3.5, 0 7" fill="#4A9EFF"/>
-    </marker>
-    <marker id="arrow-green" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-      <polygon points="0 0, 10 3.5, 0 7" fill="#3ECF8E"/>
-    </marker>
-    <marker id="arrow-orange" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-      <polygon points="0 0, 10 3.5, 0 7" fill="#F97316"/>
-    </marker>
-    <marker id="arrow-purple" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-      <polygon points="0 0, 10 3.5, 0 7" fill="#A855F7"/>
-    </marker>
+    <marker id="arr"    markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#4A9EFF"/></marker>
+    <marker id="arr-g"  markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#3ECF8E"/></marker>
+    <marker id="arr-o"  markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#F97316"/></marker>
+    <marker id="arr-p"  markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#A855F7"/></marker>
+    <marker id="arr-y"  markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#EAB308"/></marker>
+    <marker id="arr-s"  markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#64748B"/></marker>
   </defs>
 
   <!-- Background -->
-  <rect width="1200" height="820" fill="#0F1117"/>
+  <rect width="1400" height="840" fill="#0D1117"/>
 
   <!-- Title -->
-  <text x="600" y="38" text-anchor="middle" font-size="18" font-weight="bold" fill="#E2E8F0" letter-spacing="2">PATHLESS AI OFFICE — ARCHITECTURE</text>
+  <text x="700" y="32" text-anchor="middle" font-size="15" font-weight="600" fill="#E2E8F0" letter-spacing="3">PATHLESS AI OFFICE — SYSTEM ARCHITECTURE</text>
 
-  <!-- ─── BROWSER ─── -->
-  <rect x="400" y="60" width="400" height="80" rx="10" fill="#1E2330" stroke="#4A9EFF" stroke-width="1.5"/>
-  <text x="600" y="90" text-anchor="middle" font-size="13" font-weight="bold" fill="#4A9EFF">BROWSER</text>
-  <text x="600" y="110" text-anchor="middle" font-size="11" fill="#94A3B8">dashboard/index.html</text>
-  <text x="600" y="128" text-anchor="middle" font-size="10" fill="#64748B">Projects · Kickoff · Workspace · Output · Tokens</text>
+  <!-- ═══════════════════════════════════
+       COLUMN HEADERS
+  ════════════════════════════════════ -->
+  <text x="110"  y="58" text-anchor="middle" font-size="10" fill="#475569" letter-spacing="2">TRIGGERS</text>
+  <text x="355"  y="58" text-anchor="middle" font-size="10" fill="#475569" letter-spacing="2">ORCHESTRATION</text>
+  <text x="635"  y="58" text-anchor="middle" font-size="10" fill="#475569" letter-spacing="2">AGENT PHASES</text>
+  <text x="920"  y="58" text-anchor="middle" font-size="10" fill="#475569" letter-spacing="2">QUALITY LOOPS</text>
+  <text x="1180" y="58" text-anchor="middle" font-size="10" fill="#475569" letter-spacing="2">DELIVERY</text>
 
-  <!-- browser → server arrow -->
-  <line x1="600" y1="140" x2="600" y2="188" stroke="#4A9EFF" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
-  <text x="615" y="168" font-size="9" fill="#4A9EFF">REST API / 500ms poll</text>
+  <!-- ═══════════════════════════════════
+       COLUMN 1 — TRIGGERS
+  ════════════════════════════════════ -->
 
-  <!-- ─── SERVER ─── -->
-  <rect x="300" y="190" width="600" height="100" rx="10" fill="#1E2330" stroke="#E2E8F0" stroke-width="2"/>
-  <text x="600" y="215" text-anchor="middle" font-size="13" font-weight="bold" fill="#E2E8F0">server.py — port 8000</text>
-  <text x="600" y="233" text-anchor="middle" font-size="10" fill="#64748B">Python HTTP server · Agent orchestrator · Task lifecycle · Memory R/W</text>
+  <!-- Dashboard -->
+  <rect x="20" y="68" width="180" height="72" rx="8" fill="#111827" stroke="#4A9EFF" stroke-width="1.5"/>
+  <text x="110" y="90"  text-anchor="middle" font-size="11" font-weight="600" fill="#4A9EFF">Dashboard</text>
+  <text x="110" y="107" text-anchor="middle" font-size="9"  fill="#64748B">dashboard/index.html</text>
+  <text x="110" y="122" text-anchor="middle" font-size="9"  fill="#475569">Projects · Kickoff · Run · Output</text>
 
-  <!-- server internal boxes -->
-  <rect x="320" y="245" width="110" height="32" rx="5" fill="#252D3D" stroke="#4A9EFF" stroke-width="1"/>
-  <text x="375" y="265" text-anchor="middle" font-size="10" fill="#94A3B8">Project CRUD</text>
+  <!-- Linear Webhook -->
+  <rect x="20" y="158" width="180" height="62" rx="8" fill="#111827" stroke="#A855F7" stroke-width="1.5"/>
+  <text x="110" y="179" text-anchor="middle" font-size="11" font-weight="600" fill="#A855F7">Linear Webhook</text>
+  <text x="110" y="196" text-anchor="middle" font-size="9"  fill="#64748B">POST /api/webhook/linear</text>
+  <text x="110" y="211" text-anchor="middle" font-size="9"  fill="#475569">label "ai-office" → auto kickoff</text>
 
-  <rect x="445" y="245" width="110" height="32" rx="5" fill="#252D3D" stroke="#4A9EFF" stroke-width="1"/>
-  <text x="500" y="265" text-anchor="middle" font-size="10" fill="#94A3B8">Task Lifecycle</text>
+  <!-- Jira Webhook -->
+  <rect x="20" y="238" width="180" height="62" rx="8" fill="#111827" stroke="#A855F7" stroke-width="1.5"/>
+  <text x="110" y="259" text-anchor="middle" font-size="11" font-weight="600" fill="#A855F7">Jira Webhook</text>
+  <text x="110" y="276" text-anchor="middle" font-size="9"  fill="#64748B">POST /api/webhook/jira</text>
+  <text x="110" y="291" text-anchor="middle" font-size="9"  fill="#475569">jira:issue_created → auto kickoff</text>
 
-  <rect x="570" y="245" width="110" height="32" rx="5" fill="#252D3D" stroke="#4A9EFF" stroke-width="1"/>
-  <text x="625" y="265" text-anchor="middle" font-size="10" fill="#94A3B8">Phased Dispatch</text>
+  <!-- Arrows triggers → server -->
+  <line x1="200" y1="104"  x2="238" y2="160" stroke="#4A9EFF" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="200" y1="189"  x2="238" y2="200" stroke="#A855F7" stroke-width="1.5" marker-end="url(#arr-p)"/>
+  <line x1="200" y1="269"  x2="238" y2="220" stroke="#A855F7" stroke-width="1.5" marker-end="url(#arr-p)"/>
 
-  <rect x="695" y="245" width="110" height="32" rx="5" fill="#252D3D" stroke="#4A9EFF" stroke-width="1"/>
-  <text x="750" y="265" text-anchor="middle" font-size="10" fill="#94A3B8">Post-completion</text>
+  <!-- REST label -->
+  <text x="213" y="140" font-size="8" fill="#4A9EFF">REST / poll</text>
 
-  <!-- ─── ARROWS from server ─── -->
-  <!-- server → agents -->
-  <line x1="430" y1="290" x2="200" y2="368" stroke="#3ECF8E" stroke-width="1.5" marker-end="url(#arrow-green)"/>
-  <!-- server → filesystem -->
-  <line x1="550" y1="290" x2="480" y2="368" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <!-- server → sqlite -->
-  <line x1="620" y1="290" x2="680" y2="368" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <!-- server → n8n -->
-  <line x1="750" y1="290" x2="870" y2="368" stroke="#F97316" stroke-width="1.5" marker-end="url(#arrow-orange)"/>
-  <!-- server → github (post-completion) -->
-  <line x1="800" y1="290" x2="1040" y2="560" stroke="#3ECF8E" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arrow-green)"/>
-  <!-- server → linear (post-completion) -->
-  <line x1="820" y1="290" x2="1040" y2="640" stroke="#A855F7" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arrow-purple)"/>
+  <!-- ═══════════════════════════════════
+       COLUMN 2 — SERVER
+  ════════════════════════════════════ -->
+  <rect x="240" y="68" width="220" height="250" rx="8" fill="#111827" stroke="#E2E8F0" stroke-width="1.5"/>
+  <text x="350" y="91"  text-anchor="middle" font-size="12" font-weight="600" fill="#E2E8F0">server.py</text>
+  <text x="350" y="107" text-anchor="middle" font-size="9"  fill="#475569">port 8000 · Python HTTP</text>
 
-  <!-- ─── CLAUDE CLI AGENTS ─── -->
-  <rect x="30" y="370" width="340" height="300" rx="10" fill="#1A2235" stroke="#3ECF8E" stroke-width="1.5"/>
-  <text x="200" y="395" text-anchor="middle" font-size="12" font-weight="bold" fill="#3ECF8E">CLAUDE CLI AGENTS</text>
-  <text x="200" y="412" text-anchor="middle" font-size="9" fill="#64748B">claude --print --dangerously-skip-permissions</text>
+  <rect x="256" y="116" width="188" height="28" rx="5" fill="#1E293B" stroke="#334155" stroke-width="1"/>
+  <text x="350" y="134" text-anchor="middle" font-size="9" fill="#94A3B8">Orchestrator + Task Planner</text>
+
+  <rect x="256" y="152" width="188" height="28" rx="5" fill="#1E293B" stroke="#334155" stroke-width="1"/>
+  <text x="350" y="170" text-anchor="middle" font-size="9" fill="#94A3B8">Task Lifecycle (backlog→done)</text>
+
+  <rect x="256" y="188" width="188" height="28" rx="5" fill="#1E293B" stroke="#334155" stroke-width="1"/>
+  <text x="350" y="206" text-anchor="middle" font-size="9" fill="#94A3B8">Phase Dispatcher (deps graph)</text>
+
+  <rect x="256" y="224" width="188" height="28" rx="5" fill="#1E293B" stroke="#334155" stroke-width="1"/>
+  <text x="350" y="242" text-anchor="middle" font-size="9" fill="#94A3B8">Memory R/W (thread-safe)</text>
+
+  <rect x="256" y="260" width="188" height="28" rx="5" fill="#1E293B" stroke="#334155" stroke-width="1"/>
+  <text x="350" y="278" text-anchor="middle" font-size="9" fill="#94A3B8">Token Tracking (SQLite)</text>
+
+  <!-- server → agents arrow -->
+  <line x1="460" y1="193" x2="496" y2="193" stroke="#3ECF8E" stroke-width="1.5" marker-end="url(#arr-g)"/>
+
+  <!-- ═══════════════════════════════════
+       COLUMN 3 — AGENT PHASES
+  ════════════════════════════════════ -->
 
   <!-- Phase 1 -->
-  <rect x="45" y="420" width="310" height="55" rx="6" fill="#1E2D20" stroke="#3ECF8E" stroke-width="1"/>
-  <text x="200" y="437" text-anchor="middle" font-size="10" font-weight="bold" fill="#3ECF8E">PHASE 1 — parallel</text>
-  <text x="200" y="453" text-anchor="middle" font-size="10" fill="#94A3B8">bjorn (architecture)  ·  dag (devops)  ·  magnus (compliance)</text>
-  <text x="200" y="467" text-anchor="middle" font-size="9" fill="#64748B">model: sonnet</text>
+  <rect x="500" y="68" width="290" height="72" rx="8" fill="#0F2D1F" stroke="#3ECF8E" stroke-width="1.5"/>
+  <text x="645" y="89"  text-anchor="middle" font-size="10" font-weight="600" fill="#3ECF8E">PHASE 1 — parallel</text>
+  <text x="645" y="106" text-anchor="middle" font-size="9"  fill="#94A3B8">bjorn (architecture)  ·  dag (devops)  ·  magnus (compliance)</text>
+  <text x="645" y="122" text-anchor="middle" font-size="9"  fill="#475569">model: claude-sonnet  ·  no dependencies</text>
 
   <!-- Phase 2 -->
-  <rect x="45" y="484" width="310" height="68" rx="6" fill="#1E2830" stroke="#4A9EFF" stroke-width="1"/>
-  <text x="200" y="500" text-anchor="middle" font-size="10" font-weight="bold" fill="#4A9EFF">PHASE 2 — after phase 1</text>
-  <text x="200" y="516" text-anchor="middle" font-size="10" fill="#94A3B8">arve · ingrid · jorunn · else · halvard</text>
-  <text x="200" y="531" text-anchor="middle" font-size="10" fill="#94A3B8">frode · nora · guro · knut · laila</text>
-  <text x="200" y="545" text-anchor="middle" font-size="9" fill="#64748B">model: sonnet / haiku per task</text>
+  <rect x="500" y="154" width="290" height="84" rx="8" fill="#0F1F2D" stroke="#4A9EFF" stroke-width="1.5"/>
+  <text x="645" y="174" text-anchor="middle" font-size="10" font-weight="600" fill="#4A9EFF">PHASE 2 — after phase 1</text>
+  <text x="645" y="191" text-anchor="middle" font-size="9"  fill="#94A3B8">arve (coding)  ·  ingrid (UI)  ·  jorunn (brand)</text>
+  <text x="645" y="207" text-anchor="middle" font-size="9"  fill="#94A3B8">else (research)  ·  halvard (growth)  ·  frode (sprint)</text>
+  <text x="645" y="223" text-anchor="middle" font-size="9"  fill="#475569">nora (finance)  ·  guro (social)  ·  knut  ·  laila</text>
 
   <!-- Phase 3 -->
-  <rect x="45" y="561" width="310" height="45" rx="6" fill="#2D1E30" stroke="#A855F7" stroke-width="1"/>
-  <text x="200" y="577" text-anchor="middle" font-size="10" font-weight="bold" fill="#A855F7">PHASE 3 — after phase 2</text>
-  <text x="200" y="593" text-anchor="middle" font-size="10" fill="#94A3B8">odd (API testing)  ·  per (benchmarking)</text>
+  <rect x="500" y="252" width="290" height="56" rx="8" fill="#1F0F2D" stroke="#A855F7" stroke-width="1.5"/>
+  <text x="645" y="272" text-anchor="middle" font-size="10" font-weight="600" fill="#A855F7">PHASE 3 — after phase 2</text>
+  <text x="645" y="290" text-anchor="middle" font-size="9"  fill="#94A3B8">odd (API testing)  ·  per (performance benchmarks)</text>
 
-  <!-- Peer review note -->
-  <rect x="45" y="615" width="310" height="42" rx="6" fill="#252D3D" stroke="#64748B" stroke-width="1"/>
-  <text x="200" y="631" text-anchor="middle" font-size="9" fill="#94A3B8">Peer Review: arve→odd · bjorn→arve · dag→arve</text>
-  <text x="200" y="647" text-anchor="middle" font-size="9" fill="#94A3B8">jorunn↔ingrid · else↔halvard</text>
+  <!-- Phase arrows (phase 1 → phase 2 → phase 3) -->
+  <line x1="645" y1="140" x2="645" y2="152" stroke="#3ECF8E" stroke-width="1.5" marker-end="url(#arr-g)"/>
+  <line x1="645" y1="238" x2="645" y2="250" stroke="#4A9EFF" stroke-width="1.5" marker-end="url(#arr)"/>
 
+  <!-- Phases → Quality arrow -->
+  <line x1="790" y1="193" x2="830" y2="193" stroke="#E2E8F0" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- Claude CLI note -->
+  <rect x="500" y="322" width="290" height="32" rx="6" fill="#1A1A2E" stroke="#334155" stroke-width="1"/>
+  <text x="645" y="337" text-anchor="middle" font-size="9" fill="#64748B">claude --print --dangerously-skip-permissions</text>
+  <text x="645" y="350" text-anchor="middle" font-size="9" fill="#475569">--output-format stream-json  -p "{prompt}"</text>
+
+  <!-- ═══════════════════════════════════
+       COLUMN 4 — QUALITY LOOPS
+  ════════════════════════════════════ -->
+
+  <!-- Self-eval -->
+  <rect x="834" y="68" width="190" height="66" rx="8" fill="#1A1A0F" stroke="#EAB308" stroke-width="1.5"/>
+  <text x="929" y="89"  text-anchor="middle" font-size="10" font-weight="600" fill="#EAB308">Self-Evaluation</text>
+  <text x="929" y="106" text-anchor="middle" font-size="9"  fill="#94A3B8">Agent scores output 1–10</text>
+  <text x="929" y="121" text-anchor="middle" font-size="9"  fill="#475569">score &lt; 7 → retry (max 3×)</text>
+
+  <!-- Peer Review -->
+  <rect x="834" y="148" width="190" height="66" rx="8" fill="#1A1A0F" stroke="#EAB308" stroke-width="1.5"/>
+  <text x="929" y="169" text-anchor="middle" font-size="10" font-weight="600" fill="#EAB308">Peer Review</text>
+  <text x="929" y="186" text-anchor="middle" font-size="9"  fill="#94A3B8">arve↔odd · bjorn↔arve · dag↔arve</text>
+  <text x="929" y="201" text-anchor="middle" font-size="9"  fill="#475569">jorunn↔ingrid · else↔halvard</text>
+
+  <!-- CI Tests -->
+  <rect x="834" y="228" width="190" height="66" rx="8" fill="#1A1A0F" stroke="#EAB308" stroke-width="1.5"/>
+  <text x="929" y="249" text-anchor="middle" font-size="10" font-weight="600" fill="#EAB308">CI Tests</text>
+  <text x="929" y="266" text-anchor="middle" font-size="9"  fill="#94A3B8">detect pytest / npm test</text>
+  <text x="929" y="281" text-anchor="middle" font-size="9"  fill="#475569">fail → arve fixes (max 2×)</text>
+
+  <!-- Docker -->
+  <rect x="834" y="308" width="190" height="66" rx="8" fill="#1A1A0F" stroke="#EAB308" stroke-width="1.5"/>
+  <text x="929" y="329" text-anchor="middle" font-size="10" font-weight="600" fill="#EAB308">Docker Verify</text>
+  <text x="929" y="346" text-anchor="middle" font-size="9"  fill="#94A3B8">docker compose up --build</text>
+  <text x="929" y="361" text-anchor="middle" font-size="9"  fill="#475569">healthcheck 90s · fail → arve (2×)</text>
+
+  <!-- Quality loop arrows (vertical) -->
+  <line x1="929" y1="134" x2="929" y2="146" stroke="#EAB308" stroke-width="1.5" marker-end="url(#arr-y)"/>
+  <line x1="929" y1="214" x2="929" y2="226" stroke="#EAB308" stroke-width="1.5" marker-end="url(#arr-y)"/>
+  <line x1="929" y1="294" x2="929" y2="306" stroke="#EAB308" stroke-width="1.5" marker-end="url(#arr-y)"/>
+
+  <!-- Quality → Delivery arrow -->
+  <line x1="1024" y1="275" x2="1060" y2="275" stroke="#3ECF8E" stroke-width="1.5" marker-end="url(#arr-g)"/>
+  <text x="1040" y="267" text-anchor="middle" font-size="8" fill="#3ECF8E">pass</text>
+
+  <!-- ═══════════════════════════════════
+       COLUMN 5 — DELIVERY
+  ════════════════════════════════════ -->
+
+  <!-- GitHub -->
+  <rect x="1064" y="68" width="200" height="66" rx="8" fill="#0F2D1F" stroke="#3ECF8E" stroke-width="1.5"/>
+  <text x="1164" y="89"  text-anchor="middle" font-size="11" font-weight="600" fill="#3ECF8E">GitHub</text>
+  <text x="1164" y="106" text-anchor="middle" font-size="9"  fill="#94A3B8">create repo  ·  push ai-generated</text>
+  <text x="1164" y="121" text-anchor="middle" font-size="9"  fill="#475569">open PR  ·  store URL in memory</text>
+
+  <!-- Notion -->
+  <rect x="1064" y="150" width="200" height="66" rx="8" fill="#1A1A2E" stroke="#4A9EFF" stroke-width="1.5"/>
+  <text x="1164" y="171" text-anchor="middle" font-size="11" font-weight="600" fill="#4A9EFF">Notion</text>
+  <text x="1164" y="188" text-anchor="middle" font-size="9"  fill="#94A3B8">create summary page</text>
+  <text x="1164" y="203" text-anchor="middle" font-size="9"  fill="#475569">architecture · strategy · compliance</text>
+
+  <!-- Linear update -->
+  <rect x="1064" y="232" width="200" height="66" rx="8" fill="#1E1A2D" stroke="#A855F7" stroke-width="1.5"/>
+  <text x="1164" y="253" text-anchor="middle" font-size="11" font-weight="600" fill="#A855F7">Linear</text>
+  <text x="1164" y="270" text-anchor="middle" font-size="9"  fill="#94A3B8">issues → Done  ·  PR comment</text>
+  <text x="1164" y="285" text-anchor="middle" font-size="9"  fill="#475569">one issue per task, synced live</text>
+
+  <!-- Slack -->
+  <rect x="1064" y="314" width="200" height="66" rx="8" fill="#2D1E0F" stroke="#F97316" stroke-width="1.5"/>
+  <text x="1164" y="335" text-anchor="middle" font-size="11" font-weight="600" fill="#F97316">Slack (via n8n)</text>
+  <text x="1164" y="352" text-anchor="middle" font-size="9"  fill="#94A3B8">agent done · PR opened</text>
+  <text x="1164" y="367" text-anchor="middle" font-size="9"  fill="#475569">n8n Docker · port 5678</text>
+
+  <!-- Delivery vertical connectors -->
+  <line x1="1164" y1="134" x2="1164" y2="148" stroke="#3ECF8E" stroke-width="1" stroke-dasharray="4,3"/>
+  <line x1="1164" y1="216" x2="1164" y2="230" stroke="#4A9EFF" stroke-width="1" stroke-dasharray="4,3"/>
+  <line x1="1164" y1="298" x2="1164" y2="312" stroke="#A855F7" stroke-width="1" stroke-dasharray="4,3"/>
+
+  <!-- ═══════════════════════════════════
+       STORAGE ROW
+  ════════════════════════════════════ -->
+  <text x="700" y="420" text-anchor="middle" font-size="10" fill="#475569" letter-spacing="2">STORAGE</text>
+
+  <!-- Filesystem -->
+  <rect x="20" y="432" width="420" height="110" rx="8" fill="#111827" stroke="#475569" stroke-width="1.5"/>
+  <text x="230" y="453" text-anchor="middle" font-size="11" font-weight="600" fill="#94A3B8">Filesystem</text>
+  <text x="80"  y="474" text-anchor="middle" font-size="9" fill="#64748B">projects/</text>
+  <text x="80"  y="490" text-anchor="middle" font-size="9" fill="#475569">tasks · memory · decisions</text>
+  <text x="230" y="474" text-anchor="middle" font-size="9" fill="#64748B">output/</text>
+  <text x="230" y="490" text-anchor="middle" font-size="9" fill="#475569">deliverables · .runs/ (snapshots)</text>
+  <text x="380" y="474" text-anchor="middle" font-size="9" fill="#64748B">runs/</text>
+  <text x="380" y="490" text-anchor="middle" font-size="9" fill="#475569">agent stream logs</text>
+  <line x1="140" y1="462" x2="140" y2="510" stroke="#334155" stroke-width="1"/>
+  <line x1="300" y1="462" x2="300" y2="510" stroke="#334155" stroke-width="1"/>
+  <text x="230" y="520" text-anchor="middle" font-size="8" fill="#334155">all gitignored — runtime data only</text>
+
+  <!-- SQLite -->
+  <rect x="458" y="432" width="200" height="110" rx="8" fill="#111827" stroke="#475569" stroke-width="1.5"/>
+  <text x="558" y="453" text-anchor="middle" font-size="11" font-weight="600" fill="#94A3B8">SQLite</text>
+  <text x="558" y="473" text-anchor="middle" font-size="9" fill="#64748B">tokens.db</text>
+  <text x="558" y="491" text-anchor="middle" font-size="9" fill="#475569">input / output / cache tokens</text>
+  <text x="558" y="507" text-anchor="middle" font-size="9" fill="#475569">cost per agent run (USD)</text>
+
+  <!-- OpenAI MCP -->
+  <rect x="676" y="432" width="220" height="110" rx="8" fill="#111827" stroke="#F97316" stroke-width="1.5"/>
+  <text x="786" y="453" text-anchor="middle" font-size="11" font-weight="600" fill="#F97316">OpenAI MCP</text>
+  <text x="786" y="473" text-anchor="middle" font-size="9" fill="#94A3B8">gpt-4o-search-preview</text>
+  <text x="786" y="491" text-anchor="middle" font-size="9" fill="#475569">web search for 9 agents</text>
+  <text x="786" y="507" text-anchor="middle" font-size="9" fill="#475569">else · halvard · guro · nora · ...</text>
+
+  <!-- server → storage arrows -->
+  <line x1="350" y1="318" x2="230" y2="430" stroke="#475569" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arr-s)"/>
+  <line x1="370" y1="318" x2="558" y2="430" stroke="#475569" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arr-s)"/>
   <!-- agents → openai -->
-  <line x1="200" y1="670" x2="200" y2="738" stroke="#F97316" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrow-orange)"/>
-  <text x="215" y="715" font-size="9" fill="#F97316">MCP web search</text>
-  <text x="215" y="727" font-size="9" fill="#F97316">(8 agents)</text>
+  <line x1="645" y1="354" x2="786" y2="430" stroke="#F97316" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arr-o)"/>
 
-  <!-- ─── FILESYSTEM ─── -->
-  <rect x="400" y="370" width="200" height="120" rx="10" fill="#1E2330" stroke="#64748B" stroke-width="1.5"/>
-  <text x="500" y="393" text-anchor="middle" font-size="12" font-weight="bold" fill="#94A3B8">FILESYSTEM</text>
-  <text x="500" y="413" text-anchor="middle" font-size="10" fill="#64748B">projects/</text>
-  <text x="500" y="430" text-anchor="middle" font-size="10" fill="#64748B">  tasks · memory · decisions</text>
-  <text x="500" y="449" text-anchor="middle" font-size="10" fill="#64748B">output/  (agent deliverables)</text>
-  <text x="500" y="468" text-anchor="middle" font-size="10" fill="#64748B">runs/    (agent logs)</text>
+  <!-- ═══════════════════════════════════
+       LEGEND
+  ════════════════════════════════════ -->
+  <rect x="920" y="432" width="460" height="110" rx="8" fill="#0D1117" stroke="#1E293B" stroke-width="1"/>
+  <text x="1150" y="453" text-anchor="middle" font-size="10" font-weight="600" fill="#64748B" letter-spacing="1">LEGEND</text>
 
-  <!-- ─── SQLITE ─── -->
-  <rect x="620" y="370" width="180" height="80" rx="10" fill="#1E2330" stroke="#64748B" stroke-width="1.5"/>
-  <text x="710" y="395" text-anchor="middle" font-size="12" font-weight="bold" fill="#94A3B8">SQLite</text>
-  <text x="710" y="413" text-anchor="middle" font-size="10" fill="#64748B">tokens.db</text>
-  <text x="710" y="430" text-anchor="middle" font-size="10" fill="#64748B">input · output · cached · cost</text>
+  <line x1="938" y1="470" x2="968" y2="470" stroke="#4A9EFF"  stroke-width="1.5"/>
+  <text x="975" y="474" font-size="9" fill="#94A3B8">Browser ↔ Server (REST / polling)</text>
 
-  <!-- ─── N8N ─── -->
-  <rect x="810" y="370" width="180" height="80" rx="10" fill="#2D1E10" stroke="#F97316" stroke-width="1.5"/>
-  <text x="900" y="395" text-anchor="middle" font-size="12" font-weight="bold" fill="#F97316">n8n (Docker)</text>
-  <text x="900" y="413" text-anchor="middle" font-size="10" fill="#94A3B8">port 5678</text>
-  <text x="900" y="430" text-anchor="middle" font-size="10" fill="#64748B">webhook: agent done/fail</text>
+  <line x1="938" y1="490" x2="968" y2="490" stroke="#3ECF8E"  stroke-width="1.5"/>
+  <text x="975" y="494" font-size="9" fill="#94A3B8">Agent spawn / completion</text>
 
-  <!-- n8n → slack -->
-  <line x1="990" y1="410" x2="1070" y2="410" stroke="#F97316" stroke-width="1.5" marker-end="url(#arrow-orange)"/>
+  <line x1="938" y1="510" x2="968" y2="510" stroke="#EAB308"  stroke-width="1.5"/>
+  <text x="975" y="514" font-size="9" fill="#94A3B8">Quality loop evaluation</text>
 
-  <!-- ─── SLACK ─── -->
-  <rect x="1070" y="370" width="110" height="80" rx="10" fill="#1E2D1E" stroke="#3ECF8E" stroke-width="1.5"/>
-  <text x="1125" y="400" text-anchor="middle" font-size="12" font-weight="bold" fill="#3ECF8E">Slack</text>
-  <text x="1125" y="418" text-anchor="middle" font-size="9" fill="#64748B">agent complete</text>
-  <text x="1125" y="432" text-anchor="middle" font-size="9" fill="#64748B">PR opened</text>
+  <line x1="938" y1="530" x2="968" y2="530" stroke="#A855F7"  stroke-width="1.5"/>
+  <text x="975" y="534" font-size="9" fill="#94A3B8">Linear / webhook trigger</text>
 
-  <!-- ─── OPENAI ─── -->
-  <rect x="90" y="740" width="220" height="60" rx="10" fill="#2D1E10" stroke="#F97316" stroke-width="1.5"/>
-  <text x="200" y="765" text-anchor="middle" font-size="12" font-weight="bold" fill="#F97316">OpenAI API</text>
-  <text x="200" y="783" text-anchor="middle" font-size="10" fill="#64748B">gpt-4o-search-preview · MCP server</text>
+  <line x1="1150" y1="470" x2="1180" y2="470" stroke="#F97316"  stroke-width="1.5"/>
+  <text x="1187" y="474" font-size="9" fill="#94A3B8">Notifications (n8n → Slack)</text>
 
-  <!-- ─── GITHUB ─── -->
-  <rect x="1040" y="540" width="150" height="80" rx="10" fill="#1A2520" stroke="#3ECF8E" stroke-width="1.5"/>
-  <text x="1115" y="566" text-anchor="middle" font-size="12" font-weight="bold" fill="#3ECF8E">GitHub</text>
-  <text x="1115" y="584" text-anchor="middle" font-size="10" fill="#64748B">create repo</text>
-  <text x="1115" y="600" text-anchor="middle" font-size="10" fill="#64748B">push branch + open PR</text>
+  <line x1="1150" y1="490" x2="1180" y2="490" stroke="#3ECF8E"  stroke-width="1.5" stroke-dasharray="5,3"/>
+  <text x="1187" y="494" font-size="9" fill="#94A3B8">Post-completion trigger</text>
 
-  <!-- ─── LINEAR ─── -->
-  <rect x="1040" y="640" width="150" height="80" rx="10" fill="#1E1A2D" stroke="#A855F7" stroke-width="1.5"/>
-  <text x="1115" y="666" text-anchor="middle" font-size="12" font-weight="bold" fill="#A855F7">Linear</text>
-  <text x="1115" y="684" text-anchor="middle" font-size="10" fill="#64748B">issues at kickoff</text>
-  <text x="1115" y="700" text-anchor="middle" font-size="10" fill="#64748B">update on done/fail</text>
+  <line x1="1150" y1="510" x2="1180" y2="510" stroke="#475569"  stroke-width="1" stroke-dasharray="4,3"/>
+  <text x="1187" y="514" font-size="9" fill="#94A3B8">Data read / write</text>
 
-  <!-- github → slack (PR notification) -->
-  <line x1="1115" y1="540" x2="1125" y2="450" stroke="#3ECF8E" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow-green)"/>
+  <line x1="1150" y1="530" x2="1180" y2="530" stroke="#F97316"  stroke-width="1" stroke-dasharray="4,3"/>
+  <text x="1187" y="534" font-size="9" fill="#94A3B8">Web search (OpenAI MCP)</text>
 
-  <!-- ─── LEGEND ─── -->
-  <rect x="400" y="530" width="380" height="130" rx="8" fill="#151820" stroke="#2D3748" stroke-width="1"/>
-  <text x="590" y="552" text-anchor="middle" font-size="11" font-weight="bold" fill="#94A3B8">LEGEND</text>
-  <line x1="420" y1="568" x2="460" y2="568" stroke="#4A9EFF" stroke-width="1.5"/>
-  <text x="470" y="572" font-size="10" fill="#94A3B8">UI ↔ Server (REST/polling)</text>
-  <line x1="420" y1="588" x2="460" y2="588" stroke="#3ECF8E" stroke-width="1.5"/>
-  <text x="470" y="592" font-size="10" fill="#94A3B8">Agent spawn / output</text>
-  <line x1="420" y1="608" x2="460" y2="608" stroke="#F97316" stroke-width="1.5"/>
-  <text x="470" y="612" font-size="10" fill="#94A3B8">Notifications (n8n → Slack)</text>
-  <line x1="420" y1="628" x2="460" y2="628" stroke="#A855F7" stroke-width="1.5"/>
-  <text x="470" y="632" font-size="10" fill="#94A3B8">Linear integration</text>
-  <line x1="600" y1="568" x2="640" y2="568" stroke="#3ECF8E" stroke-width="1.5" stroke-dasharray="5,3"/>
-  <text x="650" y="572" font-size="10" fill="#94A3B8">Post-completion trigger</text>
-  <line x1="600" y1="588" x2="640" y2="588" stroke="#F97316" stroke-width="1.5" stroke-dasharray="4,3"/>
-  <text x="650" y="592" font-size="10" fill="#94A3B8">MCP web search</text>
-  <line x1="600" y1="608" x2="640" y2="608" stroke="#555" stroke-width="1.5"/>
-  <text x="650" y="612" font-size="10" fill="#94A3B8">Data read/write</text>
+  <!-- ═══════════════════════════════════
+       FLOW SUMMARY BAR (bottom)
+  ════════════════════════════════════ -->
+  <rect x="20" y="572" width="1360" height="40" rx="6" fill="#111827" stroke="#1E293B" stroke-width="1"/>
+  <text x="700" y="587" text-anchor="middle" font-size="9" fill="#475569" letter-spacing="1">END-TO-END FLOW</text>
+  <text x="700" y="602" text-anchor="middle" font-size="10" fill="#64748B">
+    Trigger (dashboard / webhook)  →  Orchestrator plans tasks  →  Phase 1→2→3 agents run  →  Quality loops  →  GitHub PR + Notion + Linear + Slack
+  </text>
+
+  <!-- ═══════════════════════════════════
+       STATS BAR (bottom)
+  ════════════════════════════════════ -->
+  <rect x="20"  y="630" width="200" height="60" rx="6" fill="#111827" stroke="#1E293B" stroke-width="1"/>
+  <text x="120" y="650" text-anchor="middle" font-size="10" font-weight="600" fill="#E2E8F0">16 Agents</text>
+  <text x="120" y="668" text-anchor="middle" font-size="9"  fill="#64748B">3 execution phases</text>
+  <text x="120" y="683" text-anchor="middle" font-size="9"  fill="#475569">parallel within each phase</text>
+
+  <rect x="236" y="630" width="200" height="60" rx="6" fill="#111827" stroke="#1E293B" stroke-width="1"/>
+  <text x="336" y="650" text-anchor="middle" font-size="10" font-weight="600" fill="#E2E8F0">3-Layer Quality</text>
+  <text x="336" y="668" text-anchor="middle" font-size="9"  fill="#64748B">self-eval · peer review · CI</text>
+  <text x="336" y="683" text-anchor="middle" font-size="9"  fill="#475569">auto-retry + arve repair loop</text>
+
+  <rect x="452" y="630" width="200" height="60" rx="6" fill="#111827" stroke="#1E293B" stroke-width="1"/>
+  <text x="552" y="650" text-anchor="middle" font-size="10" font-weight="600" fill="#E2E8F0">5 Integrations</text>
+  <text x="552" y="668" text-anchor="middle" font-size="9"  fill="#64748B">GitHub · Notion · Linear · Jira</text>
+  <text x="552" y="683" text-anchor="middle" font-size="9"  fill="#475569">Slack via n8n · all optional</text>
+
+  <rect x="668" y="630" width="200" height="60" rx="6" fill="#111827" stroke="#1E293B" stroke-width="1"/>
+  <text x="768" y="650" text-anchor="middle" font-size="10" font-weight="600" fill="#E2E8F0">Filesystem State</text>
+  <text x="768" y="668" text-anchor="middle" font-size="9"  fill="#64748B">tasks · memory · output</text>
+  <text x="768" y="683" text-anchor="middle" font-size="9"  fill="#475569">versioned snapshots per run</text>
+
+  <rect x="884" y="630" width="200" height="60" rx="6" fill="#111827" stroke="#1E293B" stroke-width="1"/>
+  <text x="984" y="650" text-anchor="middle" font-size="10" font-weight="600" fill="#E2E8F0">Event-Driven</text>
+  <text x="984" y="668" text-anchor="middle" font-size="9"  fill="#64748B">Linear / Jira webhook → kickoff</text>
+  <text x="984" y="683" text-anchor="middle" font-size="9"  fill="#475569">no manual step required</text>
+
+  <rect x="1100" y="630" width="280" height="60" rx="6" fill="#111827" stroke="#1E293B" stroke-width="1"/>
+  <text x="1240" y="650" text-anchor="middle" font-size="10" font-weight="600" fill="#E2E8F0">Stack</text>
+  <text x="1240" y="668" text-anchor="middle" font-size="9"  fill="#64748B">Python HTTP · Claude CLI · SQLite</text>
+  <text x="1240" y="683" text-anchor="middle" font-size="9"  fill="#475569">single-file frontend · no framework</text>
+
+  <!-- Bottom credit -->
+  <text x="700" y="820" text-anchor="middle" font-size="9" fill="#1E293B">Pathless AI Office — pathless.ai</text>
 
 </svg>

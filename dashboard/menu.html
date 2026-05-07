@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pathless</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --tp:        #0a0e1a;
+      --ts:        #5b6479;
+      --tt:        #9ca3af;
+      --cyan:      #22d3ee;
+      --blue:      #007aff;
+      --red:       #ff3b30;
+      --hairline:  rgba(0,0,0,0.06);
+      --hairline-strong: rgba(0,0,0,0.12);
+      --font: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Inter', 'Segoe UI', sans-serif;
+    }
+
+    body {
+      font-family: var(--font);
+      color: var(--tp);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 3rem 2rem;
+      background:
+        radial-gradient(circle at 18% 12%, rgba(34,211,238,0.18), transparent 42%),
+        radial-gradient(circle at 82% 88%, rgba(0,122,255,0.15), transparent 50%),
+        linear-gradient(180deg, #f8fbff 0%, #eef2f8 100%);
+      background-attachment: fixed;
+    }
+
+    .brand {
+      display: flex; align-items: center; gap: 12px;
+      margin-bottom: 2rem;
+    }
+    .brand img { height: 36px; }
+    .brand .dot {
+      width: 9px; height: 9px; border-radius: 50%;
+      background: var(--cyan);
+      box-shadow: 0 0 8px var(--cyan), 0 0 24px rgba(34,211,238,0.5);
+      animation: glowPulse 2.5s ease-in-out infinite;
+    }
+    @keyframes glowPulse {
+      0%, 100% { box-shadow: 0 0 8px var(--cyan), 0 0 24px rgba(34,211,238,0.45); }
+      50%      { box-shadow: 0 0 12px var(--cyan), 0 0 36px rgba(34,211,238,0.65); }
+    }
+
+    h1 {
+      font-size: 36px;
+      font-weight: 700;
+      letter-spacing: -0.8px;
+      margin-bottom: 0.25rem;
+      text-align: center;
+      background: linear-gradient(180deg, #0a0e1a 0%, #2a3142 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    .sub {
+      color: var(--ts);
+      font-size: 15px;
+      margin-bottom: 2.75rem;
+      text-align: center;
+    }
+
+    .menu-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+      width: 100%;
+      max-width: 880px;
+    }
+    .menu-btn {
+      background: rgba(255,255,255,0.7);
+      backdrop-filter: blur(40px) saturate(180%);
+      -webkit-backdrop-filter: blur(40px) saturate(180%);
+      border: 1px solid rgba(255,255,255,0.6);
+      border-radius: 16px;
+      padding: 1.5rem 1.4rem;
+      cursor: pointer;
+      transition: transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1),
+                  box-shadow 0.18s, border-color 0.18s, background 0.18s;
+      text-align: left;
+      color: inherit;
+      font-family: inherit;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      box-shadow:
+        0 1px 2px rgba(0,0,0,0.03),
+        0 8px 24px rgba(15,23,42,0.06);
+      text-decoration: none;
+    }
+    .menu-btn:hover {
+      transform: translateY(-2px);
+      background: rgba(255,255,255,0.85);
+      border-color: rgba(34,211,238,0.4);
+      box-shadow:
+        0 1px 2px rgba(0,0,0,0.04),
+        0 16px 36px rgba(15,23,42,0.12),
+        0 0 0 4px rgba(34,211,238,0.08);
+    }
+    .menu-btn .icon {
+      font-size: 22px;
+      line-height: 1;
+      margin-bottom: 8px;
+      color: var(--cyan);
+      width: 36px; height: 36px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 10px;
+      background: rgba(34,211,238,0.12);
+      border: 1px solid rgba(34,211,238,0.24);
+    }
+    .menu-btn .title {
+      font-size: 15px; font-weight: 600;
+      color: var(--tp);
+      letter-spacing: -0.2px;
+    }
+    .menu-btn .desc {
+      font-size: 12.5px;
+      color: var(--ts);
+      line-height: 1.4;
+    }
+
+    .footer-actions {
+      margin-top: 2rem;
+      display: flex; gap: 8px;
+    }
+    .ghost-btn {
+      background: rgba(255,255,255,0.6);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--hairline-strong);
+      border-radius: 10px;
+      color: var(--ts);
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 500;
+      padding: 7px 14px;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+    .ghost-btn:hover {
+      background: #fff;
+      color: var(--tp);
+      border-color: rgba(0,0,0,0.2);
+    }
+  </style>
+</head>
+<body>
+  <div class="brand">
+    <span class="dot"></span>
+    <img src="/dashboard/logo.png?v=2" alt="Pathless" onerror="this.style.display='none'" />
+  </div>
+
+  <h1>Pathless AI Office</h1>
+  <p class="sub">Build a team. Brief them. Watch them ship.</p>
+
+  <div class="menu-grid">
+    <a href="javascript:void(0)" onclick="go('/dashboard/new-project.html')" class="menu-btn">
+      <div class="icon">＋</div>
+      <div class="title">Create Project</div>
+      <div class="desc">Pick a team and brief them on what to build.</div>
+    </a>
+    <a href="javascript:void(0)" onclick="go('/dashboard/index.html', '#projects')" class="menu-btn">
+      <div class="icon">⌘</div>
+      <div class="title">Load Project</div>
+      <div class="desc">Open an existing project — view tasks and output.</div>
+    </a>
+    <a href="javascript:void(0)" onclick="go('/dashboard/teams.html')" class="menu-btn">
+      <div class="icon">⊞</div>
+      <div class="title">Create Team</div>
+      <div class="desc">Drag agents into Phase 1, 2, 3 and save the team.</div>
+    </a>
+    <a href="javascript:void(0)" onclick="go('/dashboard/agents.html')" class="menu-btn">
+      <div class="icon">◇</div>
+      <div class="title">Create Agent</div>
+      <div class="desc">Browse the agent library, add custom agents.</div>
+    </a>
+    <a href="javascript:void(0)" onclick="go('/dashboard/skills.html')" class="menu-btn">
+      <div class="icon">★</div>
+      <div class="title">Skills</div>
+      <div class="desc">Upload reusable skill .md files to the library.</div>
+    </a>
+    <a href="javascript:void(0)" onclick="go('/dashboard/sandbox.html')" class="menu-btn">
+      <div class="icon">▶</div>
+      <div class="title">Sandbox</div>
+      <div class="desc">Pick an agent, give them a task, see what they produce.</div>
+    </a>
+  </div>
+
+  <div class="footer-actions">
+    <button class="ghost-btn" onclick="logout()">Log out</button>
+  </div>
+
+  <script>
+    if (!sessionStorage.getItem('authenticated')) {
+      window.location.replace('/dashboard/login.html?cb=' + Date.now());
+    }
+    function go(path, hash) {
+      const sep = path.includes('?') ? '&' : '?';
+      window.location.href = path + sep + 'cb=' + Date.now() + (hash || '');
+    }
+    function logout() {
+      sessionStorage.removeItem('authenticated');
+      fetch('/api/logout', { method: 'POST' }).finally(() => {
+        window.location.replace('/dashboard/login.html?cb=' + Date.now());
+      });
+    }
+  </script>
+</body>
+</html>

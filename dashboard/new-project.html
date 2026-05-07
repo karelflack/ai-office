@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Create project · Pathless</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --tp:        #0a0e1a;
+      --ts:        #5b6479;
+      --tt:        #9ca3af;
+      --cyan:      #22d3ee;
+      --blue:      #007aff;
+      --red:       #ff3b30;
+      --hairline:        rgba(0,0,0,0.06);
+      --hairline-strong: rgba(0,0,0,0.14);
+      --radius:    10px;
+      --radius-lg: 16px;
+      --font: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Inter', 'Segoe UI', sans-serif;
+    }
+
+    body {
+      font-family: var(--font);
+      color: var(--tp);
+      min-height: 100vh;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 18% 12%, rgba(34,211,238,0.18), transparent 42%),
+        radial-gradient(circle at 82% 88%, rgba(0,122,255,0.15), transparent 50%),
+        linear-gradient(180deg, #f8fbff 0%, #eef2f8 100%);
+      background-attachment: fixed;
+    }
+
+    #header {
+      height: 56px;
+      background: rgba(255,255,255,0.65);
+      backdrop-filter: blur(40px) saturate(180%);
+      -webkit-backdrop-filter: blur(40px) saturate(180%);
+      border-bottom: 1px solid var(--hairline);
+      padding: 0 1.5rem;
+      display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 10;
+    }
+    #header-left { display: flex; align-items: center; gap: 14px; }
+    .menu-back {
+      display: inline-flex; align-items: center; gap: 4px;
+      color: var(--tp);
+      font-size: 13px; font-weight: 500;
+      text-decoration: none;
+      padding: 6px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--hairline-strong);
+      background: rgba(255,255,255,0.6);
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+      cursor: pointer;
+    }
+    .menu-back:hover {
+      background: #fff; color: var(--blue); border-color: rgba(0,122,255,0.4);
+    }
+    #title { font-size: 14px; font-weight: 600; color: var(--ts); }
+
+    #wrap {
+      height: calc(100vh - 56px);
+      display: flex; align-items: flex-start; justify-content: center;
+      padding: 4rem 2rem;
+      overflow-y: auto;
+    }
+    #card {
+      width: 100%; max-width: 560px;
+      background: rgba(255,255,255,0.72);
+      backdrop-filter: blur(40px) saturate(180%);
+      -webkit-backdrop-filter: blur(40px) saturate(180%);
+      border: 1px solid rgba(255,255,255,0.6);
+      border-radius: 20px;
+      padding: 2.25rem 2.25rem;
+      box-shadow:
+        0 1px 2px rgba(0,0,0,0.04),
+        0 12px 36px rgba(15,23,42,0.10),
+        inset 0 1px 0 rgba(255,255,255,0.8);
+    }
+    h1 { font-size: 26px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 6px; }
+    .sub { color: var(--ts); font-size: 14px; margin-bottom: 1.75rem; line-height: 1.5; }
+
+    label {
+      display: block; font-size: 11px; color: var(--ts);
+      text-transform: uppercase; letter-spacing: 0.4px; font-weight: 600;
+      margin-bottom: 8px;
+    }
+    input[type=text], textarea, select {
+      width: 100%;
+      background: rgba(255,255,255,0.7);
+      border: 1px solid var(--hairline-strong);
+      border-radius: var(--radius);
+      padding: 11px 14px;
+      color: var(--tp);
+      font-family: var(--font); font-size: 14px;
+      margin-bottom: 1.25rem;
+      transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+    }
+    textarea { font-size: 13px; min-height: 90px; resize: vertical; line-height: 1.5; }
+    input:focus, textarea:focus, select:focus {
+      outline: none;
+      background: #fff;
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(0,122,255,0.18);
+    }
+    select {
+      appearance: none; -webkit-appearance: none; -moz-appearance: none;
+      cursor: pointer;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path fill='none' stroke='%235b6479' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round' d='M1 1.5l5 5 5-5'/></svg>");
+      background-repeat: no-repeat;
+      background-position: right 0.95rem center;
+      padding-right: 2.5rem;
+    }
+
+    .team-helper {
+      margin-top: -1rem; margin-bottom: 1.25rem;
+      font-size: 12px;
+    }
+    .team-helper a { color: var(--blue); text-decoration: none; font-weight: 500; }
+    .team-helper a:hover { text-decoration: underline; }
+
+    .form-actions { display: flex; gap: 8px; margin-top: 0.75rem; align-items: center; }
+    .btn {
+      background: var(--blue);
+      border: none;
+      color: #fff;
+      border-radius: 11px;
+      padding: 11px 22px;
+      font-family: var(--font);
+      font-size: 14px; font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+      box-shadow: 0 1px 2px rgba(0,122,255,0.2), 0 8px 24px rgba(0,122,255,0.20);
+    }
+    .btn:hover { background: #0066d6; box-shadow: 0 1px 2px rgba(0,122,255,0.25), 0 10px 28px rgba(0,122,255,0.28); }
+    .btn:active { transform: scale(0.985); }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .btn.ghost {
+      background: rgba(255,255,255,0.6);
+      color: var(--ts);
+      border: 1px solid var(--hairline-strong);
+      box-shadow: none;
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    }
+    .btn.ghost:hover { background: #fff; color: var(--tp); box-shadow: none; }
+
+    #error {
+      color: var(--red); font-size: 13px; min-height: 20px;
+      margin-bottom: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+  <div id="header">
+    <div id="header-left">
+      <a class="menu-back" href="javascript:void(0)" onclick="goMenu()">← Menu</a>
+      <span id="title">Create project</span>
+    </div>
+  </div>
+
+  <div id="wrap">
+    <div id="card">
+      <h1>New project</h1>
+      <p class="sub">Pick a name, optionally describe what you're building, and choose a team. The orchestrator will plan the work in the next step.</p>
+
+      <label for="name">Project name</label>
+      <input id="name" type="text" placeholder="e.g. Customer Feedback Tracker" autocomplete="off" autofocus />
+
+      <label for="desc">Description (optional)</label>
+      <textarea id="desc" placeholder="One-line summary — what is this project?"></textarea>
+
+      <label for="team">Team</label>
+      <select id="team">
+        <option value="">(no team — orchestrator picks from all 16 built-ins)</option>
+      </select>
+      <div class="team-helper">
+        <a href="/dashboard/teams.html">→ Build a custom team</a>
+      </div>
+
+      <div id="error"></div>
+
+      <div class="form-actions">
+        <button id="create-btn" class="btn" onclick="createProject()">Create &amp; continue →</button>
+        <a class="btn ghost" href="/dashboard/menu.html" style="text-decoration:none;display:inline-flex;align-items:center;">Cancel</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    if (!sessionStorage.getItem('authenticated')) {
+      window.location.replace('/dashboard/login.html?cb=' + Date.now());
+    }
+    function goMenu() { location.href = '/dashboard/menu.html?cb=' + Date.now(); }
+    (function() {
+      const f = window.fetch;
+      window.fetch = function(input, init) {
+        return f(input, init).then(r => {
+          if (r.status === 401) {
+            sessionStorage.removeItem('authenticated');
+            window.location.replace('/dashboard/login.html?cb=' + Date.now());
+          }
+          return r;
+        });
+      };
+    })();
+
+    async function loadTeams() {
+      const sel = document.getElementById('team');
+      try {
+        const r = await fetch('/api/teams');
+        const teams = await r.json();
+        teams.forEach(t => {
+          const opt = document.createElement('option');
+          opt.value = t.slug;
+          const n = (t.deputies || []).length;
+          opt.textContent = `${t.name} (${n} deput${n === 1 ? 'y' : 'ies'} + canon)`;
+          sel.appendChild(opt);
+        });
+      } catch (e) { /* silent — default option already present */ }
+    }
+
+    async function createProject() {
+      const name = document.getElementById('name').value.trim();
+      const desc = document.getElementById('desc').value.trim();
+      const team = document.getElementById('team').value;
+      const errEl = document.getElementById('error');
+      const btn = document.getElementById('create-btn');
+      errEl.textContent = '';
+      if (!name) { errEl.textContent = 'Project name is required.'; return; }
+      btn.disabled = true; btn.textContent = 'Creating…';
+      try {
+        const r = await fetch('/api/projects', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, description: desc, team }),
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
+        window.location.replace('/dashboard/index.html?project=' + encodeURIComponent(data.slug));
+      } catch (e) {
+        errEl.textContent = `Error: ${e.message}`;
+        btn.disabled = false; btn.textContent = 'Create & continue →';
+      }
+    }
+
+    document.getElementById('name').addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); createProject(); }
+    });
+
+    loadTeams();
+  </script>
+</body>
+</html>

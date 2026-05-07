@@ -83,21 +83,29 @@ def check_anthropic_key():
 @check("server responding")
 def check_server():
     try:
-        req = urllib.request.Request("http://localhost:8000/api/projects")
-        import base64
-        creds = base64.b64encode(b"admin:admin").decode()
-        req.add_header("Authorization", f"Basic {creds}")
-        with urllib.request.urlopen(req, timeout=5) as resp:
-            if resp.status != 200:
-                raise Exception(f"HTTP {resp.status}")
-            return "http://localhost:8000 reachable"
+        # Unauth probe — the login endpoint is always reachable without creds.
+        req = urllib.request.Request(
+            "http://localhost:8000/api/login",
+            data=b"{}",
+            headers={"Content-Type": "application/json"},
+        )
+        try:
+            urllib.request.urlopen(req, timeout=5)
+        except urllib.error.HTTPError:
+            # Any HTTP response means the server is up.
+            pass
+        return "http://localhost:8000 reachable"
     except urllib.error.URLError as e:
         raise Exception(f"Server not reachable: {e}")
 
 
 @check("auth — valid credentials accepted")
 def check_auth_valid():
-    data = json.dumps({"username": "admin", "password": "admin"}).encode()
+    user = os.environ.get("OFFICE_USER", "admin")
+    pw = os.environ.get("OFFICE_PASS", "")
+    if not pw:
+        raise SkipCheck("OFFICE_PASS not set in env — cannot verify login")
+    data = json.dumps({"username": user, "password": pw}).encode()
     req = urllib.request.Request(
         "http://localhost:8000/api/login",
         data=data,
@@ -107,7 +115,7 @@ def check_auth_valid():
         result = json.loads(resp.read())
         if not result.get("ok"):
             raise Exception(f"Login failed: {result}")
-    return "admin:admin accepted"
+    return f"{user}:*** accepted"
 
 
 @check("auth — wrong credentials rejected")
@@ -132,14 +140,26 @@ def check_auth_invalid():
 
 @check("project create / delete")
 def check_project_lifecycle():
-    import base64, json as _json
-    headers = {
-        "Authorization": "Basic " + base64.b64encode(b"admin:admin").decode(),
-        "Content-Type": "application/json",
-    }
+    import json as _json
+    user = os.environ.get("OFFICE_USER", "admin")
+    pw = os.environ.get("OFFICE_PASS", "")
+    if not pw:
+        raise SkipCheck("OFFICE_PASS not set in env — cannot authenticate")
+
+    # Log in to get a session cookie (auth is cookie-based, not Basic)
+    login_req = urllib.request.Request(
+        "http://localhost:8000/api/login",
+        data=_json.dumps({"username": user, "password": pw}).encode(),
+        headers={"Content-Type": "application/json"},
+    )
+    with urllib.request.urlopen(login_req, timeout=5) as resp:
+        cookie = resp.headers.get("Set-Cookie", "").split(";", 1)[0]
+        if not cookie:
+            raise Exception("Login succeeded but no Set-Cookie returned")
+
+    headers = {"Cookie": cookie, "Content-Type": "application/json"}
     slug = f"healthcheck-{int(time.time())}"
 
-    # Create
     data = _json.dumps({"name": slug, "description": "health check project"}).encode()
     req = urllib.request.Request("http://localhost:8000/api/projects", data=data, headers=headers)
     with urllib.request.urlopen(req, timeout=5) as resp:
@@ -147,7 +167,6 @@ def check_project_lifecycle():
         if result.get("slug") != slug:
             raise Exception(f"Unexpected slug: {result}")
 
-    # Delete
     req2 = urllib.request.Request(
         f"http://localhost:8000/api/projects/{slug}/delete",
         data=b"{}",

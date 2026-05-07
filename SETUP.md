@@ -52,9 +52,13 @@ Open `.env` and fill in your keys:
 ```
 ANTHROPIC_API_KEY=your_key_here   # required
 OPENAI_API_KEY=your_key_here      # optional — only needed for web search agents
+OFFICE_USER=admin                 # dashboard login username
+OFFICE_PASS=                      # dashboard login password — pick something strong
 ```
 
 Your `ANTHROPIC_API_KEY` is the same key you used to authenticate Claude Code.
+
+If `OFFICE_PASS` is empty when you start the server, a random password is generated for that session and printed to the terminal. Add it (or your own) to `.env` to persist it across restarts.
 
 ### 5. Start the server
 
@@ -72,9 +76,7 @@ AI Office server running on http://localhost:8000
 
 Go to [http://localhost:8000](http://localhost:8000) in your browser.
 
-Login with:
-- **Username:** admin
-- **Password:** office
+Login with the credentials from your `.env` (`OFFICE_USER` / `OFFICE_PASS`). If you left `OFFICE_PASS` empty, the server printed a temporary password to the terminal when it started.
 
 ---
 
